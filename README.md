@@ -24,7 +24,7 @@ Before running the project, make sure you have the following installed:
 ### Step 1: Clone the Repository
 
 ### Step 2: Clone the Repository
-1. **Navigate to the backend folder**: cd backend
+1. **Navigate to the backend/frontend folder**: cd backend / frontend
 2. **Install dependencies**: npm install
 3. **Configure Environment Variables**:
 
