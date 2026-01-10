@@ -1,0 +1,29 @@
+# secrets
+.env
+**/.env
+**/.env.*
+
+# node
+node_modules/
+**/node_modules/
+
+# logs
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# angular build/cache
+dist/
+**/dist/
+.angular/
+**/.angular/
+
+# uploads
+backend/uploads/
+uploads/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
