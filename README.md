@@ -49,7 +49,7 @@ npm run dev
 ### Step 3: Frontend Setup (Client)
 - Keep the Backend terminal running. Open a new terminal window.
 - Navigate to the frontend folder:
-cd frontend
+cd frontend, cd tirtir-frontend
 - Install dependencies: This downloads Angular libraries.
 npm install
 - Start the Angular app:
