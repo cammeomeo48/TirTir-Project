@@ -2,46 +2,42 @@ const mongoose = require("mongoose");
 
 const ShadeSchema = new mongoose.Schema(
   {
-    // Link sang product.csv
     Product_ID: { type: String, required: true, index: true },
 
-    Shade_Code: { type: String, required: true }, // 10C, 13N...
-    Shade_Category_Name: { type: String, required: true }, // Mask Fit Red / Aura / ...
-    Parent_ID: { type: String, required: true }, // SA / MA / DE
-    Shade_ID: { type: String, required: true, unique: true, index: true }, // SA-10C
+    Shade_Code: { type: String, required: true },
+    Shade_Category_Name: { type: String, required: true },
+    Parent_ID: { type: String, required: true },
+    Shade_ID: { type: String, required: true, unique: true, index: true },
 
     Shade_Name: { type: String, required: true },
     Hex_Code: { type: String, required: true },
+    Shade_Image: { type: String },
+    Shade_Type: { type: String },
+
+    Hydration: { type: mongoose.Schema.Types.Mixed },
+    Coverage: { type: mongoose.Schema.Types.Mixed },
+    Oxidation_Level: { type: mongoose.Schema.Types.Mixed },
 
     // RGB
-    R: { type: Number, required: true, min: 0, max: 255 },
-    G: { type: Number, required: true, min: 0, max: 255 },
-    B: { type: Number, required: true, min: 0, max: 255 },
+    R: { type: Number },
+    G: { type: Number },
+    B: { type: Number },
 
-    // LAB (number)
-    L: { type: Number, required: true },
-    a: { type: Number, required: true },
-    b: { type: Number, required: true },
+    // LAB
+    L: { type: Number },
+    a: { type: Number },
+    b: { type: Number },
 
-    // Attributes
-    Skin_Tone: { type: String },
-    Skin_Type: { type: String },
-    Undertone: { type: String },
-    Finish_Type: { type: String },
+    Skin_Tone: String,
+    Skin_Type: String,
+    Undertone: String,
+    Finish_Type: String,
+    Coverage_Profile: String,
+    Oxidation_Risk_Level: String,
 
-    Hydration: { type: Number },
-    Coverage: { type: Number },
-    Coverage_Profile: { type: String },
-
-    Oxidation_Level: { type: Number },
-    Oxidation_Risk_Level: { type: String },
-
-    Shade_Image: { type: String },
-
-    // Nếu sau này muốn mở rộng (Lip, etc) thì vẫn safe
-    Shade_Type: { type: String, default: "Cushion" },
+    No: { type: Number, index: true }
   },
-  { timestamps: true }
+  { collection: "shades" }
 );
 
 module.exports = mongoose.model("Shade", ShadeSchema);

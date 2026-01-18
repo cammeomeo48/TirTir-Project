@@ -1,0 +1,32 @@
+const mongoose = require('mongoose');
+
+const ProductSchema = new mongoose.Schema({
+    Product_ID: { type: String, required: true, unique: true }, // PRD-MK-RED
+    Parent_ID: String,
+    Category: String,
+    Name: String,
+    Price: Number,
+    Volume_Size: String,
+    Is_Skincare: Boolean,
+    Description_Short: String,
+    Full_Description: String,
+    How_To_Use: String,
+
+    // Mảng đường dẫn ảnh
+    Thumbnail_Images: String,
+    Gallery_Images: [String],
+    Description_Images: [String],
+
+    // New Params for Filter
+    Skin_Type_Target: [String], // Changed to Array
+    Main_Concern: [String],     // Changed to Array
+
+    // Additional Fields
+    Is_Best_Seller: { type: Boolean, default: false },
+    Category_Slug: { type: String, index: true },
+
+    Status: String,
+    Stock_Quantity: Number
+}, { collection: 'products', timestamps: true });
+
+module.exports = mongoose.model('Product', ProductSchema);
