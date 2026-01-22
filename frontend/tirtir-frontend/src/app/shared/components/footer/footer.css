@@ -111,19 +111,13 @@
     }
 }
 
-            a {
-                color: #666;
-                font-size: 14px;
-                transition: color 0.2s;
-
-                &:hover {
-                    color: var(--color-black);
-                    text-decoration: underline;
-                }
+            a:hover {
+                color: var(--color-black);
+                text-decoration: underline;
             }
-        }
-    }
-}
+        
+    
+
 
 .footer-bottom {
     text-align: center;
