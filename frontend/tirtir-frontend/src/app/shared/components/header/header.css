@@ -30,6 +30,8 @@
     max-width: 1440px;
     margin: 0 auto;
     padding: 0 40px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .header-wrapper {
@@ -37,6 +39,7 @@
     align-items: center;
     justify-content: space-between;
     height: 80px;
+    width: 100%;
 }
 
 .logo a {
@@ -55,6 +58,26 @@
     padding: 0;
 }
 
+.main-nav {
+    position: relative;
+}
+
+.main-nav li {
+    position: relative;
+}
+
+/* Tạo vùng đệm vô hình phía trên dropdown để rê chuột thoải mái */
+.main-nav li::before {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100vw;
+    height: 40px; /* Chiều cao vùng đệm */
+    background: transparent;
+    z-index: 19; /* Thấp hơn dropdown nhưng cao hơn nội dung khác */
+}
+
 .main-nav a {
     text-decoration: none;
     color: #000;
@@ -69,6 +92,92 @@
     color: #666;
     text-decoration: underline;
     text-underline-offset: 4px;
+}
+
+.dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100vw; 
+    background-color: #fff;
+    margin-top: -10px; 
+    padding: 40px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    border-radius: 0 0 8px 8px;
+    z-index: 20;
+    box-sizing: border-box;
+}
+
+.dropdown-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 40px;
+    align-items: start;
+}
+
+.dropdown-column {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.column-header {
+    margin-bottom: 8px;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 8px;
+}
+
+.column-header a {
+    text-transform: uppercase;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #333;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.column-header a:hover {
+    color: #000;
+    text-decoration: none;
+}
+
+.column-links {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.column-links a {
+    color: #555;
+    text-decoration: none;
+    text-transform: none;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    line-height: 1.4;
+    transition: all 0.2s ease;
+    padding: 4px 0;
+    display: block;
+}
+
+.column-links a:hover {
+    color: #000;
+    text-decoration: none;
+    background-color: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+    padding-left: 8px;
+}
+
+.main-nav li:hover > .dropdown {
+    display: block;
 }
 
 .header-actions {
@@ -113,7 +222,7 @@
     position: absolute;
     top: -5px;
     right: -5px;
-    background-color: #d32f2f; /* TIRTIR Red accent often used */
+    background-color: #d32f2f; 
     color: #fff;
     font-size: 10px;
     font-weight: 700;
@@ -129,8 +238,32 @@
     .container {
         padding: 0 20px;
     }
-    
+
     .main-nav {
-        display: none; /* Mobile menu implementation would go here */
+        display: none; 
+    }
+
+    .dropdown {
+        padding: 30px 20px;
+    }
+
+    .dropdown-content {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 30px;
+    }
+}
+
+@media (max-width: 768px) {
+    .dropdown-content {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+
+    .dropdown {
+        padding: 24px 16px;
+    }
+
+    .main-nav li::before {
+        display: none;
     }
 }

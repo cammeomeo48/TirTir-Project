@@ -13,12 +13,29 @@
             <!-- Navigation -->
             <nav class="main-nav">
                 <ul>
-                    <li><a routerLink="/shop">Shop All</a></li>
-                    <li><a routerLink="/shop" [queryParams]="{category: 'makeup'}">Makeup</a></li>
-                    <li><a routerLink="/shop" [queryParams]="{category: 'skincare'}">Skincare</a></li>
-                    <li><a href="#">Virtual Services</a></li>
-                    <li><a href="#">Contact</a></li>
-                    <li><a href="#">About</a></li>
+                    <li *ngFor="let item of menuItems">
+                        <a [routerLink]="item.routerLink" [queryParams]="item.queryParams || null">
+                            {{ item.label }}
+                        </a>
+                        <div class="dropdown" *ngIf="item.children?.length">
+                            <div class="dropdown-content">
+                                <div class="dropdown-column" *ngFor="let column of item.children">
+                                    <div class="column-header">
+                                        <a [routerLink]="column.routerLink" [queryParams]="column.queryParams || null">
+                                            {{ column.label }}
+                                        </a>
+                                    </div>
+                                    <ul class="column-links" *ngIf="column.children?.length">
+                                        <li *ngFor="let product of column.children">
+                                            <a [routerLink]="product.routerLink" [queryParams]="product.queryParams || null">
+                                                {{ product.label }}
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
                 </ul>
             </nav>
 
