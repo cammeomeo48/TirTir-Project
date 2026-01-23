@@ -1,53 +1,57 @@
+/* =====================================================
+   HEADER - TIRTIR Clone (Fixed Layout)
+   Logo LEFT | Navigation CENTER | Actions RIGHT
+   ===================================================== */
+
 :host {
     display: block;
-    font-family: 'Inter', sans-serif;
-}
-
-.announcement-bar {
-    background-color: #000;
-    color: #fff;
-    text-align: center;
-    padding: 10px 0;
-    font-size: 12px;
-    font-weight: 500;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-}
-
-.announcement-bar p {
-    margin: 0;
-}
-
-.site-header {
-    background-color: #fff;
-    border-bottom: 1px solid #e5e5e5;
     position: sticky;
     top: 0;
     z-index: 1000;
 }
 
-.container {
-    max-width: 1440px;
-    margin: 0 auto;
-    padding: 0 40px;
-    width: 100%;
-    box-sizing: border-box;
+/* Announcement Bar */
+.announcement-bar {
+    background: linear-gradient(90deg, #1a1a4e 0%, #2d1b4e 50%, #1a1a4e 100%);
+    padding: 8px 16px;
+    text-align: center;
 }
 
-.header-wrapper {
+.announcement-link {
+    color: #fff;
+    font-size: 12px;
+    font-weight: 400;
+    text-decoration: none;
+    letter-spacing: 0.5px;
+}
+
+.announcement-link:hover {
+    text-decoration: underline;
+}
+
+/* Main Header */
+.header-main {
+    background: #fff;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.header-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 24px;
+    height: 60px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     height: 80px;
     width: 100%;
-    position: relative; /* Anchor for dropdown */
 }
 
-.logo a {
-    font-size: 28px;
+.logo-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px;
     font-weight: 700;
     color: #000;
-    text-decoration: none;
     letter-spacing: 2px;
 }
 
@@ -57,109 +61,147 @@
     position: static; /* Static so dropdown positions relative to header-wrapper */
 }
 
-.main-nav ul {
+/* Navigation - CENTER */
+.main-nav {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.nav-list {
     display: flex;
-    gap: 32px;
+    align-items: center;
+    gap: 24px;
     list-style: none;
     margin: 0;
     padding: 0;
-    height: 100%;
-    align-items: center;
+}
+
+.main-nav {
+    position: relative;
 }
 
 .main-nav li {
-    height: 100%;
-    display: flex;
-    align-items: center;
-    position: static; /* Static so dropdown positions relative to header-wrapper */
+    position: relative;
+}
+
+/* Tạo vùng đệm vô hình phía trên dropdown để rê chuột thoải mái */
+.main-nav li::before {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100vw;
+    height: 40px; /* Chiều cao vùng đệm */
+    background: transparent;
+    z-index: 19; /* Thấp hơn dropdown nhưng cao hơn nội dung khác */
 }
 
 .main-nav a {
     text-decoration: none;
-    color: #000;
-    font-size: 14px;
-    font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 1px;
     transition: color 0.2s;
-    height: 100%;
-    display: flex;
-    align-items: center;
 }
 
-.main-nav a:hover {
-    color: #666;
-    text-decoration: underline;
-    text-underline-offset: 4px;
+.nav-link:hover {
+    opacity: 0.6;
 }
 
 /* Dropdown */
 .dropdown {
     display: none;
-    position: absolute;
-    top: 100%; /* Starts exactly at bottom of header-wrapper */
+    position: fixed;
+    top: 100px;
     left: 0;
-    width: 100%; /* Spans full width of header-wrapper */
+    right: 0;
+    background: #fff;
+    border-top: 1px solid #e5e5e5;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+}
+
+.nav-item:hover .dropdown {
+    display: block;
+}
+
+/* Mega Menu for Makeup */
+.nav-item.has-megamenu {
+    position: relative;
+}
+
+.nav-item.has-megamenu app-makeup-mega-menu {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+}
+
+/* Restore Makeup functionality:
+   1. Hide by default using visibility (prevents clicking)
+   2. Show when visible class added
+*/
+.nav-item.has-megamenu app-makeup-mega-menu ::ng-deep .mega-menu {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(-50%) translateY(10px);
+    transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
+}
+
+.nav-item.has-megamenu app-makeup-mega-menu.visible ::ng-deep .mega-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* =====================================================
+   SKINCARE MEGA MENU - SCOPED STYLES (nav-skincare)
+   Only affects Skincare, does NOT affect Makeup
+   ===================================================== */
+.nav-skincare {
+    position: relative;
+}
+
+.nav-skincare app-skincare-mega-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100vw; 
     background-color: #fff;
-    padding: 40px 0; /* Vertical padding */
+    margin-top: -10px; 
+    padding: 40px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
     border-radius: 0 0 8px 8px;
     z-index: 20;
     box-sizing: border-box;
-    cursor: default;
-}
-
-/* Hover Trigger */
-.main-nav li:hover > .dropdown {
-    display: block;
-}
-
-/* Add a transparent bridge just in case, but full-height li should solve it */
-.main-nav li::after {
-    content: '';
-    position: absolute;
-    top: 100%;
-    height: 10px; /* Buffer zone */
-    width: 100%;
-    left: 0;
-    background: transparent;
 }
 
 .dropdown-content {
-    width: 100%;
+    max-width: 1400px;
     margin: 0 auto;
-    padding: 0 40px; /* Match container padding */
+    padding: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 40px;
     align-items: start;
-    box-sizing: border-box;
 }
 
 .dropdown-column {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
+    min-width: 0;
 }
 
-.column-header {
-    margin-bottom: 8px;
-    border-bottom: 2px solid #f0f0f0;
-    padding-bottom: 8px;
-}
-
-.column-header a {
-    text-transform: uppercase;
-    font-size: 14px;
+.column-title {
+    font-size: 13px;
     font-weight: 700;
+    text-transform: uppercase;
     letter-spacing: 1px;
     color: #333;
     text-decoration: none;
     transition: color 0.2s;
-    height: auto;
 }
 
-.column-header a:hover {
+.column-title a {
     color: #000;
     text-decoration: none;
 }
@@ -168,12 +210,14 @@
     list-style: none;
     margin: 0;
     padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+}
+
+.column-links li {
+    margin-bottom: 10px;
 }
 
 .column-links a {
+    font-size: 13px;
     color: #555;
     text-decoration: none;
     text-transform: none;
@@ -184,77 +228,111 @@
     transition: all 0.2s ease;
     padding: 4px 0;
     display: block;
-    height: auto;
 }
 
 .column-links a:hover {
     color: #000;
-    text-decoration: none;
-    background-color: rgba(0, 0, 0, 0.05);
-    border-radius: 4px;
-    padding-left: 8px;
+}
+
+.main-nav li:hover > .dropdown {
+    display: block;
 }
 
 .header-actions {
     display: flex;
     align-items: center;
-    gap: 24px;
+    gap: 16px;
+    flex-shrink: 0;
 }
 
-.search-bar {
-    display: flex;
-    align-items: center;
-    border-bottom: 1px solid #ddd;
-    padding-bottom: 4px;
-}
-
-.search-bar input {
-    border: none;
-    outline: none;
-    font-size: 14px;
-    width: 150px;
-    font-family: inherit;
-}
-
-.icon-btn {
+.action-btn {
     background: none;
     border: none;
-    cursor: pointer;
-    font-size: 18px;
-    color: #000;
     padding: 4px;
+    cursor: pointer;
+    color: #000;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
+.action-btn:hover {
+    opacity: 0.6;
+}
+
 .cart-btn {
     position: relative;
-    text-decoration: none;
 }
 
 .cart-count {
     position: absolute;
     top: -5px;
     right: -5px;
-    background-color: #d32f2f;
+    background-color: #d32f2f; 
     color: #fff;
-    font-size: 10px;
-    font-weight: 700;
-    height: 16px;
-    width: 16px;
+    font-size: 9px;
+    font-weight: 600;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
+/* Mobile Toggle */
+.mobile-toggle {
+    display: none;
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    color: #000;
+}
+
+/* Responsive */
 @media (max-width: 1024px) {
-    .container {
-        padding: 0 20px;
+    .nav-list {
+        gap: 16px;
     }
 
     .main-nav {
+        display: none; 
+    }
+
+    .dropdown {
+        padding: 30px 20px;
+    }
+
+    .dropdown-content {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 30px;
+    }
+}
+
+@media (max-width: 768px) {
+    .dropdown-content {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+
+    .dropdown {
+        padding: 24px 16px;
+    }
+
+    .main-nav li::before {
         display: none;
+    }
+
+    .mobile-toggle {
+        display: flex;
+    }
+
+    .header-container {
+        height: 56px;
+    }
+
+    .logo-text {
+        font-size: 20px;
     }
 }

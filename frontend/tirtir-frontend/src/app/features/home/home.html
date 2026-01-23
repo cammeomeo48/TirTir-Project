@@ -1,1 +1,86 @@
-<p>home works!</p>
+<!-- =====================================================
+     HOMEPAGE - TIRTIR Clone
+     ===================================================== -->
+
+<!-- Hero Section -->
+<section class="hero">
+    <div class="hero-image">
+        <!-- TODO: Replace with real TIRTIR hero image -->
+        <img src="https://placehold.co/1920x800/d32f2f/fff?text=TIRTIR+RED+CUSHION" alt="TIRTIR Hero">
+    </div>
+    <div class="hero-content">
+        <span class="hero-tag">NEW</span>
+        <h1 class="hero-title">MOOD GLIDER</h1>
+        <p class="hero-subtitle">Effortless Color That Moves With You</p>
+        <a routerLink="/shop" class="hero-btn">SHOP NOW</a>
+    </div>
+</section>
+
+<!-- Best Sellers -->
+<section class="section">
+    <div class="container">
+        <h2 class="section-title">BEST SELLERS</h2>
+        <div class="products-grid">
+            <app-product-card *ngFor="let product of bestSellers" [product]="product"></app-product-card>
+        </div>
+        <div class="section-action">
+            <a routerLink="/shop" class="view-all-btn">VIEW ALL</a>
+        </div>
+    </div>
+</section>
+
+<!-- Promo Banner -->
+<section class="promo-banner">
+    <div class="container">
+        <div class="promo-grid">
+            <a routerLink="/shop" [queryParams]="{category: 'skincare'}" class="promo-card">
+                <!-- TODO: Replace with real promo image -->
+                <img src="https://placehold.co/700x400/f5e6e0/000?text=Skincare+Collection" alt="Skincare">
+                <div class="promo-overlay">
+                    <h3>SKINCARE</h3>
+                    <span class="promo-link">Shop Now →</span>
+                </div>
+            </a>
+            <a routerLink="/shop" [queryParams]="{category: 'makeup'}" class="promo-card">
+                <!-- TODO: Replace with real promo image -->
+                <img src="https://placehold.co/700x400/e8e0f5/000?text=Makeup+Collection" alt="Makeup">
+                <div class="promo-overlay">
+                    <h3>MAKEUP</h3>
+                    <span class="promo-link">Shop Now →</span>
+                </div>
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- New Arrivals -->
+<section class="section">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">NEW ARRIVALS</h2>
+            <a routerLink="/shop" class="view-all-link">View All</a>
+        </div>
+        <app-product-carousel [products]="newArrivals"></app-product-carousel>
+    </div>
+</section>
+
+<!-- Featured Banner -->
+<section class="featured-banner">
+    <!-- TODO: Replace with real banner image -->
+    <img src="https://placehold.co/1920x500/000/fff?text=MASK+FIT+RED+CUSHION+-+72+Hour+Coverage" alt="Red Cushion">
+    <div class="banner-content">
+        <span class="banner-tag">#1 VIRAL CUSHION</span>
+        <h2 class="banner-title">MASK FIT RED CUSHION</h2>
+        <a routerLink="/products/red-cushion" class="hero-btn">SHOP NOW</a>
+    </div>
+</section>
+
+<!-- Trending -->
+<section class="section">
+    <div class="container">
+        <h2 class="section-title">TRENDING NOW</h2>
+        <div class="products-grid">
+            <app-product-card *ngFor="let product of trending" [product]="product"></app-product-card>
+        </div>
+    </div>
+</section>

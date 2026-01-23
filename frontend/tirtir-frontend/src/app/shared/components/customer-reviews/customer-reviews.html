@@ -1,0 +1,82 @@
+<!-- =====================================================
+     CUSTOMER REVIEWS SECTION - TIRTIR Clone
+     Star ratings, review breakdown, and customer feedback
+     ===================================================== -->
+
+<section class="customer-reviews">
+    <div class="container">
+        <!-- Section Header -->
+        <div class="reviews-header">
+            <h2 class="section-title">CUSTOMER REVIEWS</h2>
+            <div class="overall-rating">
+                <div class="rating-score">
+                    <span class="score-value">{{ averageRating }}</span>
+                    <div class="stars-display">
+                        <span *ngFor="let star of getStars(5)" [class]="getStarClass(star)">★</span>
+                    </div>
+                    <span class="total-reviews">Based on {{ totalReviews | number }} reviews</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rating Breakdown -->
+        <div class="rating-breakdown">
+            <div *ngFor="let rating of ratingBreakdown" class="breakdown-row">
+                <span class="star-label">{{ rating.stars }} ★</span>
+                <div class="progress-bar">
+                    <div class="progress-fill" [style.width.%]="rating.percentage"></div>
+                </div>
+                <span class="percentage">{{ rating.percentage }}%</span>
+            </div>
+        </div>
+
+        <!-- Write Review CTA -->
+        <div class="write-review-cta">
+            <button class="write-review-btn">Write a Review</button>
+        </div>
+
+        <!-- Reviews List -->
+        <div class="reviews-list">
+            <div *ngFor="let review of reviews" class="review-card">
+                <div class="review-header">
+                    <div class="reviewer-info">
+                        <span class="reviewer-name">{{ review.author }}</span>
+                        <span class="verified-badge" *ngIf="review.verified">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="#22c55e">
+                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                            </svg>
+                            Verified Purchase
+                        </span>
+                    </div>
+                    <span class="review-date">{{ review.date }}</span>
+                </div>
+
+                <div class="review-rating">
+                    <span *ngFor="let star of getStars(review.rating)" [class]="getStarClass(star)">★</span>
+                </div>
+
+                <h4 class="review-title">{{ review.title }}</h4>
+
+                <p class="review-shade" *ngIf="review.shade">Shade: {{ review.shade }}</p>
+
+                <p class="review-content">{{ review.content }}</p>
+
+                <div class="review-footer">
+                    <button class="helpful-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path
+                                d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+                        </svg>
+                        Helpful ({{ review.helpful }})
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Load More -->
+        <div class="load-more">
+            <button class="load-more-btn">Load More Reviews</button>
+        </div>
+    </div>
+</section>

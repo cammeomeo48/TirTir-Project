@@ -1,1 +1,120 @@
-<p>product-detail works!</p>
+<!-- =====================================================
+     PRODUCT DETAIL PAGE - TIRTIR Clone
+     Matches: https://tirtir.global/collections/shop-all/products/*
+     ===================================================== -->
+
+<div class="product-detail" *ngIf="product">
+    <div class="container">
+        <div class="pdp-layout">
+            <!-- Left: Image Gallery -->
+            <div class="gallery">
+                <div class="gallery-main">
+                    <img [src]="selectedImage" [alt]="product.name" class="main-image">
+                    <span class="sale-badge" *ngIf="product.originalPrice">SALE</span>
+                </div>
+                <div class="gallery-thumbs">
+                    <button *ngFor="let img of product.images; let i = index" class="thumb"
+                        [class.active]="selectedImage === img" (click)="selectImage(img)">
+                        <img [src]="img" [alt]="'View ' + (i + 1)">
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right: Product Info -->
+            <div class="product-info">
+                <div class="info-header">
+                    <h1 class="product-name">{{ product.name }}</h1>
+                    <div class="rating-row">
+                        <div class="stars">
+                            <span *ngFor="let s of getStars(product.rating)" class="star filled">★</span>
+                        </div>
+                        <span class="rating-value">{{ product.rating }}</span>
+                        <span class="review-count">({{ product.reviewCount | number }} Reviews)</span>
+                    </div>
+                    <div class="price-row">
+                        <span class="original-price" *ngIf="product.originalPrice">${{ product.originalPrice.toFixed(2)
+                            }}</span>
+                        <span class="current-price">${{ product.price.toFixed(2) }}</span>
+                    </div>
+                </div>
+
+                <p class="product-description">{{ product.description }}</p>
+
+                <!-- Key Features -->
+                <div class="key-features" *ngIf="product.keyFeatures.length">
+                    <h4 class="features-title">Key Features</h4>
+                    <ul class="features-list">
+                        <li *ngFor="let feature of product.keyFeatures">{{ feature }}</li>
+                    </ul>
+                </div>
+
+                <!-- Shade Selector -->
+                <div class="shade-selector" *ngIf="product.shades?.length">
+                    <div class="selector-header">
+                        <span class="label">Shade:</span>
+                        <span class="selected-shade">{{ selectedShade }}</span>
+                        <span class="shade-count">({{ product.shades?.length }} shades)</span>
+                    </div>
+                    <div class="shade-options">
+                        <button *ngFor="let shade of product.shades" class="shade-btn"
+                            [class.active]="selectedShade === shade.name" [style.background]="shade.color"
+                            (click)="selectShade(shade.name)" [attr.aria-label]="shade.name" [title]="shade.name">
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Quantity -->
+                <div class="quantity-selector">
+                    <span class="label">Quantity:</span>
+                    <div class="qty-controls">
+                        <button (click)="decreaseQty()" aria-label="Decrease">−</button>
+                        <span class="qty-value">{{ quantity }}</span>
+                        <button (click)="increaseQty()" aria-label="Increase">+</button>
+                    </div>
+                </div>
+
+                <!-- Add to Cart -->
+                <button class="add-to-cart">
+                    ADD TO CART — ${{ (product.price * quantity).toFixed(2) }}
+                </button>
+
+                <!-- Accordion Sections -->
+                <div class="accordion">
+                    <div class="accordion-item" [class.open]="activeAccordion === 'description'">
+                        <button class="accordion-header" (click)="toggleAccordion('description')">
+                            <span>Description</span>
+                            <span class="icon">{{ activeAccordion === 'description' ? '−' : '+' }}</span>
+                        </button>
+                        <div class="accordion-content">
+                            <p>{{ product.fullDescription }}</p>
+                        </div>
+                    </div>
+                    <div class="accordion-item" [class.open]="activeAccordion === 'howto'">
+                        <button class="accordion-header" (click)="toggleAccordion('howto')">
+                            <span>How to Use</span>
+                            <span class="icon">{{ activeAccordion === 'howto' ? '−' : '+' }}</span>
+                        </button>
+                        <div class="accordion-content">
+                            <p>{{ product.howToUse }}</p>
+                        </div>
+                    </div>
+                    <div class="accordion-item" [class.open]="activeAccordion === 'ingredients'">
+                        <button class="accordion-header" (click)="toggleAccordion('ingredients')">
+                            <span>Ingredients</span>
+                            <span class="icon">{{ activeAccordion === 'ingredients' ? '−' : '+' }}</span>
+                        </button>
+                        <div class="accordion-content">
+                            <p>{{ product.ingredients }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Brand Gallery Section -->
+<app-brand-gallery></app-brand-gallery>
+
+<!-- Customer Reviews Section -->
+<app-customer-reviews [productName]="product.name"></app-customer-reviews>

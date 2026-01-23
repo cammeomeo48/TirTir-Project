@@ -1,1 +1,44 @@
-<p>product-card works!</p>
+<div class="product-card" *ngIf="displayProduct">
+    <!-- Image Container -->
+    <a [routerLink]="['/products', productLink]" class="card-image">
+        <!-- TODO: Replace with real TIRTIR product image -->
+        <img [src]="displayProduct.image" [alt]="displayProduct.name" class="product-img">
+
+        <!-- Badges -->
+        <div class="badges">
+            <span *ngFor="let badge of displayProduct.badges" class="badge" [class.sale]="badge === 'SALE'"
+                [class.new]="badge === 'NEW'" [class.shades]="badge.includes('SHADES')">
+                {{ badge }}
+            </span>
+        </div>
+    </a>
+
+    <!-- Product Info -->
+    <div class="card-info">
+        <!-- Title -->
+        <h3 class="product-title">
+            <a [routerLink]="['/products', productLink]">{{ displayProduct.name }}</a>
+        </h3>
+
+        <!-- Subtitle -->
+        <p class="product-subtitle" *ngIf="displayProduct.subtitle">{{ displayProduct.subtitle }}</p>
+
+        <!-- Price -->
+        <div class="price-row">
+            <span class="original-price" *ngIf="displayProduct.originalPrice">${{
+                displayProduct.originalPrice.toFixed(2) }}</span>
+            <span class="current-price" [class.sale]="displayProduct.originalPrice">${{ displayProduct.price.toFixed(2)
+                }}</span>
+        </div>
+
+        <!-- Shade Swatches -->
+        <div class="swatches" *ngIf="displayProduct.swatches?.length">
+            <span *ngFor="let swatch of displayProduct.swatches.slice(0, 5)" class="swatch"
+                [style.background]="swatch.color">
+            </span>
+            <span class="more" *ngIf="displayProduct.shadeCount && displayProduct.shadeCount > 5">
+                +{{ displayProduct.shadeCount - 5 }}
+            </span>
+        </div>
+    </div>
+</div>

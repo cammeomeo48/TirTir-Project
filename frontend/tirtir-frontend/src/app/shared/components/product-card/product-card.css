@@ -1,0 +1,155 @@
+/* =====================================================
+   PRODUCT CARD - TIRTIR Clone
+   Reference: https://tirtir.global/collections/shop-all
+   ===================================================== */
+
+:host {
+    display: block;
+}
+
+.product-card {
+    text-align: center;
+}
+
+/* Image Container */
+.card-image {
+    display: block;
+    position: relative;
+    margin-bottom: 16px;
+    background: #f8f8f8;
+    overflow: hidden;
+}
+
+.product-img {
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+
+.card-image:hover .product-img {
+    transform: scale(1.05);
+}
+
+/* Badges */
+.badges {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 10px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    background: #000;
+    color: #fff;
+}
+
+.badge.sale {
+    background: #8b0000;
+}
+
+.badge.new {
+    background: #000;
+}
+
+.badge.shades {
+    background: #8b0000;
+}
+
+/* Card Info */
+.card-info {
+    padding: 0 8px;
+}
+
+.product-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0 0 6px 0;
+    line-height: 1.4;
+}
+
+.product-title a {
+    color: #000;
+    text-decoration: none;
+}
+
+.product-title a:hover {
+    opacity: 0.6;
+}
+
+.product-subtitle {
+    font-size: 12px;
+    color: #666;
+    margin: 0 0 8px 0;
+    line-height: 1.4;
+}
+
+/* Price */
+.price-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.original-price {
+    font-size: 13px;
+    color: #999;
+    text-decoration: line-through;
+}
+
+.current-price {
+    font-size: 14px;
+    font-weight: 600;
+    color: #000;
+}
+
+.current-price.sale {
+    color: #d32f2f;
+}
+
+/* Swatches */
+.swatches {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+}
+
+.swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.more {
+    font-size: 11px;
+    color: #666;
+    margin-left: 4px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .product-title {
+        font-size: 13px;
+    }
+
+    .product-subtitle {
+        font-size: 11px;
+    }
+
+    .badge {
+        font-size: 9px;
+        padding: 3px 8px;
+    }
+}
