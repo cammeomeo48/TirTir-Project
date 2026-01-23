@@ -27,7 +27,8 @@
                                     </div>
                                     <ul class="column-links" *ngIf="column.children?.length">
                                         <li *ngFor="let product of column.children">
-                                            <a [routerLink]="product.routerLink" [queryParams]="product.queryParams || null">
+                                            <a [routerLink]="product.routerLink"
+                                                [queryParams]="product.queryParams || null">
                                                 {{ product.label }}
                                             </a>
                                         </li>

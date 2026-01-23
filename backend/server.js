@@ -11,11 +11,13 @@ app.use(express.json());
 
 const shadeRoutes = require("./routes/shade.routes");
 const productRoutes = require("./routes/product.routes");
+const menuRoutes = require("./routes/menu.routes");
 
 app.get("/api/health", (req, res) => res.json({ ok: true, msg: "alive" }));
 
 app.use("/api/shades", shadeRoutes);
 app.use("/api/products", productRoutes);
+app.use("/api/menus", menuRoutes);
 app.use('/assets', express.static(path.join(__dirname, '../frontend/tirtir-frontend/public/assets')));
 
 const PORT = process.env.PORT || 5000;

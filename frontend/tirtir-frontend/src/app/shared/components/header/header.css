@@ -40,6 +40,7 @@
     justify-content: space-between;
     height: 80px;
     width: 100%;
+    position: relative; /* Anchor for dropdown */
 }
 
 .logo a {
@@ -50,32 +51,27 @@
     letter-spacing: 2px;
 }
 
+/* Make Nav full height to eliminate vertical gaps for hover */
+.main-nav {
+    height: 100%;
+    position: static; /* Static so dropdown positions relative to header-wrapper */
+}
+
 .main-nav ul {
     display: flex;
     gap: 32px;
     list-style: none;
     margin: 0;
     padding: 0;
-}
-
-.main-nav {
-    position: relative;
+    height: 100%;
+    align-items: center;
 }
 
 .main-nav li {
-    position: relative;
-}
-
-/* Tạo vùng đệm vô hình phía trên dropdown để rê chuột thoải mái */
-.main-nav li::before {
-    content: '';
-    position: absolute;
-    top: 100%;
-    left: 0;
-    width: 100vw;
-    height: 40px; /* Chiều cao vùng đệm */
-    background: transparent;
-    z-index: 19; /* Thấp hơn dropdown nhưng cao hơn nội dung khác */
+    height: 100%;
+    display: flex;
+    align-items: center;
+    position: static; /* Static so dropdown positions relative to header-wrapper */
 }
 
 .main-nav a {
@@ -86,6 +82,9 @@
     text-transform: uppercase;
     letter-spacing: 1px;
     transition: color 0.2s;
+    height: 100%;
+    display: flex;
+    align-items: center;
 }
 
 .main-nav a:hover {
@@ -94,29 +93,47 @@
     text-underline-offset: 4px;
 }
 
+/* Dropdown */
 .dropdown {
     display: none;
     position: absolute;
-    top: 100%;
+    top: 100%; /* Starts exactly at bottom of header-wrapper */
     left: 0;
-    width: 100vw; 
+    width: 100%; /* Spans full width of header-wrapper */
     background-color: #fff;
-    margin-top: -10px; 
-    padding: 40px;
+    padding: 40px 0; /* Vertical padding */
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
     border-radius: 0 0 8px 8px;
     z-index: 20;
     box-sizing: border-box;
+    cursor: default;
+}
+
+/* Hover Trigger */
+.main-nav li:hover > .dropdown {
+    display: block;
+}
+
+/* Add a transparent bridge just in case, but full-height li should solve it */
+.main-nav li::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    height: 10px; /* Buffer zone */
+    width: 100%;
+    left: 0;
+    background: transparent;
 }
 
 .dropdown-content {
-    max-width: 1400px;
+    width: 100%;
     margin: 0 auto;
-    padding: 0;
+    padding: 0 40px; /* Match container padding */
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 40px;
     align-items: start;
+    box-sizing: border-box;
 }
 
 .dropdown-column {
@@ -139,6 +156,7 @@
     color: #333;
     text-decoration: none;
     transition: color 0.2s;
+    height: auto;
 }
 
 .column-header a:hover {
@@ -166,6 +184,7 @@
     transition: all 0.2s ease;
     padding: 4px 0;
     display: block;
+    height: auto;
 }
 
 .column-links a:hover {
@@ -174,10 +193,6 @@
     background-color: rgba(0, 0, 0, 0.05);
     border-radius: 4px;
     padding-left: 8px;
-}
-
-.main-nav li:hover > .dropdown {
-    display: block;
 }
 
 .header-actions {
@@ -222,7 +237,7 @@
     position: absolute;
     top: -5px;
     right: -5px;
-    background-color: #d32f2f; 
+    background-color: #d32f2f;
     color: #fff;
     font-size: 10px;
     font-weight: 700;
@@ -240,30 +255,6 @@
     }
 
     .main-nav {
-        display: none; 
-    }
-
-    .dropdown {
-        padding: 30px 20px;
-    }
-
-    .dropdown-content {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 30px;
-    }
-}
-
-@media (max-width: 768px) {
-    .dropdown-content {
-        grid-template-columns: 1fr;
-        gap: 24px;
-    }
-
-    .dropdown {
-        padding: 24px 16px;
-    }
-
-    .main-nav li::before {
         display: none;
     }
 }
