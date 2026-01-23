@@ -23,7 +23,8 @@ export interface ProductData {
     images: string[];
     shades?: ProductShade[];
     sizes?: { name: string; price: number }[];
-    category: string;
+    category: 'makeup' | 'skincare' | 'other';
+    subcategory?: 'face' | 'lip' | 'cleanse-tone' | 'treatments' | 'moisturize-sunscreen';
 }
 
 export const PRODUCTS: ProductData[] = [
@@ -64,7 +65,8 @@ export const PRODUCTS: ProductData[] = [
             { name: '30N Beige', color: '#b89880' },
             { name: '32N Caramel', color: '#a88870' },
         ],
-        category: 'cushion',
+        category: 'makeup',
+        subcategory: 'face',
     },
 
     // ========================================
@@ -107,7 +109,8 @@ export const PRODUCTS: ProductData[] = [
             { name: '30N Beige', color: '#b89880' },
             { name: '43N Truffle', color: '#8b7355' },
         ],
-        category: 'cushion',
+        category: 'makeup',
+        subcategory: 'face',
     },
 
     // ========================================
@@ -146,7 +149,8 @@ export const PRODUCTS: ProductData[] = [
             { name: '25N Warm Beige', color: '#d0b8a0' },
             { name: '27N Honey', color: '#c4a890' },
         ],
-        category: 'cushion',
+        category: 'makeup',
+        subcategory: 'face',
     },
 
     // ========================================
@@ -177,7 +181,8 @@ export const PRODUCTS: ProductData[] = [
             'https://placehold.co/600x750/42a5f5/fff?text=Makeup+Fixer+3',
             'https://placehold.co/600x750/2196f3/fff?text=Makeup+Fixer+4',
         ],
-        category: 'fixer',
+        category: 'makeup',
+        subcategory: 'face',
     },
 
     // ========================================
@@ -213,7 +218,8 @@ export const PRODUCTS: ProductData[] = [
             { name: 'Mint', color: '#d4edda' },
             { name: 'Lavender', color: '#e8daef' },
         ],
-        category: 'primer',
+        category: 'makeup',
+        subcategory: 'face',
     },
 
     // ========================================
@@ -252,7 +258,8 @@ export const PRODUCTS: ProductData[] = [
             { name: '05 Rosy Peach', color: '#dba39a' },
             { name: '06 Soft Pink', color: '#e8b4bc' },
         ],
-        category: 'lip',
+        category: 'makeup',
+        subcategory: 'lip',
     },
 
     // ========================================
@@ -294,7 +301,8 @@ export const PRODUCTS: ProductData[] = [
             { name: '08 Plum Berry', color: '#8e4a5e' },
             { name: '09 Brick Red', color: '#a84040' },
         ],
-        category: 'lip',
+        category: 'makeup',
+        subcategory: 'lip',
     },
 
     // ========================================
@@ -335,7 +343,8 @@ export const PRODUCTS: ProductData[] = [
             { name: '07 Dusty Rose', color: '#b5838d' },
             { name: '08 Plum', color: '#8e4a5e' },
         ],
-        category: 'lip',
+        category: 'makeup',
+        subcategory: 'lip',
     },
 
     // ========================================
@@ -373,7 +382,8 @@ export const PRODUCTS: ProductData[] = [
             { name: '04 Peach', color: '#ffdab9' },
             { name: '05 Rose', color: '#e8b4bc' },
         ],
-        category: 'lip',
+        category: 'makeup',
+        subcategory: 'lip',
     },
 
     // ========================================
@@ -408,7 +418,8 @@ export const PRODUCTS: ProductData[] = [
         sizes: [
             { name: '120ml', price: 28.00 },
         ],
-        category: 'cleanser',
+        category: 'skincare',
+        subcategory: 'cleanse-tone',
     },
 
     // ========================================
@@ -442,7 +453,8 @@ export const PRODUCTS: ProductData[] = [
         sizes: [
             { name: '150ml', price: 24.00 },
         ],
-        category: 'toner',
+        category: 'skincare',
+        subcategory: 'cleanse-tone',
     },
 
     // ========================================
@@ -473,7 +485,8 @@ export const PRODUCTS: ProductData[] = [
             'https://placehold.co/600x750/9ccc65/fff?text=Matcha+Toner+3',
             'https://placehold.co/600x750/dcedc8/000?text=Matcha+Toner+4',
         ],
-        category: 'toner',
+        category: 'skincare',
+        subcategory: 'cleanse-tone',
     },
 
     // ========================================
@@ -504,7 +517,8 @@ export const PRODUCTS: ProductData[] = [
             'https://placehold.co/600x750/ffb74d/000?text=Foam+Cleanser+3',
             'https://placehold.co/600x750/fff3e0/000?text=Foam+Cleanser+4',
         ],
-        category: 'cleanser',
+        category: 'skincare',
+        subcategory: 'cleanse-tone',
     },
 
     // ========================================
@@ -538,7 +552,8 @@ export const PRODUCTS: ProductData[] = [
         sizes: [
             { name: '50ml / 1.69 fl.oz.', price: 32.00 },
         ],
-        category: 'cream',
+        category: 'skincare',
+        subcategory: 'moisturize-sunscreen',
     },
 
     // ========================================
@@ -569,7 +584,8 @@ export const PRODUCTS: ProductData[] = [
             'https://placehold.co/600x750/81c784/fff?text=Matcha+Cream+3',
             'https://placehold.co/600x750/dcedc8/000?text=Matcha+Cream+4',
         ],
-        category: 'cream',
+        category: 'skincare',
+        subcategory: 'moisturize-sunscreen',
     },
 
     // ========================================
@@ -600,7 +616,8 @@ export const PRODUCTS: ProductData[] = [
             'https://placehold.co/600x750/90caf9/000?text=Sunscreen+3',
             'https://placehold.co/600x750/e1f5fe/000?text=Sunscreen+4',
         ],
-        category: 'sunscreen',
+        category: 'skincare',
+        subcategory: 'moisturize-sunscreen',
     },
 
     // ========================================
@@ -631,7 +648,8 @@ export const PRODUCTS: ProductData[] = [
             'https://placehold.co/600x750/aed581/000?text=Matcha+Duo+3',
             'https://placehold.co/600x750/e8f5e9/000?text=Matcha+Duo+4',
         ],
-        category: 'gift-set',
+        category: 'skincare',
+        subcategory: 'moisturize-sunscreen',
     },
 
     // ========================================
@@ -663,7 +681,8 @@ export const PRODUCTS: ProductData[] = [
             'https://placehold.co/600x750/4fc3f7/000?text=SOS+Serum+3',
             'https://placehold.co/600x750/e1f5fe/000?text=SOS+Serum+4',
         ],
-        category: 'serum',
+        category: 'skincare',
+        subcategory: 'treatments',
     },
 
     // ========================================
@@ -698,7 +717,8 @@ export const PRODUCTS: ProductData[] = [
             { name: '10ml / 0.33 fl.oz.', price: 24.00 },
             { name: '40ml / 1.35 fl.oz.', price: 42.00 },
         ],
-        category: 'ampoule',
+        category: 'skincare',
+        subcategory: 'treatments',
     },
 
     // ========================================
@@ -729,7 +749,8 @@ export const PRODUCTS: ProductData[] = [
             'https://placehold.co/600x750/a5d6a7/000?text=Jojoba+Oil+3',
             'https://placehold.co/600x750/e8f5e9/000?text=Jojoba+Oil+4',
         ],
-        category: 'facial-oil',
+        category: 'skincare',
+        subcategory: 'treatments',
     },
 
     // ========================================
@@ -760,7 +781,8 @@ export const PRODUCTS: ProductData[] = [
             'https://placehold.co/600x750/ba68c8/fff?text=Eye+Cream+3',
             'https://placehold.co/600x750/f3e5f5/000?text=Eye+Cream+4',
         ],
-        category: 'eye-cream',
+        category: 'skincare',
+        subcategory: 'treatments',
     },
 
     // ========================================
@@ -791,7 +813,8 @@ export const PRODUCTS: ProductData[] = [
             'https://placehold.co/600x750/ff8a65/fff?text=Glow+Mask+3',
             'https://placehold.co/600x750/fbe9e7/000?text=Glow+Mask+4',
         ],
-        category: 'mask',
+        category: 'skincare',
+        subcategory: 'treatments',
     },
 
     // ========================================
@@ -822,7 +845,8 @@ export const PRODUCTS: ProductData[] = [
             'https://placehold.co/600x750/81c784/fff?text=Rosemary+Mask+3',
             'https://placehold.co/600x750/e8f5e9/000?text=Rosemary+Mask+4',
         ],
-        category: 'mask',
+        category: 'skincare',
+        subcategory: 'treatments',
     },
 ];
 
