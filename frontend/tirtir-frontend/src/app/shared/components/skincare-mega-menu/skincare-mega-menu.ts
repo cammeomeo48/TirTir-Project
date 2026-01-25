@@ -14,7 +14,7 @@ export class SkincareMegaMenuComponent {
     @Input() categories: MenuItem[] = [];
 
     get cleanseTonerItems() {
-        return this.categories.find(c => c.label === 'Cleanse & Tone')?.children || [];
+        return this.categories.find(c => c.label === 'Cleanse & Toner')?.children || [];
     }
 
     get treatmentsItems() {

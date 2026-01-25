@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ProductCard } from '../../shared/components/product-card/product-card';
 import { PRODUCTS, ProductData } from '../../core/constants/products.data';
+import { ProductService } from '../../core/services/product.service';
 
 @Component({
   selector: 'app-shop',
@@ -31,7 +32,7 @@ export class ShopComponent implements OnInit {
   productsPerPage = 12;
 
   // All products from data source
-  allProducts: ProductData[] = PRODUCTS;
+  allProducts: ProductData[] = [];
 
   // Display products (filtered & paginated)
   displayProducts: ProductData[] = [];
@@ -65,7 +66,10 @@ export class ShopComponent implements OnInit {
     { label: 'Anti-Aging', value: 'anti-aging', count: 0 },
   ];
 
-  constructor(private route: ActivatedRoute) { }
+  constructor(
+    private route: ActivatedRoute,
+    private productService: ProductService
+  ) { }
 
   ngOnInit(): void {
     this.isMakeupCollection = this.route.snapshot.routeConfig?.path === 'collections/makeup';
@@ -75,11 +79,15 @@ export class ShopComponent implements OnInit {
       this.collectionDescription = 'Discover TIRTIR makeup essentials for a long-lasting, luminous finish.';
     }
 
-    // Calculate counts
-    this.calculateCounts();
-
-    // Initial load
-    this.updateDisplayProducts();
+    // Load from API
+    this.productService.getProducts().subscribe({
+      next: (products) => {
+        this.allProducts = products;
+        this.calculateCounts();
+        this.updateDisplayProducts();
+      },
+      error: (err) => console.error('Failed to load products', err)
+    });
   }
 
   calculateCounts() {
@@ -95,7 +103,7 @@ export class ShopComponent implements OnInit {
     if (this.isMakeupCollection) {
       // Makeup categories: cushion, lip, fixer, primer
       const makeupCategories = ['cushion', 'lip', 'fixer', 'primer'];
-      filtered = filtered.filter(p => makeupCategories.includes(p.category));
+      filtered = filtered.filter(p => makeupCategories.includes(p.category)); // API must map this correctly
     }
 
     // Apply sorting

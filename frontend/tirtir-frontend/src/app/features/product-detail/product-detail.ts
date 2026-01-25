@@ -4,6 +4,7 @@ import { RouterModule, ActivatedRoute } from '@angular/router';
 import { BrandGalleryComponent } from '../../shared/components/brand-gallery/brand-gallery';
 import { CustomerReviewsComponent } from '../../shared/components/customer-reviews/customer-reviews';
 import { getProductBySlug, ProductData, PRODUCTS } from '../../core/constants/products.data';
+import { ProductService } from '../../core/services/product.service';
 
 @Component({
   selector: 'app-product-detail',
@@ -19,29 +20,30 @@ export class ProductDetailComponent implements OnInit {
   quantity = 1;
   activeAccordion: string | null = 'description';
 
-  constructor(private route: ActivatedRoute) { }
+  constructor(
+    private route: ActivatedRoute,
+    private productService: ProductService
+  ) { }
 
   ngOnInit() {
     this.route.params.subscribe(params => {
       const slug = params['slug'];
-      const foundProduct = getProductBySlug(slug);
 
-      if (foundProduct) {
-        this.product = foundProduct;
-        this.selectedImage = this.product.images[0];
-        if (this.product.shades && this.product.shades.length > 0) {
-          // Select a middle shade by default
-          const midIndex = Math.floor(this.product.shades.length / 2);
-          this.selectedShade = this.product.shades[midIndex].name;
+      this.productService.getProductDetail(slug).subscribe({
+        next: (data) => {
+          this.product = data;
+          this.selectedImage = this.product.images[0];
+          if (this.product.shades && this.product.shades.length > 0) {
+            // Select a middle shade by default
+            const midIndex = Math.floor(this.product.shades.length / 2);
+            this.selectedShade = this.product.shades[midIndex].name;
+          }
+        },
+        error: (err) => {
+          console.error('Product not found', err);
+          // Handle Not Found - maybe redirect or show error
         }
-      } else {
-        // Fallback to first product if not found
-        this.product = PRODUCTS[0];
-        this.selectedImage = this.product.images[0];
-        if (this.product.shades && this.product.shades.length > 0) {
-          this.selectedShade = this.product.shades[0].name;
-        }
-      }
+      });
     });
   }
 

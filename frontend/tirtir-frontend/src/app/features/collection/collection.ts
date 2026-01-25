@@ -1,9 +1,11 @@
+
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ProductCard } from '../../shared/components/product-card/product-card';
-import { PRODUCTS, ProductData } from '../../core/constants/products.data';
+import { ProductData } from '../../core/constants/products.data';
+import { ProductService } from '../../core/services/product.service';
 
 interface CategoryConfig {
     title: string;
@@ -94,7 +96,10 @@ export class CollectionComponent implements OnInit {
         },
     };
 
-    constructor(private route: ActivatedRoute) { }
+    constructor(
+        private route: ActivatedRoute,
+        private productService: ProductService
+    ) { }
 
     ngOnInit(): void {
         this.route.params.subscribe(params => {
@@ -106,24 +111,28 @@ export class CollectionComponent implements OnInit {
     loadProducts(): void {
         const config = this.categoryConfigs[this.collectionSlug];
 
-        if (config) {
-            this.collectionTitle = config.title;
-            this.collectionDescription = config.description;
+        // Fetch ALL products then filter client side (Simplest migration path for now)
+        // Ideally should iterate to backend filtering later
+        this.productService.getProducts().subscribe(fetchedProducts => {
+            if (config) {
+                this.collectionTitle = config.title;
+                this.collectionDescription = config.description;
 
-            // Filter products by slugs if provided, otherwise by categories
-            if (config.productSlugs && config.productSlugs.length > 0) {
-                this.products = PRODUCTS.filter(p => config.productSlugs!.includes(p.slug));
+                // Filter products by slugs if provided, otherwise by categories
+                if (config.productSlugs && config.productSlugs.length > 0) {
+                    this.products = fetchedProducts.filter(p => config.productSlugs!.includes(p.slug));
+                } else {
+                    this.products = fetchedProducts.filter(p => config.productCategories.includes(p.category));
+                }
             } else {
-                this.products = PRODUCTS.filter(p => config.productCategories.includes(p.category));
+                // Default to all products
+                this.products = fetchedProducts;
             }
-        } else {
-            // Default to all products
-            this.products = PRODUCTS;
-        }
 
-        // Reset pagination and update
-        this.currentPage = 1;
-        this.updatePagination();
+            // Reset pagination and update
+            this.currentPage = 1;
+            this.updatePagination();
+        });
     }
 
     updatePagination() {

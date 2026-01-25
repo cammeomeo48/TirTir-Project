@@ -35,3 +35,6 @@ async function start() {
 }
 
 start();
+// trigger restart
+// restart trigger 2
+// final alignment check restart

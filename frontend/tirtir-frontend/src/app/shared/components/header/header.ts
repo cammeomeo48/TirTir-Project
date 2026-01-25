@@ -48,4 +48,4 @@ export class HeaderComponent implements OnInit {
   onSkincareHover(show: boolean) {
     this.showSkincareMenu = show;
   }
-}
+}// trigger reload
