@@ -17,9 +17,7 @@ const ProductSchema = new mongoose.Schema({
     Gallery_Images: [String],
     Description_Images: [String],
 
-    // New Params for Filter
-    Skin_Type_Target: [String], // Changed to Array
-    Main_Concern: [String],     // Changed to Array
+    // Embedded Shades REMOVED (Stored in separate 'shades' collection)
 
     // Additional Fields
     Is_Best_Seller: { type: Boolean, default: false },

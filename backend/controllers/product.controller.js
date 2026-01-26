@@ -119,33 +119,58 @@ exports.getProductDetail = async (req, res) => {
     try {
         const param = req.params.id;
 
-        // 1. Try to find by Product_ID first (Fastest)
+        // Try to find by Product_ID first
         let product = await Product.findOne({ Product_ID: param });
 
-        // 2. If not found, try to find by Slug (Optimized)
+        // If not found, try to find by Name (derived from slug)
+        // Assume slug is kebab-case of Name
         if (!product) {
-            // Fetch minimal fields for ALL products to check slugs in memory
-            // This is faster than an unindexed Regex search for <10k items
-            const allProducts = await Product.find({}, 'Name Product_ID');
-            const found = allProducts.find(p => generateSlug(p.Name) === param);
-
-            if (found) {
-                product = await Product.findOne({ Product_ID: found.Product_ID });
-            }
+            // Convert slug back to approximate regex for Name
+            // e.g. "mask-fit-red-cushion" -> "Mask Fit Red Cushion" (case insensitive regex)
+            const nameRegex = param.split('-').join('.*');
+            product = await Product.findOne({ Name: { $regex: new RegExp(`^${nameRegex}$`, 'i') } });
         }
 
         if (!product) return res.status(404).json({ message: "Product not found" });
 
+        // 3. Fetch Shades from SEPARATE Collection (as per user requirement)
         const shades = await Shade.find({ Product_ID: product.Product_ID })
             .sort({ No: 1 });
 
-        // Map main product data
+        // 4. Map Data & Merge Images
         const mappedProduct = mapProductToFrontend(product);
 
-        // Return mapped product + shades
+        // MERGE LOGIC: Combine Product Gallery Images + Shade Images
+        // Start with Thumbnail
+        let allImages = [mappedProduct.Thumbnail_Images];
+
+        // Add Gallery Images
+        if (mappedProduct.images && mappedProduct.images.length > 0) {
+            // mappedProduct.images already includes Thumbnail + Gallery from helper, 
+            // but let's be explicit to avoid duplicates if helper changes.
+            // Actually currently helper returns [Thumb, ...Gallery].
+            allImages = [...mappedProduct.images];
+        }
+
+        // Add Shade Images (if not already present)
+        if (shades && shades.length > 0) {
+            shades.forEach(s => {
+                if (s.Shade_Image && !allImages.includes(s.Shade_Image)) {
+                    allImages.push(s.Shade_Image);
+                }
+            });
+        }
+
+        // Return merged data
         res.json({
             ...mappedProduct,
-            shades,
+            images: allImages, // Overwrite with fully merged list
+            shades: shades.map(s => ({
+                name: s.Shade_Name,
+                color: s.Hex_Code,
+                image: s.Shade_Image,
+                // Include other shade details if needed by frontend
+            }))
         });
     } catch (err) {
         res.status(500).json({ message: err.message });

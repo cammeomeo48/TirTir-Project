@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map, of } from 'rxjs';
-import { ProductData } from '../constants/products.data';
+import { ProductData, PRODUCTS, getProductBySlug } from '../constants/products.data';
 
 export interface BackendProduct {
   Product_ID: string;
@@ -73,14 +73,13 @@ export class ProductService {
       images: bp.images && bp.images.length > 0
         ? bp.images.map(fixUrl)
         : [fixUrl(bp.Thumbnail_Images)],
-      image: fixUrl(bp.Thumbnail_Images),
       shades: bp.shades?.map(s => ({
-        name: s.Name || s.Shade_Name,
-        color: s.Color_Code || '#000000',
-        image: fixUrl(s.Image_Url)
+        name: s.name || s.Shade_Name || s.Name,
+        color: s.color || s.Hex_Code || s.Color_Code || '#000000',
+        image: fixUrl(s.image || s.Image_Url || s.Shade_Image)
       })),
       sizes: [{ name: 'Standard', price: bp.Price }],
-      // Improved Category Mapping
+      // Smart Category Mapping from DB Data
       category: ((): any => {
         const cat = bp.Category ? bp.Category.toLowerCase() : '';
         if (cat.includes('cushion')) return 'cushion';
@@ -97,7 +96,7 @@ export class ProductService {
         if (cat.includes('eye')) return 'eye-cream';
         if (cat.includes('ampoule')) return 'ampoule';
 
-        // Fallback based on ID as requested by user (MK = Makeup)
+        // Fallback: Check ID for generic Makeup
         if (bp.Product_ID && bp.Product_ID.toUpperCase().includes('MK')) return 'makeup';
 
         return 'skincare';

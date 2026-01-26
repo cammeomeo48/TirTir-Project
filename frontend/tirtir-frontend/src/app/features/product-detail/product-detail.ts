@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute } from '@angular/router';
 import { BrandGalleryComponent } from '../../shared/components/brand-gallery/brand-gallery';
 import { CustomerReviewsComponent } from '../../shared/components/customer-reviews/customer-reviews';
-import { ProductData } from '../../core/constants/products.data';
+import { getProductBySlug, ProductData, PRODUCTS } from '../../core/constants/products.data';
 import { ProductService } from '../../core/services/product.service';
 
 @Component({
@@ -51,8 +51,14 @@ export class ProductDetailComponent implements OnInit {
     this.selectedImage = img;
   }
 
-  selectShade(shade: string) {
-    this.selectedShade = shade;
+  selectShade(shadeName: string) {
+    this.selectedShade = shadeName;
+
+    // Find the shade object to get its image
+    const shadeObj = this.product.shades?.find(s => s.name === shadeName);
+    if (shadeObj && shadeObj.image) {
+      this.selectedImage = shadeObj.image;
+    }
   }
 
   increaseQty() {

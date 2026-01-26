@@ -42,24 +42,24 @@ export class CollectionComponent implements OnInit {
         'makeup': {
             title: 'MAKEUP',
             description: 'Discover TIRTIR makeup essentials for a long-lasting, luminous finish.',
-            productCategories: ['cushion', 'lip', 'makeup', 'primer', 'fixer', 'tint', 'balm'],
+            productCategories: ['cushion', 'lip', 'makeup'],
         },
         // Sub-categories - Face
-        'face-makeup': {
+        'face': {
             title: 'FACE',
             description: 'Foundation, cushion, and base makeup products.',
-            productCategories: ['cushion', 'primer', 'fixer'],
+            productCategories: ['cushion', 'makeup'],
         },
-        'lip-makeup': {
+        'lip': {
             title: 'LIP',
             description: 'Lip tints, balms, and glosses for every mood.',
-            productCategories: ['lip', 'tint', 'balm'],
+            productCategories: ['lip'],
         },
         // Sub-categories - Skincare
-        'cleansers-toners': {
+        'cleanse-toner': {
             title: 'CLEANSE & TONER',
             description: 'Gentle cleansers and hydrating toners for clean, balanced skin.',
-            productCategories: ['cleanser', 'toner', 'foam'],
+            productCategories: ['cleanser', 'toner'],
         },
         'treatments': {
             title: 'TREATMENTS',
@@ -69,7 +69,7 @@ export class CollectionComponent implements OnInit {
         'moisturize-sunscreen': {
             title: 'MOISTURIZE & SUNSCREEN',
             description: 'Hydrating creams and protective sunscreens for healthy skin.',
-            productCategories: ['cream', 'sunscreen'],
+            productCategories: ['cream', 'sunscreen', 'gift-set'],
         },
     };
 

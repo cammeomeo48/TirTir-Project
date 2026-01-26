@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { MENU_ITEMS } from '../constants/menu.data';
-import { ProductData } from '../constants/products.data';
+import { PRODUCTS, ProductData } from '../constants/products.data';
 
 export interface MenuItem {
     _id?: string;

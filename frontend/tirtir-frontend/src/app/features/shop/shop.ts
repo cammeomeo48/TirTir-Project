@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ProductCard } from '../../shared/components/product-card/product-card';
-import { ProductData } from '../../core/constants/products.data';
+import { PRODUCTS, ProductData } from '../../core/constants/products.data';
 import { ProductService } from '../../core/services/product.service';
 
 @Component({

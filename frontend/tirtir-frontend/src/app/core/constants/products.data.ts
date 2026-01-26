@@ -19,11 +19,16 @@ export interface ProductData {
     howToUse: string;
     ingredients: string;
     images: string[];
-    image?: string; // For compatibility with ProductCard
     shades?: ProductShade[];
     sizes?: { name: string; price: number }[];
     category: 'makeup' | 'skincare' | 'other';
     subcategory?: 'face' | 'lip' | 'cleanse-tone' | 'treatments' | 'moisturize-sunscreen';
 }
 
+export const PRODUCTS: ProductData[] = [];
 
+// Helper function to find product by slug
+// @deprecated - Use ProductService.getProductDetail(slug) instead
+export function getProductBySlug(slug: string): ProductData | undefined {
+    return undefined;
+}

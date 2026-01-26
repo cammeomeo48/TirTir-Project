@@ -38,13 +38,30 @@
 
 .gallery-main {
     position: relative;
-    background: #f5f5f5;
+    background: #fff;
+    /* Changed to white or keep gray if preferred, user said "khung image", usually white looks cleaner or light gray */
+    background-color: #f5f5f5;
     margin-bottom: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    width: 500px;
+    /* Fixed width as requested */
+    height: 500px;
+    /* Fixed height to match */
+    margin-left: auto;
+    margin-right: auto;
+    border-radius: 8px;
+    /* Soften edges */
 }
 
 .main-image {
-    width: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
     height: auto;
+    object-fit: contain;
     display: block;
 }
 
