@@ -37,62 +37,39 @@ export class CollectionComponent implements OnInit {
         'skincare': {
             title: 'SKINCARE',
             description: 'Discover TIRTIR skincare essentials for healthy, radiant skin.',
-            productCategories: ['cleanser', 'toner', 'serum', 'ampoule', 'cream', 'sunscreen', 'facial-oil', 'eye-cream', 'mask', 'gift-set'],
+            productCategories: ['cleanser', 'toner', 'serum', 'ampoule', 'cream', 'sunscreen', 'facial-oil', 'eye-cream', 'mask', 'gift-set', 'skincare'],
         },
         'makeup': {
             title: 'MAKEUP',
             description: 'Discover TIRTIR makeup essentials for a long-lasting, luminous finish.',
-            productCategories: ['cushion', 'lip', 'makeup'],
-            productSlugs: [
-                'mask-fit-red-cushion', 'mask-fit-all-cover-cushion', 'mask-fit-aura-cushion',
-                'mask-fit-tone-up-essence', 'mask-fit-make-up-fixer',
-                'waterism-glow-melting-balm', 'waterism-glow-tint', 'mini-waterism-glow-tint', 'water-mellow-lip-balm'
-            ],
+            productCategories: ['cushion', 'lip', 'makeup', 'primer', 'fixer', 'tint', 'balm'],
         },
         // Sub-categories - Face
-        'face': {
+        'face-makeup': {
             title: 'FACE',
             description: 'Foundation, cushion, and base makeup products.',
-            productCategories: ['cushion', 'makeup'],
-            productSlugs: [
-                'mask-fit-red-cushion', 'mask-fit-all-cover-cushion', 'mask-fit-aura-cushion',
-                'mask-fit-tone-up-essence', 'mask-fit-make-up-fixer'
-            ],
+            productCategories: ['cushion', 'primer', 'fixer'],
         },
-        'lip': {
+        'lip-makeup': {
             title: 'LIP',
             description: 'Lip tints, balms, and glosses for every mood.',
-            productCategories: ['lip'],
-            productSlugs: [
-                'waterism-glow-melting-balm', 'waterism-glow-tint', 'mini-waterism-glow-tint', 'water-mellow-lip-balm'
-            ],
+            productCategories: ['lip', 'tint', 'balm'],
         },
         // Sub-categories - Skincare
-        'cleanse-toner': {
+        'cleansers-toners': {
             title: 'CLEANSE & TONER',
             description: 'Gentle cleansers and hydrating toners for clean, balanced skin.',
-            productCategories: ['cleanser', 'toner'],
-            productSlugs: [
-                'hydro-boost-enzyme-cleansing-balm', 'milk-creamy-foam-cleanser',
-                'milk-skin-toner', 'matcha-skin-toner'
-            ],
+            productCategories: ['cleanser', 'toner', 'foam'],
         },
         'treatments': {
             title: 'TREATMENTS',
             description: 'Serums, ampoules, and targeted treatments for skin concerns.',
             productCategories: ['serum', 'ampoule', 'facial-oil', 'eye-cream', 'mask'],
-            productSlugs: [
-                'sos-serum', 'ceramic-milk-ampoule', 'organic-jojoba-oil',
-                'collagen-lifting-eye-cream', 'collagen-core-glow-mask', 'dermatir-pure-rosemary-calming-mask'
-            ],
         },
         'moisturize-sunscreen': {
             title: 'MOISTURIZE & SUNSCREEN',
             description: 'Hydrating creams and protective sunscreens for healthy skin.',
-            productCategories: ['cream', 'sunscreen', 'gift-set'],
-            productSlugs: [
-                'ceramic-cream', 'matcha-calming-cream', 'hydro-uv-shield-sunscreen', 'matcha-calming-duo-set'
-            ],
+            productCategories: ['cream', 'sunscreen'],
         },
     };
 
@@ -111,9 +88,8 @@ export class CollectionComponent implements OnInit {
     loadProducts(): void {
         const config = this.categoryConfigs[this.collectionSlug];
 
-        // Fetch ALL products then filter client side (Simplest migration path for now)
-        // Ideally should iterate to backend filtering later
-        this.productService.getProducts().subscribe(fetchedProducts => {
+        // Fetch ALL products for client-side filtering (limit=1000)
+        this.productService.getProducts({ limit: 1000 }).subscribe(fetchedProducts => {
             if (config) {
                 this.collectionTitle = config.title;
                 this.collectionDescription = config.description;

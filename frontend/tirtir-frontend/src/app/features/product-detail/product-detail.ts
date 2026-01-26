@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute } from '@angular/router';
 import { BrandGalleryComponent } from '../../shared/components/brand-gallery/brand-gallery';
 import { CustomerReviewsComponent } from '../../shared/components/customer-reviews/customer-reviews';
-import { getProductBySlug, ProductData, PRODUCTS } from '../../core/constants/products.data';
+import { ProductData } from '../../core/constants/products.data';
 import { ProductService } from '../../core/services/product.service';
 
 @Component({

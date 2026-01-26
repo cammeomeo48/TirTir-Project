@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ProductCard } from '../../shared/components/product-card/product-card';
-import { PRODUCTS, ProductData } from '../../core/constants/products.data';
+import { ProductData } from '../../core/constants/products.data';
 import { ProductService } from '../../core/services/product.service';
 
 @Component({
@@ -80,7 +80,7 @@ export class ShopComponent implements OnInit {
     }
 
     // Load from API
-    this.productService.getProducts().subscribe({
+    this.productService.getProducts({ limit: 1000 }).subscribe({
       next: (products) => {
         this.allProducts = products;
         this.calculateCounts();

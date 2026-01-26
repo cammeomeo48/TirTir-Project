@@ -92,7 +92,7 @@ exports.getAllProducts = async (req, res) => {
 
         // 3) Pagination
         const pageNum = Math.max(parseInt(page, 10) || 1, 1);
-        const limitNum = Math.min(Math.max(parseInt(limit, 10) || 12, 1), 100);
+        const limitNum = Math.max(parseInt(limit, 10) || 12, 1);
         const skip = (pageNum - 1) * limitNum;
 
         // 4) Execute
@@ -119,16 +119,19 @@ exports.getProductDetail = async (req, res) => {
     try {
         const param = req.params.id;
 
-        // Try to find by Product_ID first
+        // 1. Try to find by Product_ID first (Fastest)
         let product = await Product.findOne({ Product_ID: param });
 
-        // If not found, try to find by Name (derived from slug)
-        // Assume slug is kebab-case of Name
+        // 2. If not found, try to find by Slug (Optimized)
         if (!product) {
-            // Convert slug back to approximate regex for Name
-            // e.g. "mask-fit-red-cushion" -> "Mask Fit Red Cushion" (case insensitive regex)
-            const nameRegex = param.split('-').join('.*');
-            product = await Product.findOne({ Name: { $regex: new RegExp(`^${nameRegex}$`, 'i') } });
+            // Fetch minimal fields for ALL products to check slugs in memory
+            // This is faster than an unindexed Regex search for <10k items
+            const allProducts = await Product.find({}, 'Name Product_ID');
+            const found = allProducts.find(p => generateSlug(p.Name) === param);
+
+            if (found) {
+                product = await Product.findOne({ Product_ID: found.Product_ID });
+            }
         }
 
         if (!product) return res.status(404).json({ message: "Product not found" });
@@ -139,7 +142,7 @@ exports.getProductDetail = async (req, res) => {
         // Map main product data
         const mappedProduct = mapProductToFrontend(product);
 
-        // Return mapped product + shades (shades are an additional detail requested by getProductDetail)
+        // Return mapped product + shades
         res.json({
             ...mappedProduct,
             shades,

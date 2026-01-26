@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { Observable, map, of } from 'rxjs';
 import { ProductData } from '../constants/products.data';
 
 export interface BackendProduct {
@@ -48,6 +48,15 @@ export class ProductService {
   }
 
   private mapToProductData(bp: BackendProduct): ProductData {
+    // Helper to ensure full URL for images
+    const fixUrl = (url: string) => {
+      if (!url) return '';
+      if (url.startsWith('http')) return url;
+      // Prepend backend URL. Remove leading slash if present to avoid double slashes.
+      const cleanUrl = url.startsWith('/') ? url.substring(1) : url;
+      return `http://localhost:5000/${cleanUrl}`;
+    };
+
     return {
       id: bp.Product_ID,
       slug: bp.slug || bp.Product_ID.toLowerCase(), // Fallback
@@ -61,11 +70,39 @@ export class ProductService {
       keyFeatures: [], // Mock or empty
       howToUse: bp.How_To_Use || 'Apply gently to skin.',
       ingredients: 'See packaging for details.',
-      images: bp.images && bp.images.length > 0 ? bp.images : [bp.Thumbnail_Images],
-      shades: bp.shades?.map(s => ({ name: s.Name || s.Shade_Name, color: s.Color_Code || '#000000', image: s.Image_Url })),
+      images: bp.images && bp.images.length > 0
+        ? bp.images.map(fixUrl)
+        : [fixUrl(bp.Thumbnail_Images)],
+      image: fixUrl(bp.Thumbnail_Images),
+      shades: bp.shades?.map(s => ({
+        name: s.Name || s.Shade_Name,
+        color: s.Color_Code || '#000000',
+        image: fixUrl(s.Image_Url)
+      })),
       sizes: [{ name: 'Standard', price: bp.Price }],
-      category: bp.Is_Skincare ? 'skincare' : 'makeup',
-      subcategory: 'face', // Default fallback, logic needs to be smarter if possible or inferred from category slug
+      // Improved Category Mapping
+      category: ((): any => {
+        const cat = bp.Category ? bp.Category.toLowerCase() : '';
+        if (cat.includes('cushion')) return 'cushion';
+        if (cat.includes('lip')) return 'lip';
+        if (cat.includes('toner')) return 'toner';
+        if (cat.includes('serum')) return 'serum';
+        if (cat.includes('foam') || cat.includes('cleanser')) return 'cleanser';
+        if (cat.includes('cream')) return 'cream';
+        if (cat.includes('sunscreen')) return 'sunscreen';
+        if (cat.includes('mask')) return 'mask';
+        if (cat.includes('primer')) return 'primer';
+        if (cat.includes('fixer')) return 'fixer';
+        if (cat.includes('oil')) return 'facial-oil';
+        if (cat.includes('eye')) return 'eye-cream';
+        if (cat.includes('ampoule')) return 'ampoule';
+
+        // Fallback based on ID as requested by user (MK = Makeup)
+        if (bp.Product_ID && bp.Product_ID.toUpperCase().includes('MK')) return 'makeup';
+
+        return 'skincare';
+      })(),
+      subcategory: 'face', // Default fallback
     };
   }
 }
