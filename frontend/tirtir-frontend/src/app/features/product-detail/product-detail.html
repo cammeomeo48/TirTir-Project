@@ -9,7 +9,7 @@
             <!-- Left: Image Gallery -->
             <div class="gallery">
                 <div class="gallery-main">
-                    <img [src]="selectedImage" [alt]="product.name" class="main-image">
+                    <img [src]="selectedImage" [alt]="product.name" class="main-image" fetchpriority="high">
                     <span class="sale-badge" *ngIf="product.originalPrice">SALE</span>
                 </div>
                 <div class="gallery-thumbs">
@@ -117,4 +117,4 @@
 <app-brand-gallery></app-brand-gallery>
 
 <!-- Customer Reviews Section -->
-<app-customer-reviews [productName]="product.name"></app-customer-reviews>
+<app-customer-reviews *ngIf="product" [productName]="product.name"></app-customer-reviews>
