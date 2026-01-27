@@ -32,3 +32,4 @@ export const PRODUCTS: ProductData[] = [];
 export function getProductBySlug(slug: string): ProductData | undefined {
     return undefined;
 }
+``
