@@ -9,7 +9,7 @@ import { ProductService } from '../../core/services/product.service';
 @Component({
   selector: 'app-product-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, BrandGalleryComponent, CustomerReviewsComponent],
+  imports: [CommonModule, RouterModule, CustomerReviewsComponent],
   templateUrl: './product-detail.html',
   styleUrl: './product-detail.css',
 })

@@ -113,8 +113,20 @@
     </div>
 </div>
 
-<!-- Brand Gallery Section -->
-<app-brand-gallery></app-brand-gallery>
+<!-- Visual Story / Description Images Section -->
+<section class="product-visual-story" *ngIf="product && product.descriptionImages.length">
+    <div class="container">
+        <!-- Optional Title if needed, or just clean images like user reference -->
+        <div class="visual-stack">
+            <img *ngFor="let img of product.descriptionImages" [src]="img" alt="Product Detail Visual"
+                class="w-full h-auto block" loading="lazy">
+        </div>
+    </div>
+</section>
+
+<!-- Brand Gallery Section (Only show if NO description images, or move below) -->
+<!-- User replaced this concept with description images for this view -->
+<!-- <app-brand-gallery></app-brand-gallery> -->
 
 <!-- Customer Reviews Section -->
 <app-customer-reviews *ngIf="product" [productName]="product.name"></app-customer-reviews>

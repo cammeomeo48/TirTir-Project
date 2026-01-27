@@ -15,7 +15,9 @@ export interface BackendProduct {
   images?: string[];
   category?: string;
   shades?: any[];
-  // Add other backend fields here
+  // Matches backend response key from product.controller.js
+  descriptionImages?: string[];
+  Description_Images?: string[]; // Deprecated/Fallback
   Full_Description?: string;
   How_To_Use?: string;
 }
@@ -73,6 +75,9 @@ export class ProductService {
       images: bp.images && bp.images.length > 0
         ? bp.images.map(fixUrl)
         : [fixUrl(bp.Thumbnail_Images)],
+      descriptionImages: bp.descriptionImages
+        ? bp.descriptionImages.map(fixUrl)
+        : (bp.Description_Images ? bp.Description_Images.map(fixUrl) : []),
       shades: bp.shades?.map(s => ({
         name: s.name || s.Shade_Name || s.Name,
         color: s.color || s.Hex_Code || s.Color_Code || '#000000',

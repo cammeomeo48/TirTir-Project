@@ -12,6 +12,10 @@ const generateSlug = (name) => {
 // STRICT DATA MAPPING LAYER
 // Prevents DB schema changes from breaking Frontend
 const mapProductToFrontend = (product) => {
+    // DEBUG LOG
+    console.log(`[DEBUG] Mapping Product: ${product.Product_ID}`);
+    console.log(`[DEBUG] Description_Images from DB:`, product.Description_Images);
+
     return {
         id: product.Product_ID, // Map Product_ID to 'id' for easier FE consumption if needed, or keep strictly Product_ID
         Product_ID: product.Product_ID, // Keep original for compatibility
@@ -23,6 +27,7 @@ const mapProductToFrontend = (product) => {
         slug: generateSlug(product.Name), // Dynamic Slug Generation
         description: product.Description_Short, // Added description for Detail page
         images: [product.Thumbnail_Images, ...(product.Gallery_Images || [])], // Map images array for Detail page
+        descriptionImages: product.Description_Images || [], // Added description images
         category: product.Category_Slug || product.Category, // Generic category field
         // Add any other fields if FE requests them later. 
     };

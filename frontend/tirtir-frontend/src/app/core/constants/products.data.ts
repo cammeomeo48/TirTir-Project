@@ -19,6 +19,7 @@ export interface ProductData {
     howToUse: string;
     ingredients: string;
     images: string[];
+    descriptionImages: string[];
     shades?: ProductShade[];
     sizes?: { name: string; price: number }[];
     category: 'makeup' | 'skincare' | 'other';
