@@ -165,8 +165,19 @@ textarea:focus {
 .container {
   width: 100%;
   max-width: var(--container-max);
-  margin: 0 auto;
-  padding: 0 40px;
+  margin-inline: auto;
+  padding-inline: 24px;
+}
+
+/* App Root Constraints for Desktop Stability */
+app-root {
+  display: block;
+  min-width: 1024px; /* Prevent crushing on small windows */
+}
+
+.app-content {
+  min-height: calc(100vh - var(--header-height));
+  position: relative;
 }
 
 @media (max-width: 768px) {

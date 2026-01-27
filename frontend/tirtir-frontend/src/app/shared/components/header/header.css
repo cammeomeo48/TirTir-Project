@@ -39,12 +39,16 @@
     max-width: 1400px;
     margin: 0 auto;
     padding: 0 24px;
-    height: 60px;
+    height: var(--header-height);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 80px;
     width: 100%;
+}
+
+.header-left,
+.header-actions {
+    flex: 0 0 auto;
 }
 
 .logo-text {
@@ -58,14 +62,17 @@
 /* Make Nav full height to eliminate vertical gaps for hover */
 .main-nav {
     height: 100%;
-    position: static; /* Static so dropdown positions relative to header-wrapper */
+    position: static;
+    /* Static so dropdown positions relative to header-wrapper */
 }
 
-/* Navigation - CENTER */
+/* Navigation - CENTER (Flexbox approach) */
 .main-nav {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
+    flex: 1 1 auto;
+    display: flex;
+    justify-content: center;
+    height: 100%;
+    position: static;
 }
 
 .nav-list {
@@ -92,9 +99,11 @@
     top: 100%;
     left: 0;
     width: 100vw;
-    height: 40px; /* Chiều cao vùng đệm */
+    height: 40px;
+    /* Chiều cao vùng đệm */
     background: transparent;
-    z-index: 19; /* Thấp hơn dropdown nhưng cao hơn nội dung khác */
+    z-index: 19;
+    /* Thấp hơn dropdown nhưng cao hơn nội dung khác */
 }
 
 .main-nav a {
@@ -167,9 +176,9 @@
     position: absolute;
     top: 100%;
     left: 0;
-    width: 100vw; 
+    width: 100vw;
     background-color: #fff;
-    margin-top: -10px; 
+    margin-top: -10px;
     padding: 40px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
     border-radius: 0 0 8px 8px;
@@ -246,7 +255,7 @@
     color: #000;
 }
 
-.main-nav li:hover > .dropdown {
+.main-nav li:hover>.dropdown {
     display: block;
 }
 
@@ -280,7 +289,7 @@
     position: absolute;
     top: -5px;
     right: -5px;
-    background-color: #d32f2f; 
+    background-color: #d32f2f;
     color: #fff;
     font-size: 9px;
     font-weight: 600;
@@ -309,7 +318,7 @@
     }
 
     .main-nav {
-        display: none; 
+        display: none;
     }
 
     .dropdown {

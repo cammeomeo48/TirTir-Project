@@ -6,11 +6,7 @@
     display: block;
 }
 
-.container {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 0 24px;
-}
+/* .container uses global styles */
 
 .section {
     padding: 80px 0;
@@ -22,7 +18,10 @@
 
 .hero {
     position: relative;
-    height: 600px;
+    position: relative;
+    min-height: 60vh;
+    /* Responsive height */
+    display: flex;
     display: flex;
     align-items: center;
     justify-content: center;
