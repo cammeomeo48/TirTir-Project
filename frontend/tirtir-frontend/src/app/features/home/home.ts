@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ProductCard } from '../../shared/components/product-card/product-card';
@@ -13,11 +13,13 @@ import { ProductService } from '../../core/services/product.service';
   styleUrl: './home.css',
 })
 export class HomeComponent {
+  private productService = inject(ProductService);
+
   bestSellers: any[] = [];
   newArrivals: any[] = [];
   trending: any[] = [];
 
-  constructor(private productService: ProductService) { }
+  constructor() { }
 
   ngOnInit() {
     this.loadBestSellers();

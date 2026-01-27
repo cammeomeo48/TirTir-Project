@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute } from '@angular/router';
 import { BrandGalleryComponent } from '../../shared/components/brand-gallery/brand-gallery';
@@ -14,16 +14,16 @@ import { ProductService } from '../../core/services/product.service';
   styleUrl: './product-detail.css',
 })
 export class ProductDetailComponent implements OnInit {
+  private route = inject(ActivatedRoute);
+  private productService = inject(ProductService);
+
   product!: ProductData;
   selectedImage: string = '';
   selectedShade: string = '';
   quantity = 1;
   activeAccordion: string | null = 'description';
 
-  constructor(
-    private route: ActivatedRoute,
-    private productService: ProductService
-  ) { }
+  constructor() { }
 
   ngOnInit() {
     this.route.params.subscribe(params => {

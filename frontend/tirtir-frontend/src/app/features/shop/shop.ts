@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -14,6 +14,9 @@ import { ProductService } from '../../core/services/product.service';
   styleUrl: './shop.css',
 })
 export class ShopComponent implements OnInit {
+  private route = inject(ActivatedRoute);
+  private productService = inject(ProductService);
+
   isMakeupCollection = false;
   collectionTitle = 'SHOP ALL';
   collectionDescription = 'Discover all TIRTIR products.';
@@ -66,10 +69,7 @@ export class ShopComponent implements OnInit {
     { label: 'Anti-Aging', value: 'anti-aging', count: 0 },
   ];
 
-  constructor(
-    private route: ActivatedRoute,
-    private productService: ProductService
-  ) { }
+  constructor() { }
 
   ngOnInit(): void {
     this.isMakeupCollection = this.route.snapshot.routeConfig?.path === 'collections/makeup';

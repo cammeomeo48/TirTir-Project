@@ -1,9 +1,10 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { MenuItem, MenuService } from '../../../core/services/menu.service';
 import { MakeupMegaMenuComponent } from '../makeup-mega-menu/makeup-mega-menu';
 import { SkincareMegaMenuComponent } from '../skincare-mega-menu/skincare-mega-menu';
+
+import { CommonModule } from '@angular/common'; // Ensure CommonModule is imported
 
 @Component({
   selector: 'app-header',
@@ -13,14 +14,15 @@ import { SkincareMegaMenuComponent } from '../skincare-mega-menu/skincare-mega-m
   styleUrl: './header.css',
 })
 export class HeaderComponent implements OnInit {
+  // Use inject() pattern
+  private menuService = inject(MenuService);
+  private cdr = inject(ChangeDetectorRef);
+
   menuItems: MenuItem[] = [];
   showMakeupMenu = false;
   showSkincareMenu = false;
 
-  constructor(
-    private menuService: MenuService,
-    private cdr: ChangeDetectorRef
-  ) { }
+  constructor() { }
 
   ngOnInit() {
     this.menuService.getMenuItems().subscribe({
