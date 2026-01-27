@@ -1,3 +1,4 @@
+
 export interface ProductShade {
     name: string;
     color: string;
@@ -26,6 +27,8 @@ export interface ProductData {
 
 export const PRODUCTS: ProductData[] = [];
 
+// Helper function to find product by slug
+// @deprecated - Use ProductService.getProductDetail(slug) instead
 export function getProductBySlug(slug: string): ProductData | undefined {
     return undefined;
 }
