@@ -8,6 +8,9 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key_here';
 // Register Controller
 exports.register = async (req, res) => {
     try {
+        if (!req.body) {
+            return res.status(400).json({ message: "Request body is empty" });
+        }
         const { name, email, password } = req.body;
 
         // Validation

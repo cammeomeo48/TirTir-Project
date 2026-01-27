@@ -8,11 +8,13 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 const shadeRoutes = require("./routes/shade.routes");
 const productRoutes = require("./routes/product.routes");
 const menuRoutes = require("./routes/menu.routes");
 
+app.get("/", (req, res) => res.send("API Running"));
 app.get("/api/health", (req, res) => res.json({ ok: true, msg: "alive" }));
 
 app.use("/api/shades", shadeRoutes);
