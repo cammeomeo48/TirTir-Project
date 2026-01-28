@@ -22,6 +22,7 @@ app.use("/api/products", productRoutes);
 app.use("/api/menus", menuRoutes);
 app.use("/api/auth", require("./routes/auth.routes"));
 app.use("/api/cart", require("./routes/cart.routes"));
+app.use("/api/chat", require("./routes/chat.routes"));
 app.use('/assets', express.static(path.join(__dirname, '../frontend/tirtir-frontend/public/assets')));
 
 const PORT = process.env.PORT || 5000;
