@@ -22,9 +22,10 @@
 
 .pdp-layout {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 60px;
     align-items: start;
+    width: 100%;
 }
 
 /* =====================================================
@@ -34,6 +35,8 @@
 .gallery {
     position: sticky;
     top: 100px;
+    width: 100%;
+    min-width: 0;
 }
 
 .gallery-main {
@@ -47,6 +50,7 @@
     align-items: center;
     overflow: hidden;
     width: 500px;
+    max-width: 100%;
     /* Fixed width as requested */
     height: 500px;
     /* Fixed height to match */
@@ -109,6 +113,11 @@
 /* =====================================================
    PRODUCT INFO
    ===================================================== */
+
+.product-info {
+    width: 100%;
+    min-width: 0;
+}
 
 .info-header {
     margin-bottom: 24px;

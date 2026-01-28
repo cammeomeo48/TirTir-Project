@@ -169,16 +169,16 @@
    Only affects Skincare, does NOT affect Makeup
    ===================================================== */
 .nav-skincare {
-    position: relative;
+    position: static;
 }
 
 .nav-skincare app-skincare-mega-menu ::ng-deep .mega-menu {
     position: absolute;
     top: 100%;
-    left: 0;
+    left: 50%;
     width: 100vw;
     background-color: #fff;
-    margin-top: -10px;
+    margin-top: 0;
     padding: 40px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
     border-radius: 0 0 8px 8px;
@@ -188,14 +188,14 @@
     /* Hidden by default */
     opacity: 0;
     visibility: hidden;
-    transform: translateY(10px);
+    transform: translateX(-50%) translateY(10px);
     transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
 }
 
 .nav-skincare app-skincare-mega-menu.visible ::ng-deep .mega-menu {
     opacity: 1;
     visibility: visible;
-    transform: translateY(0);
+    transform: translateX(-50%) translateY(0);
 }
 
 .dropdown-content {
