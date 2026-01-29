@@ -44,7 +44,7 @@ MONGO_URI=mongodb+srv://<username>:<password>@cluster0....mongodb.net/TirTir-Pro
 
 4. Start the Server:
 npm run dev
--> Success: You should see Server running on port 5000 and MongoDB Connected.
+-> Success: You should see Server running on port 5000 and MongoDB Connected.nn
 
 ### Step 3: Frontend Setup (Client)
 - Keep the Backend terminal running. Open a new terminal window.

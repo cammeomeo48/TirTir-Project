@@ -1,0 +1,26 @@
+<div class="shade-finder-container">
+    <div class="camera-section">
+        <h2>Virtual Shade Finder</h2>
+        
+        <div class="camera-viewport" *ngIf="isCameraActive">
+            <video [srcObject]="stream" autoplay playsinline></video>
+        </div>
+
+        <div class="placeholder" *ngIf="!isCameraActive">
+            <p>Click below to start the camera and find your perfect shade</p>
+        </div>
+
+        <div class="controls">
+            <button class="btn-primary" *ngIf="!isCameraActive" (click)="startCamera()">
+                Start Camera
+            </button>
+            <button class="btn-secondary" *ngIf="isCameraActive" (click)="stopCamera()">
+                Stop Camera
+            </button>
+        </div>
+
+        <div class="error-message" *ngIf="error">
+            {{ error }}
+        </div>
+    </div>
+</div>

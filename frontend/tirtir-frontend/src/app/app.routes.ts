@@ -5,12 +5,15 @@ import { ProductDetailComponent } from './features/product-detail/product-detail
 import { MakeupComponent } from './features/makeup/makeup';
 import { CushionComponent } from './features/cushion/cushion';
 import { CollectionComponent } from './features/collection/collection';
+import { ShadeFinderComponent } from './features/shade-finder/shade-finder';
 
 export const routes: Routes = [
     { path: '', component: HomeComponent },
     { path: 'shop', component: ShopComponent },
     // Collection pages (category-based product listings)
     { path: 'collections/:slug', component: CollectionComponent },
+    // Virtual Services (Shade Finder)
+    { path: 'virtual-services', component: ShadeFinderComponent },
     // Legacy routes for backward compatibility
     { path: 'makeup/cushions', component: CushionComponent },
     // Product detail page
