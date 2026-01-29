@@ -3,6 +3,7 @@ const router = express.Router();
 const shadeController = require("../controllers/shade.controller");
 
 router.get("/", shadeController.getShades);
+router.post("/match", shadeController.findBestMatch);
 router.get("/:shadeId", shadeController.getShadeById);
 
 module.exports = router;

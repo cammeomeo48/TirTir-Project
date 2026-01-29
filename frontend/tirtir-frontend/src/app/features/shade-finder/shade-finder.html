@@ -1,26 +1,135 @@
 <div class="shade-finder-container">
-    <div class="camera-section">
-        <h2>Virtual Shade Finder</h2>
+    <h2>Virtual Shade Finder</h2>
+    
+    <div class="camera-container">
+        <video #videoElement autoplay playsinline></video>
+        <canvas #canvasElement class="hidden"></canvas>
         
-        <div class="camera-viewport" *ngIf="isCameraActive">
-            <video [srcObject]="stream" autoplay playsinline></video>
+        <!-- ROI Indicator (Follows Face) -->
+        <div class="overlay" *ngIf="faceTracker.isFaceDetected() && faceTracker.facePoints(); let points">
+            <!-- 5 Points Scanner -->
+            
+            <!-- Forehead: Increased Size -->
+            <div class="roi-container forehead"
+                 [style.left.%]="(1 - points.forehead.x) * 100"
+                 [style.top.%]="points.forehead.y * 100">
+                <div class="scanner-ring"></div>
+                <div class="scanner-corners"></div>
+            </div>
+
+            <!-- Nose: Default Size (Small) -->
+            <div class="roi-container small"
+                 [style.left.%]="(1 - points.nose.x) * 100"
+                 [style.top.%]="points.nose.y * 100">
+                <div class="scanner-ring"></div>
+                <div class="scanner-corners"></div>
+            </div>
+
+            <!-- Left Cheek: Smaller Size -->
+            <div class="roi-container cheek"
+                 [style.left.%]="(1 - points.leftCheek.x) * 100"
+                 [style.top.%]="points.leftCheek.y * 100">
+                <div class="scanner-ring"></div>
+                <div class="scanner-corners"></div>
+            </div>
+
+            <!-- Right Cheek: Smaller Size -->
+            <div class="roi-container cheek"
+                 [style.left.%]="(1 - points.rightCheek.x) * 100"
+                 [style.top.%]="points.rightCheek.y * 100">
+                <div class="scanner-ring"></div>
+                <div class="scanner-corners"></div>
+            </div>
+
+            <!-- Chin: Small Size -->
+            <div class="roi-container small"
+                 [style.left.%]="(1 - points.chin.x) * 100"
+                 [style.top.%]="points.chin.y * 100">
+                <div class="scanner-ring"></div>
+                <div class="scanner-corners"></div>
+                <div class="scanner-label">Scanning...</div>
+            </div>
+        </div>
+        
+        <div class="overlay" *ngIf="!isCameraActive && !isProcessing" style="display: flex; align-items: center; justify-content: center; background: #eee; color: #666;">
+            <p>Camera is off</p>
+        </div>
+    </div>
+
+    <div class="controls">
+        <div class="skin-type-selector">
+            <label>Skin Type:</label>
+            <select [(ngModel)]="selectedSkinType">
+                <option value="Normal">Normal / Combination</option>
+                <option value="Oily">Oily (Dầu)</option>
+                <option value="Dry">Dry (Khô)</option>
+            </select>
         </div>
 
-        <div class="placeholder" *ngIf="!isCameraActive">
-            <p>Click below to start the camera and find your perfect shade</p>
-        </div>
-
-        <div class="controls">
-            <button class="btn-primary" *ngIf="!isCameraActive" (click)="startCamera()">
-                Start Camera
+        <div class="actions">
+            <button *ngIf="!isCameraActive" (click)="startCamera()">Start Camera</button>
+            <button *ngIf="isCameraActive" (click)="stopCamera()" style="background: #333; margin-right: 10px;">Stop</button>
+            <button *ngIf="isCameraActive" (click)="scanShade()" [disabled]="!lightingStatus().isValid || isProcessing">
+                {{ isProcessing ? 'Analyzing...' : 'Find My Shade' }}
             </button>
-            <button class="btn-secondary" *ngIf="isCameraActive" (click)="stopCamera()">
-                Stop Camera
-            </button>
         </div>
+        
+        <p *ngIf="error" style="color: red;">{{ error }}</p>
+    </div>
 
-        <div class="error-message" *ngIf="error">
-            {{ error }}
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" *ngIf="isProcessing">
+        <div class="spinner"></div>
+        <p>Đang phân tích tông da...</p>
+    </div>
+
+    <!-- Result Modal / Bottom Sheet -->
+    <div class="modal-overlay" *ngIf="showResultModal()">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Kết Quả Phân Tích</h3>
+                <button class="close-btn" (click)="closeModal()">×</button>
+            </div>
+            
+            <div class="modal-body" *ngIf="recommendedShades.length > 0">
+                <!-- Best Match -->
+                <div class="best-match-section">
+                    <div class="match-badge">Perfect Match</div>
+                    <div class="product-image">
+                        <!-- Placeholder image if no image in DB, or use a generic cushion image -->
+                        <img [src]="recommendedShades[0].Image_URL || 'assets/images/cushion-placeholder.png'" alt="Best Match Shade">
+                    </div>
+                    <div class="best-shade-info">
+                        <h2 class="shade-title">{{ recommendedShades[0].Shade_Name }}</h2>
+                        <p class="shade-code">{{ recommendedShades[0].Shade_Code }}</p>
+                        
+                        <div class="explanation-box">
+                            <span class="icon">💡</span>
+                            <p>{{ explanationText }}</p>
+                        </div>
+
+                        <button class="buy-now-btn">Mua Ngay</button>
+                    </div>
+                </div>
+
+                <!-- Other Matches -->
+                <div class="other-matches-section">
+                    <h4>Các lựa chọn khác</h4>
+                    <div class="other-matches-list">
+                        <div class="other-match-item" *ngFor="let shade of recommendedShades.slice(1)">
+                            <div class="other-match-image-container" *ngIf="shade.Image_URL">
+                                <img [src]="shade.Image_URL" alt="{{shade.Shade_Name}}" class="other-match-img">
+                            </div>
+                            <div class="color-dot" *ngIf="!shade.Image_URL" [style.background-color]="shade.Hex_Code"></div>
+                            <div class="other-shade-info">
+                                <span class="name">{{ shade.Product_Name ? shade.Product_Name + ' - ' : '' }}{{ shade.Shade_Name }}</span>
+                                <span class="code">{{ shade.Shade_Code }}</span>
+                            </div>
+                            <div class="match-percent">{{ (100 - shade.matchScore) | number:'1.0-0' }}% Match</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
