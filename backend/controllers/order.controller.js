@@ -67,20 +67,60 @@ exports.createOrder = async (req, res) => {
 // 2. LẤY DANH SÁCH ĐƠN HÀNG CỦA USER
 exports.getMyOrders = async (req, res) => {
     try {
-        const { userId } = req.query; // Sau này sẽ lấy từ Token
-        const orders = await Order.find({ user: userId }).sort({ createdAt: -1 });
+        // Tạm thời lấy userId từ query (Sau này có Middleware sẽ lấy từ req.user.id)
+        const { userId } = req.query; 
+
+        if (!userId) {
+            return res.status(400).json({ message: "Thiếu userId" });
+        }
+
+        // Sort: { createdAt: -1 } nghĩa là giảm dần (mới nhất nằm trên cùng)
+        const orders = await Order.find({ user: userId })
+                                  .sort({ createdAt: -1 });
+
         res.json(orders);
+    } catch (error) {
+        console.error("Get Orders Error:", error);
+        res.status(500).json({ message: "Lỗi khi lấy danh sách đơn hàng" });
+    }
+};
+
+// 3. CHI TIẾT ĐƠN HÀNG
+exports.getOrderById = async (req, res) => {
+    try {
+        const order = await Order.findById(req.params.id).populate('user', 'name email');
+        
+        if (!order) {
+            return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+        }
+        res.json(order);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
 
-// 3. LẤY CHI TIẾT 1 ĐƠN HÀNG
-exports.getOrderById = async (req, res) => {
+// 4. CẬP NHẬT TRẠNG THÁI (Dành cho Admin)
+// Flow: Pending -> Processing -> Shipped -> Delivered
+exports.updateOrderStatus = async (req, res) => {
     try {
-        const order = await Order.findById(req.params.id);
-        if (!order) return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
-        res.json(order);
+        const { orderId, status } = req.body;
+
+        const validStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ message: "Trạng thái không hợp lệ" });
+        }
+
+        const order = await Order.findByIdAndUpdate(
+            orderId, 
+            { status: status },
+            { new: true } // Trả về data mới sau khi update
+        );
+
+        if (!order) {
+            return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+        }
+
+        res.json({ message: "Cập nhật trạng thái thành công", order });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

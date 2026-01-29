@@ -11,4 +11,7 @@ router.get('/my-orders', orderController.getMyOrders);
 // Xem chi tiết đơn
 router.get('/:id', orderController.getOrderById);
 
+// Admin: Cập nhật trạng thái (Dùng PUT)
+router.put('/update-status', orderController.updateOrderStatus);
+
 module.exports = router;
