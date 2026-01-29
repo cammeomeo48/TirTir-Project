@@ -142,7 +142,7 @@
 .nav-item.has-megamenu app-makeup-mega-menu {
     position: absolute;
     top: 100%;
-    left: 50%;
+    left: 100%;
     transform: translateX(-50%);
     z-index: 1000;
 }
@@ -175,8 +175,8 @@
 .nav-skincare app-skincare-mega-menu ::ng-deep .mega-menu {
     position: absolute;
     top: 100%;
-    left: 50%;
-    width: 100vw;
+    left: 100%;
+    width: auto;
     background-color: #fff;
     margin-top: 0;
     padding: 40px;

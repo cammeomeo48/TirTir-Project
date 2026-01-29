@@ -13,6 +13,7 @@ app.use(express.urlencoded({ extended: true }));
 const shadeRoutes = require("./routes/shade.routes");
 const productRoutes = require("./routes/product.routes");
 const menuRoutes = require("./routes/menu.routes");
+const { ensureSlugs } = require("./controllers/product.controller");
 
 app.get("/", (req, res) => res.send("API Running"));
 app.get("/api/health", (req, res) => res.json({ ok: true, msg: "alive" }));
@@ -32,6 +33,7 @@ async function start() {
   try {
     await mongoose.connect(MONGO_URI);
     console.log("MongoDB connected");
+    await ensureSlugs(); // Auto-populate slugs
     app.listen(PORT, () => console.log(`Server running: http://localhost:${PORT}`));
   } catch (err) {
     console.error("Startup error:", err.message);

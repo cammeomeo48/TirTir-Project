@@ -55,6 +55,21 @@ export class CollectionComponent implements OnInit {
             description: 'Lip tints, balms, and glosses for every mood.',
             productCategories: ['lip'],
         },
+        'lips': {
+            title: 'LIP',
+            description: 'Lip tints, balms, and glosses for every mood.',
+            productCategories: ['lip'],
+        },
+        'lip-makeup': {
+            title: 'LIP MAKEUP',
+            description: 'Lip tints, balms, and glosses for every mood.',
+            productCategories: ['lip'],
+        },
+        'face-makeup': {
+            title: 'FACE MAKEUP',
+            description: 'Foundation, cushion, and base makeup products.',
+            productCategories: ['cushion', 'makeup'],
+        },
         // Sub-categories - Skincare
         'cleanse-toner': {
             title: 'CLEANSE & TONER',
@@ -88,26 +103,33 @@ export class CollectionComponent implements OnInit {
     loadProducts(): void {
         const config = this.categoryConfigs[this.collectionSlug];
 
-        // Fetch ALL products for client-side filtering (limit=1000)
-        this.productService.getProducts({ limit: 1000 }).subscribe(fetchedProducts => {
-            if (config) {
-                this.collectionTitle = config.title;
-                this.collectionDescription = config.description;
+        if (config) {
+            this.collectionTitle = config.title;
+            this.collectionDescription = config.description;
+        }
 
-                // Filter products by slugs if provided, otherwise by categories
-                if (config.productSlugs && config.productSlugs.length > 0) {
-                    this.products = fetchedProducts.filter(p => config.productSlugs!.includes(p.slug));
-                } else {
-                    this.products = fetchedProducts.filter(p => config.productCategories.includes(p.category));
-                }
-            } else {
-                // Default to all products
-                this.products = fetchedProducts;
-            }
+        // Fetch FILTERED products from backend (Server-Side Filtering)
+        // We pass 'categorySlug' which matches our route slug (e.g. 'cleanse-toner')
+        // The backend now knows how to map 'cleanse-toner' -> ['cleanser', 'toner']
+        const queryParams: any = {
+            limit: 1000, // Fetch all matching items for client-side pagination (simplified)
+            categorySlug: this.collectionSlug
+        };
 
-            // Reset pagination and update
-            this.currentPage = 1;
-            this.updatePagination();
+        // Special case: 'all' collection
+        if (this.collectionSlug === 'all') {
+            delete queryParams.categorySlug;
+        }
+
+        this.productService.getProducts(queryParams).subscribe(response => {
+            // Wrap in setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError
+            setTimeout(() => {
+                this.products = response.data;
+
+                // Reset pagination and update
+                this.currentPage = 1;
+                this.updatePagination();
+            }, 0);
         });
     }
 

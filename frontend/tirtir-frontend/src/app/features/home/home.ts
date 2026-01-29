@@ -29,14 +29,14 @@ export class HomeComponent {
 
   loadBestSellers() {
     this.productService.getProducts({ sort: 'best_seller', limit: 4 }).subscribe({
-      next: (data) => this.bestSellers = data,
+      next: (response) => this.bestSellers = response.data,
       error: (e) => console.error('Failed to load best sellers', e)
     });
   }
 
   loadNewArrivals() {
     this.productService.getProducts({ sort: 'newest', limit: 4 }).subscribe({
-      next: (data) => this.newArrivals = data,
+      next: (response) => this.newArrivals = response.data,
       error: (e) => console.error('Failed to load new arrivals', e)
     });
   }
@@ -44,7 +44,7 @@ export class HomeComponent {
   loadTrending() {
     // Trending could be best sellers or another criteria. Using default for now.
     this.productService.getProducts({ limit: 4, page: 2 }).subscribe({
-      next: (data) => this.trending = data,
+      next: (response) => this.trending = response.data,
       error: (e) => console.error('Failed to load trending', e)
     });
   }

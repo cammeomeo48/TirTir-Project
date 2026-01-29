@@ -14,7 +14,10 @@ export class SkincareMegaMenuComponent {
     @Input() categories: MenuItem[] = [];
 
     get cleanseTonerItems() {
-        return this.categories.find(c => c.label === 'Cleanse & Toner')?.children || [];
+        return this.categories.find(c =>
+            c.label === 'Cleanse & Toner' ||
+            c.label === 'Cleanse & Tone'
+        )?.children || [];
     }
 
     get treatmentsItems() {
@@ -22,6 +25,9 @@ export class SkincareMegaMenuComponent {
     }
 
     get moisturizeSunscreenItems() {
-        return this.categories.find(c => c.label === 'Moisturize & Sunscreen')?.children || [];
+        return this.categories.find(c =>
+            c.label === 'Moisturize & Sunscreen' ||
+            c.label === 'Moisturize & Cream'
+        )?.children || [];
     }
 }

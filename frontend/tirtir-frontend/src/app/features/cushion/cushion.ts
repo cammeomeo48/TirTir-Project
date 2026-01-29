@@ -70,13 +70,9 @@ export class CushionComponent implements OnInit {
     constructor(private productService: ProductService) { }
 
     ngOnInit(): void {
-        this.loadCushions();
-    }
-
-    loadCushions() {
         this.productService.getProducts({ keyword: 'cushion', limit: 20 }).subscribe({
-            next: (data) => this.products = data,
-            error: (e) => console.error('Failed to load cushioning', e)
+            next: (response) => this.products = response.data,
+            error: (err) => console.error('Error loading cushions:', err)
         });
     }
 

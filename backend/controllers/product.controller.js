@@ -5,6 +5,7 @@ const Shade = require("../models/shade.model");
 const generateSlug = (name) => {
     if (!name) return '';
     return name.toLowerCase()
+        .replace('tirtir', '') // Remove brand name for cleaner slug
         .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with hyphens
         .replace(/^-+|-+$/g, '');    // Trim hyphens
 };
@@ -33,12 +34,51 @@ const mapProductToFrontend = (product) => {
     };
 };
 
+// Self-healing: Populates 'slug' field if missing
+exports.ensureSlugs = async () => {
+    try {
+        console.log("Checking for products with missing slugs...");
+        const products = await Product.find({ slug: { $exists: false } });
+        if (products.length === 0) {
+            console.log("All products have slugs.");
+            return;
+        }
+
+        console.log(`Found ${products.length} products without slugs. Generating...`);
+        let count = 0;
+        for (const p of products) {
+            if (p.Name) {
+                p.slug = generateSlug(p.Name);
+                await p.save();
+                count++;
+            }
+        }
+        console.log(`Successfully generated slugs for ${count} products.`);
+    } catch (err) {
+        console.error("Error ensuring slugs:", err);
+    }
+};
+
+// Meta-Category Mappings (Frontend Slugs -> DB Category Slugs)
+const CATEGORY_MAPPINGS = {
+    'skincare': ['cleanser', 'toner', 'serum', 'ampoule', 'cream', 'sunscreen', 'facial-oil', 'eye-cream', 'mask', 'gift-set', 'skincare'],
+    'makeup': ['cushion', 'lip', 'makeup', 'tint', 'balm', 'primer', 'setting-spray'],
+    'face': ['cushion', 'makeup', 'primer', 'setting-spray'],
+    'face-makeup': ['cushion', 'makeup', 'primer', 'setting-spray'], // Matched to /collections/face-makeup
+    'lip': ['lip', 'tint', 'balm'],
+    'lips': ['lip', 'tint', 'balm'], // Handle plural case
+    'lip-makeup': ['lip', 'tint', 'balm'], // Matched to /collections/lip-makeup
+    'cleanse-toner': ['cleanser', 'toner'],
+    'treatments': ['serum', 'ampoule', 'facial-oil', 'eye-cream', 'mask'],
+    'moisturize-sunscreen': ['cream', 'sunscreen', 'gift-set']
+};
+
 exports.getAllProducts = async (req, res) => {
     try {
         const {
             keyword,
-            category,
-            categorySlug,
+            category, // Comma separated list of Categories (Display Names) e.g. "Cushion,Toner"
+            categorySlug, // Special purpose slug logic (mostly for Collection pages)
             isSkincare,
             skinType,
             concern,
@@ -47,66 +87,112 @@ exports.getAllProducts = async (req, res) => {
             limit = 12,
         } = req.query;
 
-        // 1) Build query
-        const queryObj = {};
+        // 1. Build MATCH stage (Filter)
+        const matchStage = {};
 
         if (keyword) {
-            queryObj.Name = { $regex: keyword, $options: "i" };
+            matchStage.Name = { $regex: keyword, $options: "i" };
         }
 
-        // Prefer slug if provided (Exact), otherwise Category (Regex)
-        if (categorySlug) {
-            queryObj.Category_Slug = categorySlug;
-        } else if (category) {
-            queryObj.Category = { $regex: category, $options: "i" };
-        }
+        // Handle 'category' (Sidebar Filter - Multi-select)
+        if (category) {
+            const catList = category.split(',').map(c => c.trim());
+            if (catList.length > 0) {
+                // Map Display Names (e.g. "Lip", "Cushion") to Database Slugs
+                let targetSlugs = [];
 
-        if (isSkincare !== undefined) {
-            queryObj.Is_Skincare = isSkincare === "true";
-        }
+                catList.forEach(catName => {
+                    // Normalize: "Lip" -> "lip", "Facial Oil" -> "facial-oil"
+                    const normalized = catName.toLowerCase().replace(/\s+/g, '-');
 
-        if (skinType) {
-            queryObj.Skin_Type_Target = { $regex: skinType, $options: "i" };
-        }
+                    // Check Umbrella Mappings
+                    if (CATEGORY_MAPPINGS[normalized]) {
+                        targetSlugs.push(...CATEGORY_MAPPINGS[normalized]);
+                    } else {
+                        // Fallback: Assume the normalized name is the slug (e.g. "cushion" -> "cushion")
+                        targetSlugs.push(normalized);
+                    }
+                });
 
-        if (concern) {
-            queryObj.Main_Concern = { $regex: concern, $options: "i" };
-        }
-
-        // 2) Sort
-        let sortObj = { _id: -1 };
-        if (sort) {
-            switch (sort) {
-                case "price_asc":
-                    sortObj = { Price: 1 };
-                    break;
-                case "price_desc":
-                    sortObj = { Price: -1 };
-                    break;
-                case "best_seller":
-                    sortObj = { Is_Best_Seller: -1 };
-                    break;
-                case "newest":
-                    sortObj = { _id: -1 };
-                    break;
-                default:
-                    sortObj = { _id: -1 };
-                    break;
+                // Filter by Category_Slug (Indexed & Consistent)
+                if (targetSlugs.length > 0) {
+                    matchStage.Category_Slug = { $in: targetSlugs };
+                }
             }
         }
 
-        // 3) Pagination
+        // Handle 'categorySlug' (Collection Pages - specialized)
+        if (categorySlug) {
+            if (CATEGORY_MAPPINGS[categorySlug]) {
+                matchStage.Category_Slug = { $in: CATEGORY_MAPPINGS[categorySlug] };
+            } else {
+                matchStage.Category_Slug = categorySlug;
+            }
+        }
+
+        if (isSkincare !== undefined) {
+            matchStage.Is_Skincare = isSkincare === "true";
+        }
+
+        if (skinType) {
+            matchStage.Skin_Type_Target = { $regex: skinType, $options: "i" };
+        }
+
+        if (concern) {
+            matchStage.Main_Concern = { $regex: concern, $options: "i" };
+        }
+
+        // 2. Build SORT stage
+        let sortStage = { _id: -1 };
+        if (sort) {
+            switch (sort) {
+                case "price_asc": sortStage = { Price: 1 }; break;
+                case "price_desc": sortStage = { Price: -1 }; break;
+                case "best_seller": sortStage = { Is_Best_Seller: -1 }; break;
+                case "newest": sortStage = { _id: -1 }; break;
+                default: sortStage = { _id: -1 }; break;
+            }
+        }
+
+        // 3. Pagination
         const pageNum = Math.max(parseInt(page, 10) || 1, 1);
         const limitNum = Math.max(parseInt(limit, 10) || 12, 1);
         const skip = (pageNum - 1) * limitNum;
 
-        // 4) Execute
-        const [total, products] = await Promise.all([
-            Product.countDocuments(queryObj),
-            Product.find(queryObj).sort(sortObj).skip(skip).limit(limitNum),
-        ]);
+        // 4. AGGREGATION PIPELINE
+        const pipeline = [
+            { $match: matchStage },
+            {
+                $facet: {
+                    // Pipeline A: Get Data
+                    "products": [
+                        { $sort: sortStage },
+                        { $skip: skip },
+                        { $limit: limitNum }
+                    ],
+                    // Pipeline B: Get Counts (for Pagination & Sidebar)
+                    "totalCount": [
+                        { $count: "count" }
+                    ],
+                    // Pipeline C: Global Category Counts (Filtered by current criteria)
+                    // If you want GLOBAL counts ignoring filters, you'd need a separate aggregation or move $match into facets.
+                    // Usually users want to know "How many Cushions are there with my current search?".
+                    "categories": [
+                        { $group: { _id: "$Category", count: { $sum: 1 } } },
+                        { $sort: { _id: 1 } } // Alphabetical sort
+                    ]
+                }
+            }
+        ];
 
-        // 5) MAP DATA for Frontend
+        const results = await Product.aggregate(pipeline);
+        const result = results[0];
+
+        const products = result.products;
+        const total = result.totalCount[0] ? result.totalCount[0].count : 0;
+        const categories = result.categories.map(c => ({ name: c._id, count: c.count }));
+
+        // 5. Map Data for Frontend
         const mappedProducts = products.map(p => mapProductToFrontend(p));
 
         res.json({
@@ -114,8 +200,11 @@ exports.getAllProducts = async (req, res) => {
             page: pageNum,
             limit: limitNum,
             data: mappedProducts,
+            categories: categories // Return category counts for sidebar
         });
+
     } catch (err) {
+        console.error("Aggregation Error:", err);
         res.status(500).json({ message: err.message });
     }
 };
@@ -124,16 +213,20 @@ exports.getProductDetail = async (req, res) => {
     try {
         const param = req.params.id;
 
-        // Try to find by Product_ID first
-        let product = await Product.findOne({ Product_ID: param });
+        // FAST LOOKUP: Check Exact Slug or Product_ID (Indexed)
+        let product = await Product.findOne({
+            $or: [
+                { slug: param },
+                { Product_ID: param }
+            ]
+        });
 
-        // If not found, try to find by Name (derived from slug)
-        // Assume slug is kebab-case of Name
+        // SLOW FALLBACK: Regex Name Match (Only if slug not found)
+        // This should rarely run once slugs are populated
         if (!product) {
-            // Convert slug back to approximate regex for Name
-            // e.g. "mask-fit-red-cushion" -> "Mask Fit Red Cushion" (case insensitive regex)
             const nameRegex = param.split('-').join('.*');
-            product = await Product.findOne({ Name: { $regex: new RegExp(`^${nameRegex}$`, 'i') } });
+            // Removed ^ anchor to allow partial match (e.g. "Mask Fit" matching "Tirtir Mask Fit")
+            product = await Product.findOne({ Name: { $regex: new RegExp(`${nameRegex}`, 'i') } });
         }
 
         if (!product) return res.status(404).json({ message: "Product not found" });

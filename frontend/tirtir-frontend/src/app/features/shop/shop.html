@@ -87,7 +87,8 @@
                     <ul class="filter-options" *ngIf="expandedFilters['type']">
                         <li *ngFor="let type of productTypes">
                             <label class="filter-checkbox">
-                                <input type="checkbox" [value]="type.value">
+                                <input type="checkbox" [value]="type.value"
+                                    (change)="onFilterChange($event, type.value)">
                                 <span class="checkbox-label">{{ type.label }}</span>
                                 <span class="count">({{ type.count }})</span>
                             </label>

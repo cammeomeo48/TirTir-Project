@@ -22,12 +22,16 @@ export class MenuService {
     private apiUrl = 'http://localhost:5000/api/menus';
 
     getMenuItems(): Observable<MenuItem[]> {
-        // Try to fetch from backend, fallback to static data on error
+        // User requested to use static data (links to product details)
+        // instead of dynamic category API
+        return of(MENU_ITEMS);
+        /*
         return this.http.get<MenuItem[]>(this.apiUrl).pipe(
             catchError(err => {
                 console.warn('Menu API failed, using static fallback:', err);
                 return of(MENU_ITEMS);
             })
         );
+        */
     }
 }

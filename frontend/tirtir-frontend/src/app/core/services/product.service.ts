@@ -29,7 +29,7 @@ export class ProductService {
   private apiUrl = 'http://localhost:5000/api/products';
   private http = inject(HttpClient);
 
-  getProducts(params?: any): Observable<ProductData[]> {
+  getProducts(params?: any): Observable<{ data: ProductData[], total: number, categories: any[] }> {
     let httpParams = new HttpParams();
     if (params) {
       Object.keys(params).forEach((key) => {
@@ -38,8 +38,12 @@ export class ProductService {
         }
       });
     }
-    return this.http.get<{ data: BackendProduct[] }>(this.apiUrl, { params: httpParams }).pipe(
-      map(response => response.data.map(this.mapToProductData))
+    return this.http.get<{ data: BackendProduct[], total: number, categories: any[] }>(this.apiUrl, { params: httpParams }).pipe(
+      map(response => ({
+        data: response.data.map(this.mapToProductData),
+        total: response.total,
+        categories: response.categories
+      }))
     );
   }
 
@@ -88,7 +92,7 @@ export class ProductService {
       category: ((): any => {
         const cat = bp.Category ? bp.Category.toLowerCase() : '';
         if (cat.includes('cushion')) return 'cushion';
-        if (cat.includes('lip')) return 'lip';
+        if (cat.includes('lip') || cat.includes('tint') || cat.includes('balm')) return 'lip';
         if (cat.includes('toner')) return 'toner';
         if (cat.includes('serum')) return 'serum';
         if (cat.includes('foam') || cat.includes('cleanser')) return 'cleanser';
@@ -96,7 +100,7 @@ export class ProductService {
         if (cat.includes('sunscreen')) return 'sunscreen';
         if (cat.includes('mask')) return 'mask';
         if (cat.includes('primer')) return 'primer';
-        if (cat.includes('fixer')) return 'fixer';
+        if (cat.includes('fixer') || cat.includes('spray')) return 'fixer';
         if (cat.includes('oil')) return 'facial-oil';
         if (cat.includes('eye')) return 'eye-cream';
         if (cat.includes('ampoule')) return 'ampoule';
