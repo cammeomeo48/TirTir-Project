@@ -28,6 +28,16 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
   showResultModal = signal(false);
   explanationText = '';
 
+  // Advanced Lighting & Validation State
+  lightingStatus = signal<{ isValid: boolean, message: string, type: 'success' | 'warning' | 'error' }>({ 
+    isValid: false, 
+    message: 'Đang khởi động camera...', 
+    type: 'warning' 
+  });
+  
+  colorHistory: {r: number, g: number, b: number}[] = [];
+  readonly HISTORY_SIZE = 15; // Smooth over ~0.5s (assuming 30fps)
+
   constructor(
     public faceTracker: FaceTrackerService,
     private http: HttpClient
@@ -103,7 +113,7 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
     if (rawColors.length === 0) return;
 
     // 2. Average current frame color
-    const currentFrameAvg = rawColors.reduce((acc, curr) => ({
+    const currentFrameAvg = rawColors.reduce((acc: {r: number, g: number, b: number}, curr: {r: number, g: number, b: number}) => ({
         r: acc.r + curr.r,
         g: acc.g + curr.g,
         b: acc.b + curr.b
@@ -120,7 +130,7 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
     }
 
     // 4. Calculate Smoothed Color
-    const smoothedColor = this.colorHistory.reduce((acc, curr) => ({
+    const smoothedColor = this.colorHistory.reduce((acc: {r: number, g: number, b: number}, curr: {r: number, g: number, b: number}) => ({
         r: acc.r + curr.r,
         g: acc.g + curr.g,
         b: acc.b + curr.b
@@ -155,7 +165,7 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
     
     // Use the SMOOTHED color from history for better accuracy
     if (this.colorHistory.length > 0) {
-        const smoothedColor = this.colorHistory.reduce((acc, curr) => ({
+        const smoothedColor = this.colorHistory.reduce((acc: {r: number, g: number, b: number}, curr: {r: number, g: number, b: number}) => ({
             r: acc.r + curr.r,
             g: acc.g + curr.g,
             b: acc.b + curr.b

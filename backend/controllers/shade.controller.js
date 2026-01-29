@@ -1,4 +1,5 @@
 const Shade = require("../models/shade.model");
+const Product = require("../models/product.model");
 const { rgbToLab, deltaE00 } = require("../utils/colorUtils");
 
 exports.findBestMatch = async (req, res) => {
@@ -15,7 +16,8 @@ exports.findBestMatch = async (req, res) => {
             return res.status(400).json({ message: "Missing color data (RGB or LAB required)" });
         }
 
-        const shades = await Shade.find({});
+        // Filter: Only recommend Cushions (exclude Lipsticks, Skincare, etc.)
+        const shades = await Shade.find({ Shade_Type: 'Cushion' });
         
         // 1. Determine User Undertone (Heuristic)
         // Skin usually has b > a (Yellow > Red). 

@@ -5,6 +5,14 @@
         <video #videoElement autoplay playsinline></video>
         <canvas #canvasElement class="hidden"></canvas>
         
+        <!-- Real-time Lighting Status Indicator -->
+        <div class="lighting-status" *ngIf="isCameraActive" [ngClass]="lightingStatus().type">
+            <span class="status-icon" *ngIf="lightingStatus().type === 'success'">✅</span>
+            <span class="status-icon" *ngIf="lightingStatus().type === 'warning'">⚠️</span>
+            <span class="status-icon" *ngIf="lightingStatus().type === 'error'">❌</span>
+            <span class="status-text">{{ lightingStatus().message }}</span>
+        </div>
+
         <!-- ROI Indicator (Follows Face) -->
         <div class="overlay" *ngIf="faceTracker.isFaceDetected() && faceTracker.facePoints(); let points">
             <!-- 5 Points Scanner -->
