@@ -9,8 +9,32 @@ const mongoSanitize = require('express-mongo-sanitize');
 const errorHandler = require('./middlewares/error');
 const app = express();
 
-app.use(helmet());
-app.use(cors());
+// CORS Configuration - MUST BE FIRST
+app.use(cors({
+  origin: ['http://localhost:4200', 'http://127.0.0.1:4200'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Static Files - Add CORS headers manually
+app.use('/assets', (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  next();
+}, express.static(path.join(__dirname, '../frontend/tirtir-frontend/public/assets'), {
+  setHeaders: (res, filePath) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+}));
+
+// Security Headers - Configure helmet to allow images
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow cross-origin images
+  contentSecurityPolicy: false // Disable CSP for development (re-enable in production)
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 // app.use(mongoSanitize()); // FIXME: Causes TypeError with Express 5 (req.query getter)
@@ -31,7 +55,6 @@ app.use("/api/auth", require("./routes/auth.routes"));
 app.use("/api/cart", require("./routes/cart.routes"));
 app.use("/api/chat", require("./routes/chat.routes"));
 app.use("/api/orders", require("./routes/order.routes"));
-app.use('/assets', express.static(path.join(__dirname, '../frontend/tirtir-frontend/public/assets')));
 
 // Global Error Handler
 app.use(errorHandler);

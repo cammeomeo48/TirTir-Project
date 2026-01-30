@@ -14,10 +14,6 @@ const generateSlug = (name) => {
 // STRICT DATA MAPPING LAYER
 // Prevents DB schema changes from breaking Frontend
 const mapProductToFrontend = (product) => {
-    // DEBUG LOG
-    console.log(`[DEBUG] Mapping Product: ${product.Product_ID}`);
-    console.log(`[DEBUG] Description_Images from DB:`, product.Description_Images);
-
     return {
         id: product.Product_ID, // Map Product_ID to 'id' for easier FE consumption if needed, or keep strictly Product_ID
         Product_ID: product.Product_ID, // Keep original for compatibility
