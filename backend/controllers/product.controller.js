@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Product = require("../models/product.model");
 const Shade = require("../models/shade.model");
 
@@ -270,6 +271,111 @@ exports.getProductDetail = async (req, res) => {
                 // Include other shade details if needed by frontend
             }))
         });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+exports.createProduct = async (req, res) => {
+    try {
+        const { Product_ID, Name, Price, Category } = req.body;
+        if (!Product_ID || !Name || Price === undefined || !Category) {
+            return res.status(400).json({ message: "Missing required fields" });
+        }
+        const existingProduct = await Product.findOne({ Product_ID });
+        if (existingProduct) {
+            return res.status(400).json({ message: "Product already exists" });
+        }
+        const slug = generateSlug(Name);
+        const product = new Product({ ...req.body, slug });
+        const created = await product.save();
+        res.status(201).json(mapProductToFrontend(created));
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+exports.updateProduct = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const or = [{ Product_ID: id }];
+        if (mongoose.Types.ObjectId.isValid(id)) or.push({ _id: id });
+        const product = await Product.findOne({ $or: or });
+        if (!product) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+        Object.assign(product, req.body);
+        if (req.body.Name) {
+            product.slug = generateSlug(req.body.Name);
+        }
+        const updated = await product.save();
+        res.json(mapProductToFrontend(updated));
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+exports.deleteProduct = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const or = [{ Product_ID: id }];
+        if (mongoose.Types.ObjectId.isValid(id)) or.push({ _id: id });
+        const deleted = await Product.findOneAndDelete({ $or: or });
+        if (!deleted) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+        res.json({ message: "Product removed" });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+exports.updateStock = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { stock } = req.body;
+        if (stock === undefined || stock < 0) {
+            return res.status(400).json({ message: "Invalid stock value" });
+        }
+        const or = [{ Product_ID: id }];
+        if (mongoose.Types.ObjectId.isValid(id)) or.push({ _id: id });
+        const product = await Product.findOne({ $or: or });
+        if (!product) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+        product.Stock_Quantity = stock;
+        await product.save();
+        res.json({ message: "Stock updated", stock: product.Stock_Quantity });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+exports.bulkImport = async (req, res) => {
+    try {
+        const items = req.body;
+        if (!Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ message: "Invalid payload" });
+        }
+        let created = 0;
+        let updated = 0;
+        const errors = [];
+        for (const p of items) {
+            try {
+                if (!p.Product_ID || !p.Name) {
+                    errors.push({ id: p.Product_ID || "UNKNOWN", error: "Missing ID or Name" });
+                    continue;
+                }
+                p.slug = generateSlug(p.Name);
+                const existing = await Product.findOne({ Product_ID: p.Product_ID });
+                if (existing) {
+                    Object.assign(existing, p);
+                    await existing.save();
+                    updated++;
+                } else {
+                    await Product.create(p);
+                    created++;
+                }
+            } catch (e) {
+                errors.push({ id: p.Product_ID, error: e.message });
+            }
+        }
+        res.json({ message: "Bulk import processed", created, updated, errors });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

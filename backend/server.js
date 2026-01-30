@@ -20,6 +20,7 @@ app.get("/api/health", (req, res) => res.json({ ok: true, msg: "alive" }));
 
 app.use("/api/shades", shadeRoutes);
 app.use("/api/products", productRoutes);
+app.use("/api/admin/products", require("./routes/admin.products.routes"));
 app.use("/api/menus", menuRoutes);
 app.use("/api/auth", require("./routes/auth.routes"));
 app.use("/api/cart", require("./routes/cart.routes"));
