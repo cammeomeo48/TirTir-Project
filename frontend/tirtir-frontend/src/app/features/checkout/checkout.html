@@ -1,0 +1,77 @@
+<div class="checkout-container">
+    <div class="checkout-content">
+        <h1 class="checkout-title">Checkout</h1>
+
+        <div *ngIf="error" class="error-alert">{{ error }}</div>
+
+        <div class="checkout-layout">
+            <!-- Shipping Form -->
+            <div class="shipping-section">
+                <h2>Shipping Information</h2>
+                <form [formGroup]="checkoutForm" (ngSubmit)="onSubmit()">
+                    <div class="form-field">
+                        <label>Full Name *</label>
+                        <input type="text" formControlName="fullName" placeholder="John Doe" class="field-input"
+                            [class.error]="getFieldError('fullName')" />
+                        <span *ngIf="getFieldError('fullName')" class="field-error">{{ getFieldError('fullName')
+                            }}</span>
+                    </div>
+
+                    <div class="form-field">
+                        <label>Phone Number *</label>
+                        <input type="tel" formControlName="phone" placeholder="+1 234 567 8900" class="field-input"
+                            [class.error]="getFieldError('phone')" />
+                        <span *ngIf="getFieldError('phone')" class="field-error">{{ getFieldError('phone') }}</span>
+                    </div>
+
+                    <div class="form-field">
+                        <label>Address *</label>
+                        <input type="text" formControlName="address" placeholder="123 Main St, Apt 4B"
+                            class="field-input" [class.error]="getFieldError('address')" />
+                        <span *ngIf="getFieldError('address')" class="field-error">{{ getFieldError('address') }}</span>
+                    </div>
+
+                    <div class="form-field">
+                        <label>City *</label>
+                        <input type="text" formControlName="city" placeholder="New York" class="field-input"
+                            [class.error]="getFieldError('city')" />
+                        <span *ngIf="getFieldError('city')" class="field-error">{{ getFieldError('city') }}</span>
+                    </div>
+
+                    <div class="form-field">
+                        <label>Payment Method *</label>
+                        <select formControlName="paymentMethod" class="field-input">
+                            <option value="COD">Cash on Delivery</option>
+                            <option value="BANK_TRANSFER">Bank Transfer</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="place-order-btn" [disabled]="loading">
+                        <span *ngIf="!loading">Place Order</span>
+                        <app-loading-spinner *ngIf="loading"></app-loading-spinner>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Order Summary -->
+            <div class="summary-section">
+                <h2>Order Summary</h2>
+                <div *ngIf="cart" class="order-items">
+                    <div *ngFor="let item of cart.items" class="summary-item">
+                        <img [src]="getImageUrl(item.product.Thumbnail_Images)" [alt]="item.product.Name"
+                            class="summary-img" />
+                        <div class="summary-details">
+                            <p class="summary-name">{{ item.product.Name }}</p>
+                            <p class="summary-qty">Qty: {{ item.quantity }}</p>
+                        </div>
+                        <p class="summary-price">${{ (item.product.Price * item.quantity).toFixed(2) }}</p>
+                    </div>
+                </div>
+                <div class="summary-total">
+                    <span>Total</span>
+                    <span class="total-amount">${{ getTotal().toFixed(2) }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

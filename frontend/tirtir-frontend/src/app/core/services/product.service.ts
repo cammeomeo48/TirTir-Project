@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map, of } from 'rxjs';
 import { ProductData, PRODUCTS, getProductBySlug } from '../constants/products.data';
+import { environment } from '../../../environments/environment';
 
 export interface BackendProduct {
   Product_ID: string;
@@ -26,7 +27,7 @@ export interface BackendProduct {
   providedIn: 'root',
 })
 export class ProductService {
-  private apiUrl = 'http://localhost:5000/api/products';
+  private apiUrl = `${environment.apiUrl}/products`;
   private http = inject(HttpClient);
 
   getProducts(params?: any): Observable<{ data: ProductData[], total: number, categories: any[] }> {

@@ -1,25 +1,20 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, catchError, of } from 'rxjs';
-import { MENU_ITEMS } from '../constants/menu.data';
+import { Observable, catchError, map, of } from 'rxjs';
+import { MENU_ITEMS, MenuItem } from '../constants/menu.data';
+import { environment } from '../../../environments/environment';
 
-export interface MenuItem {
-    _id?: string;
-    label: string;
-    routerLink: string;
-    queryParams?: any;
-    children?: MenuItem[];
-    order?: number;
-    image?: string;
-    description?: string;
-}
+// Re-export MenuItem for backward compatibility
+export type { MenuItem };
 
 @Injectable({
     providedIn: 'root',
 })
 export class MenuService {
     private http = inject(HttpClient);
-    private apiUrl = 'http://localhost:5000/api/menus';
+
+    // Backend API URL
+    private apiUrl = `${environment.apiUrl}/menus`;
 
     getMenuItems(): Observable<MenuItem[]> {
         // User requested to use static data (links to product details)

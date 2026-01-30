@@ -1,0 +1,83 @@
+<div class="register-container">
+    <div class="register-card">
+        <div class="register-header">
+            <h1 class="register-title">Create Account</h1>
+            <p class="register-subtitle">Join us and start shopping</p>
+        </div>
+
+        <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form">
+            <!-- Success Message -->
+            <div *ngIf="successMessage" class="success-alert">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path
+                        d="M10 0C4.48 0 0 4.48 0 10C0 15.52 4.48 20 10 20C15.52 20 20 15.52 20 10C20 4.48 15.52 0 10 0ZM8 15L3 10L4.41 8.59L8 12.17L15.59 4.58L17 6L8 15Z"
+                        fill="currentColor" />
+                </svg>
+                <span>{{ successMessage }}</span>
+            </div>
+
+            <!-- Error Message -->
+            <div *ngIf="errorMessage" class="error-alert">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path
+                        d="M10 0C4.48 0 0 4.48 0 10C0 15.52 4.48 20 10 20C15.52 20 20 15.52 20 10C20 4.48 15.52 0 10 0ZM11 15H9V13H11V15ZM11 11H9V5H11V11Z"
+                        fill="currentColor" />
+                </svg>
+                <span>{{ errorMessage }}</span>
+            </div>
+
+            <!-- Name Field -->
+            <div class="form-field">
+                <label for="name" class="field-label">Full Name</label>
+                <input id="name" type="text" formControlName="name" placeholder="Enter your full name"
+                    class="field-input" [class.input-error]="getFieldError('name')" />
+                <span *ngIf="getFieldError('name')" class="field-error">
+                    {{ getFieldError('name') }}
+                </span>
+            </div>
+
+            <!-- Email Field -->
+            <div class="form-field">
+                <label for="email" class="field-label">Email Address</label>
+                <input id="email" type="email" formControlName="email" placeholder="your@email.com" class="field-input"
+                    [class.input-error]="getFieldError('email')" />
+                <span *ngIf="getFieldError('email')" class="field-error">
+                    {{ getFieldError('email') }}
+                </span>
+            </div>
+
+            <!-- Password Field -->
+            <div class="form-field">
+                <label for="password" class="field-label">Password</label>
+                <input id="password" type="password" formControlName="password" placeholder="At least 6 characters"
+                    class="field-input" [class.input-error]="getFieldError('password')" />
+                <span *ngIf="getFieldError('password')" class="field-error">
+                    {{ getFieldError('password') }}
+                </span>
+            </div>
+
+            <!-- Confirm Password Field -->
+            <div class="form-field">
+                <label for="confirmPassword" class="field-label">Confirm Password</label>
+                <input id="confirmPassword" type="password" formControlName="confirmPassword"
+                    placeholder="Confirm your password" class="field-input"
+                    [class.input-error]="getFieldError('confirmPassword')" />
+                <span *ngIf="getFieldError('confirmPassword')" class="field-error">
+                    {{ getFieldError('confirmPassword') }}
+                </span>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="submit-button" [disabled]="loading">
+                <span *ngIf="!loading">Create Account</span>
+                <app-loading-spinner *ngIf="loading"></app-loading-spinner>
+            </button>
+
+            <!-- Login Link -->
+            <div class="login-prompt">
+                <span>Already have an account?</span>
+                <a routerLink="/login" class="login-link">Sign In</a>
+            </div>
+        </form>
+    </div>
+</div>

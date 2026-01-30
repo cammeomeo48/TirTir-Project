@@ -1,10 +1,10 @@
 <div class="shade-finder-container">
     <h2>Virtual Shade Finder</h2>
-    
+
     <div class="camera-container">
         <video #videoElement autoplay playsinline></video>
         <canvas #canvasElement class="hidden"></canvas>
-        
+
         <!-- Real-time Lighting Status Indicator -->
         <div class="lighting-status" *ngIf="isCameraActive" [ngClass]="lightingStatus().type">
             <span class="status-icon" *ngIf="lightingStatus().type === 'success'">✅</span>
@@ -13,43 +13,33 @@
             <span class="status-text">{{ lightingStatus().message }}</span>
         </div>
 
-        <!-- ROI Indicator (Follows Face) -->
+        <!-- ROI Indicator (Follows Face) - DISABLED UNTIL MEDIAPIPE IS INSTALLED -->
+        <!-- TODO: Re-enable when MediaPipe package is installed
         <div class="overlay" *ngIf="faceTracker.isFaceDetected() && faceTracker.facePoints(); let points">
-            <!-- 5 Points Scanner -->
-            
-            <!-- Forehead: Increased Size -->
             <div class="roi-container forehead"
                  [style.left.%]="(1 - points.forehead.x) * 100"
                  [style.top.%]="points.forehead.y * 100">
                 <div class="scanner-ring"></div>
                 <div class="scanner-corners"></div>
             </div>
-
-            <!-- Nose: Default Size (Small) -->
             <div class="roi-container small"
                  [style.left.%]="(1 - points.nose.x) * 100"
                  [style.top.%]="points.nose.y * 100">
                 <div class="scanner-ring"></div>
                 <div class="scanner-corners"></div>
             </div>
-
-            <!-- Left Cheek: Smaller Size -->
             <div class="roi-container cheek"
                  [style.left.%]="(1 - points.leftCheek.x) * 100"
                  [style.top.%]="points.leftCheek.y * 100">
                 <div class="scanner-ring"></div>
                 <div class="scanner-corners"></div>
             </div>
-
-            <!-- Right Cheek: Smaller Size -->
             <div class="roi-container cheek"
                  [style.left.%]="(1 - points.rightCheek.x) * 100"
                  [style.top.%]="points.rightCheek.y * 100">
                 <div class="scanner-ring"></div>
                 <div class="scanner-corners"></div>
             </div>
-
-            <!-- Chin: Small Size -->
             <div class="roi-container small"
                  [style.left.%]="(1 - points.chin.x) * 100"
                  [style.top.%]="points.chin.y * 100">
@@ -58,8 +48,10 @@
                 <div class="scanner-label">Scanning...</div>
             </div>
         </div>
-        
-        <div class="overlay" *ngIf="!isCameraActive && !isProcessing" style="display: flex; align-items: center; justify-content: center; background: #eee; color: #666;">
+        -->
+
+        <div class="overlay" *ngIf="!isCameraActive && !isProcessing"
+            style="display: flex; align-items: center; justify-content: center; background: #eee; color: #666;">
             <p>Camera is off</p>
         </div>
     </div>
@@ -76,12 +68,13 @@
 
         <div class="actions">
             <button *ngIf="!isCameraActive" (click)="startCamera()">Start Camera</button>
-            <button *ngIf="isCameraActive" (click)="stopCamera()" style="background: #333; margin-right: 10px;">Stop</button>
+            <button *ngIf="isCameraActive" (click)="stopCamera()"
+                style="background: #333; margin-right: 10px;">Stop</button>
             <button *ngIf="isCameraActive" (click)="scanShade()" [disabled]="!lightingStatus().isValid || isProcessing">
                 {{ isProcessing ? 'Analyzing...' : 'Find My Shade' }}
             </button>
         </div>
-        
+
         <p *ngIf="error" style="color: red;">{{ error }}</p>
     </div>
 
@@ -98,19 +91,20 @@
                 <h3>Kết Quả Phân Tích</h3>
                 <button class="close-btn" (click)="closeModal()">×</button>
             </div>
-            
+
             <div class="modal-body" *ngIf="recommendedShades.length > 0">
                 <!-- Best Match -->
                 <div class="best-match-section">
                     <div class="match-badge">Perfect Match</div>
                     <div class="product-image">
                         <!-- Placeholder image if no image in DB, or use a generic cushion image -->
-                        <img [src]="recommendedShades[0].Image_URL || 'assets/images/cushion-placeholder.png'" alt="Best Match Shade">
+                        <img [src]="recommendedShades[0].Image_URL || 'assets/images/cushion-placeholder.png'"
+                            alt="Best Match Shade">
                     </div>
                     <div class="best-shade-info">
                         <h2 class="shade-title">{{ recommendedShades[0].Shade_Name }}</h2>
                         <p class="shade-code">{{ recommendedShades[0].Shade_Code }}</p>
-                        
+
                         <div class="explanation-box">
                             <span class="icon">💡</span>
                             <p>{{ explanationText }}</p>
@@ -128,9 +122,11 @@
                             <div class="other-match-image-container" *ngIf="shade.Image_URL">
                                 <img [src]="shade.Image_URL" alt="{{shade.Shade_Name}}" class="other-match-img">
                             </div>
-                            <div class="color-dot" *ngIf="!shade.Image_URL" [style.background-color]="shade.Hex_Code"></div>
+                            <div class="color-dot" *ngIf="!shade.Image_URL" [style.background-color]="shade.Hex_Code">
+                            </div>
                             <div class="other-shade-info">
-                                <span class="name">{{ shade.Product_Name ? shade.Product_Name + ' - ' : '' }}{{ shade.Shade_Name }}</span>
+                                <span class="name">{{ shade.Product_Name ? shade.Product_Name + ' - ' : '' }}{{
+                                    shade.Shade_Name }}</span>
                                 <span class="code">{{ shade.Shade_Code }}</span>
                             </div>
                             <div class="match-percent">{{ (100 - shade.matchScore) | number:'1.0-0' }}% Match</div>

@@ -1,0 +1,77 @@
+<div class="cart-container">
+    <div class="cart-content">
+        <h1 class="cart-title">Shopping Cart</h1>
+
+        <!-- Loading State -->
+        <div *ngIf="loading" class="loading-container">
+            <app-loading-spinner></app-loading-spinner>
+        </div>
+
+        <!-- Error State -->
+        <div *ngIf="error && !loading" class="error-message">
+            {{ error }}
+        </div>
+
+        <!-- Empty Cart -->
+        <div *ngIf="!loading && cart && cart.items.length === 0" class="empty-cart">
+            <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+                <path d="M20 20L28 60H60L68 20H20Z" stroke="currentColor" stroke-width="2" />
+                <circle cx="32" cy="70" r="3" fill="currentColor" />
+                <circle cx="56" cy="70" r="3" fill="currentColor" />
+            </svg>
+            <h2>Your cart is empty</h2>
+            <p>Add some items to get started</p>
+            <button (click)="continueShoppping()" class="shop-button">Continue Shopping</button>
+        </div>
+
+        <!-- Cart Items -->
+        <div *ngIf="!loading && cart && cart.items.length > 0" class="cart-layout">
+            <div class="cart-items">
+                <div *ngFor="let item of cart.items" class="cart-item">
+                    <img [src]="getImageUrl(item.product.Thumbnail_Images)" [alt]="item.product.Name"
+                        class="item-image" />
+
+                    <div class="item-details">
+                        <h3 class="item-name">{{ item.product.Name }}</h3>
+                        <p *ngIf="item.shade" class="item-shade">Shade: {{ item.shade }}</p>
+                        <p class="item-price">${{ item.product.Price }}</p>
+                    </div>
+
+                    <div class="item-actions">
+                        <div class="quantity-control">
+                            <button (click)="updateQuantity(item, item.quantity - 1)" class="qty-btn">−</button>
+                            <span class="qty-value">{{ item.quantity }}</span>
+                            <button (click)="updateQuantity(item, item.quantity + 1)" class="qty-btn">+</button>
+                        </div>
+                        <p class="item-total">${{ (item.product.Price * item.quantity).toFixed(2) }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cart Summary -->
+            <div class="cart-summary">
+                <h2 class="summary-title">Order Summary</h2>
+
+                <div class="summary-row">
+                    <span>Subtotal</span>
+                    <span>${{ getSubtotal().toFixed(2) }}</span>
+                </div>
+
+                <div class="summary-row">
+                    <span>Shipping</span>
+                    <span>{{ getShipping() === 0 ? 'Free' : '$' + getShipping().toFixed(2) }}</span>
+                </div>
+
+                <div class="summary-divider"></div>
+
+                <div class="summary-row total-row">
+                    <span>Total</span>
+                    <span>${{ getTotal().toFixed(2) }}</span>
+                </div>
+
+                <button (click)="goToCheckout()" class="checkout-button">Proceed to Checkout</button>
+                <button (click)="continueShoppping()" class="continue-button">Continue Shopping</button>
+            </div>
+        </div>
+    </div>
+</div>
