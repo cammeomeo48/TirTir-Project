@@ -4,11 +4,16 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const path = require('path');
+const helmet = require('helmet');
+const mongoSanitize = require('express-mongo-sanitize');
+const errorHandler = require('./middlewares/error');
 const app = express();
 
+app.use(helmet());
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+// app.use(mongoSanitize()); // FIXME: Causes TypeError with Express 5 (req.query getter)
 
 const shadeRoutes = require("./routes/shade.routes");
 const productRoutes = require("./routes/product.routes");
@@ -27,6 +32,9 @@ app.use("/api/cart", require("./routes/cart.routes"));
 app.use("/api/chat", require("./routes/chat.routes"));
 app.use("/api/orders", require("./routes/order.routes"));
 app.use('/assets', express.static(path.join(__dirname, '../frontend/tirtir-frontend/public/assets')));
+
+// Global Error Handler
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI;

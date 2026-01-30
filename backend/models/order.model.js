@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { ORDER_STATUS, PAYMENT_METHOD } = require('../constants');
 
 const OrderSchema = new mongoose.Schema({
     user: {
@@ -28,8 +29,8 @@ const OrderSchema = new mongoose.Schema({
     },
     paymentMethod: {
         type: String,
-        enum: ['COD', 'BANK_TRANSFER'],
-        default: 'COD'
+        enum: Object.values(PAYMENT_METHOD),
+        default: PAYMENT_METHOD.COD
     },
     totalAmount: {
         type: Number,
@@ -37,8 +38,8 @@ const OrderSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'],
-        default: 'Pending'
+        enum: Object.values(ORDER_STATUS),
+        default: ORDER_STATUS.PENDING
     }
 }, { timestamps: true });
 

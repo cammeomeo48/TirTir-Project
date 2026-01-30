@@ -1,6 +1,7 @@
 const Order = require('../models/order.model');
 const Cart = require('../models/cart.model');
 const Product = require('../models/product.model');
+const { ORDER_STATUS } = require('../constants');
 
 // 1. TẠO ĐƠN HÀNG (CHECKOUT)
 exports.createOrder = async (req, res) => {
@@ -47,7 +48,7 @@ exports.createOrder = async (req, res) => {
             shippingAddress,
             paymentMethod,
             totalAmount: calculatedTotal,
-            status: 'Pending'
+            status: ORDER_STATUS.PENDING
         });
 
         await newOrder.save();
@@ -109,7 +110,7 @@ exports.updateOrderStatus = async (req, res) => {
     try {
         const { orderId, status } = req.body;
 
-        const validStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
+        const validStatuses = Object.values(ORDER_STATUS);
         if (!validStatuses.includes(status)) {
             return res.status(400).json({ message: "Trạng thái không hợp lệ" });
         }

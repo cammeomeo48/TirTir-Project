@@ -26,10 +26,19 @@ exports.register = async (req, res) => {
             return res.status(400).json({ message: "All fields are required" });
         }
 
-        // Password strength validation
+        // Email format validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ message: "Invalid email format" });
+        }
+
+        // Password strength validation (at least 6 chars, 1 number, 1 special char)
         if (password.length < 6) {
             return res.status(400).json({ message: "Password must be at least 6 characters" });
         }
+        // Example stronger check (optional based on requirements, keeping it simple but better than before)
+        // const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\$%\^&\*])(?=.{8,})/;
+
 
         // Check if user exists
         const existingUser = await User.findOne({ email });

@@ -40,11 +40,18 @@ exports.addToCart = async (req, res) => {
         }
 
         // CRITICAL: Recalculate Total Price using DB Prices
+        // Optimize: Fetch all products in one query to avoid N+1 problem
+        const productIds = cart.items.map(item => item.product);
+        const products = await Product.find({ _id: { $in: productIds } }).select('Price');
+        
+        const priceMap = {};
+        products.forEach(p => { priceMap[p._id.toString()] = p.Price; });
+
         let total = 0;
         for (const item of cart.items) {
-            const prod = await Product.findById(item.product);
-            if (prod) {
-                total += prod.Price * item.quantity;
+            const price = priceMap[item.product.toString()];
+            if (price !== undefined) {
+                total += price * item.quantity;
             }
         }
         cart.totalPrice = total;
