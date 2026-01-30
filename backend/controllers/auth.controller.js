@@ -13,7 +13,7 @@ const getJwtSecret = () => {
     return secret;
 };
 
-// Register Controller
+// Register Controller - WITH EMAIL VERIFICATION
 exports.register = async (req, res) => {
     try {
         if (!req.body) {
@@ -41,19 +41,66 @@ exports.register = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Create user
+        // Create user with isEmailVerified = false (default)
         const newUser = new User({
             name,
             email,
             password: hashedPassword
         });
 
-        await newUser.save();
+        // Generate email verification token
+        const verificationToken = newUser.getEmailVerificationToken();
 
-        res.status(201).json({
-            success: true,
-            message: "User registered successfully"
-        });
+        // Save user (with hashed verification token)
+        await newUser.save({ validateBeforeSave: false });
+
+        // Create verification URL
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
+        const verificationUrl = `${frontendUrl}/verify-email/${verificationToken}`;
+
+        // Email content
+        const message = `Welcome to TirTir Shop!\n\nPlease verify your email address by clicking the link below:\n\n${verificationUrl}\n\nIf you did not create this account, please ignore this email.`;
+
+        const htmlMessage = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #FF6B9D;">Welcome to TirTir Shop! 🎉</h2>
+                <p>Thank you for registering with us. Please verify your email address to activate your account.</p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="${verificationUrl}" 
+                       style="display: inline-block; padding: 12px 30px; background-color: #FF6B9D; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                        Verify Email Address
+                    </a>
+                </div>
+                <p>Or copy and paste this link into your browser:</p>
+                <p style="color: #666; word-break: break-all;">${verificationUrl}</p>
+                <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+                <p style="color: #999; font-size: 12px;">If you did not create this account, please ignore this email.</p>
+            </div>
+        `;
+
+        try {
+            await sendEmail({
+                email: newUser.email,
+                subject: 'Verify Your Email - TirTir Shop',
+                message,
+                html: htmlMessage
+            });
+
+            res.status(200).json({
+                success: true,
+                message: 'Registration successful! Please check your email to verify your account.'
+            });
+        } catch (err) {
+            console.error('Email send error:', err);
+
+            // If email fails, delete the user
+            await User.findByIdAndDelete(newUser._id);
+
+            return res.status(500).json({
+                success: false,
+                message: 'Email could not be sent. Please try registering again.'
+            });
+        }
 
     } catch (error) {
         console.error("Register Error:", error);
@@ -75,6 +122,14 @@ exports.login = async (req, res) => {
         const user = await User.findOne({ email });
         if (!user) {
             return res.status(400).json({ message: "Invalid credentials" });
+        }
+
+        // Check if email is verified
+        if (!user.isEmailVerified) {
+            return res.status(403).json({
+                success: false,
+                message: "Please verify your email before logging in. Check your inbox for verification link."
+            });
         }
 
         // Compare password
@@ -129,6 +184,78 @@ exports.getMe = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Server error"
+        });
+    }
+};
+
+// Verify Email
+exports.verifyEmail = async (req, res) => {
+    try {
+        // Get token from params
+        const { token } = req.params;
+
+        if (!token) {
+            return res.status(400).json({
+                success: false,
+                message: 'Verification token is required'
+            });
+        }
+
+        // Hash the token to match the one in database
+        const hashedToken = crypto
+            .createHash('sha256')
+            .update(token)
+            .digest('hex');
+
+        // Find user with this verification token
+        const user = await User.findOne({
+            emailVerificationToken: hashedToken
+        });
+
+        if (!user) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid or expired verification token'
+            });
+        }
+
+        // Check if already verified
+        if (user.isEmailVerified) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email is already verified. You can login now.'
+            });
+        }
+
+        // Verify the user
+        user.isEmailVerified = true;
+        user.emailVerificationToken = undefined; // Clear the token
+        await user.save();
+
+        // Generate JWT token for immediate login
+        const jwtToken = jwt.sign(
+            { id: user._id, role: user.role },
+            getJwtSecret(),
+            { expiresIn: '7d' }
+        );
+
+        res.status(200).json({
+            success: true,
+            message: 'Email verified successfully! You are now logged in.',
+            token: jwtToken,
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role
+            }
+        });
+
+    } catch (error) {
+        console.error('Verify Email Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error during email verification'
         });
     }
 };
