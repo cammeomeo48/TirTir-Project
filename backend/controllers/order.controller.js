@@ -5,7 +5,9 @@ const Product = require('../models/product.model');
 // 1. TẠO ĐƠN HÀNG (CHECKOUT)
 exports.createOrder = async (req, res) => {
     try {
-        const { userId, shippingAddress, paymentMethod } = req.body;
+        // Get userId from authenticated user (set by protect middleware)
+        const userId = req.user.id;
+        const { shippingAddress, paymentMethod } = req.body;
 
         // A. Lấy giỏ hàng của user
         const cart = await Cart.findOne({ user: userId }).populate('items.product');
@@ -53,9 +55,9 @@ exports.createOrder = async (req, res) => {
         // D. Quan trọng: XÓA GIỎ HÀNG sau khi đặt thành công
         await Cart.findOneAndDelete({ user: userId });
 
-        res.status(201).json({ 
-            message: "Đặt hàng thành công!", 
-            orderId: newOrder._id 
+        res.status(201).json({
+            message: "Đặt hàng thành công!",
+            orderId: newOrder._id
         });
 
     } catch (error) {
@@ -67,16 +69,12 @@ exports.createOrder = async (req, res) => {
 // 2. LẤY DANH SÁCH ĐƠN HÀNG CỦA USER
 exports.getMyOrders = async (req, res) => {
     try {
-        // Tạm thời lấy userId từ query (Sau này có Middleware sẽ lấy từ req.user.id)
-        const { userId } = req.query; 
-
-        if (!userId) {
-            return res.status(400).json({ message: "Thiếu userId" });
-        }
+        // Get userId from authenticated user (set by protect middleware)
+        const userId = req.user.id;
 
         // Sort: { createdAt: -1 } nghĩa là giảm dần (mới nhất nằm trên cùng)
         const orders = await Order.find({ user: userId })
-                                  .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 });
 
         res.json(orders);
     } catch (error) {
@@ -89,10 +87,16 @@ exports.getMyOrders = async (req, res) => {
 exports.getOrderById = async (req, res) => {
     try {
         const order = await Order.findById(req.params.id).populate('user', 'name email');
-        
+
         if (!order) {
             return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
         }
+
+        // Security: Check if the order belongs to the requesting user (unless admin)
+        if (order.user._id.toString() !== req.user.id && req.user.role !== 'admin') {
+            return res.status(403).json({ message: "Bạn không có quyền xem đơn hàng này" });
+        }
+
         res.json(order);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -111,7 +115,7 @@ exports.updateOrderStatus = async (req, res) => {
         }
 
         const order = await Order.findByIdAndUpdate(
-            orderId, 
+            orderId,
             { status: status },
             { new: true } // Trả về data mới sau khi update
         );

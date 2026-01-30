@@ -4,10 +4,12 @@ const Product = require('../models/product.model');
 // Add to Cart
 exports.addToCart = async (req, res) => {
     try {
-        const { userId, productId, quantity, shade } = req.body;
+        // Get userId from authenticated user (set by protect middleware)
+        const userId = req.user.id;
+        const { productId, quantity, shade } = req.body;
 
-        if (!userId || !productId || !quantity) {
-            return res.status(400).json({ message: "UserId, ProductId, and Quantity are required" });
+        if (!productId || !quantity) {
+            return res.status(400).json({ message: "ProductId and Quantity are required" });
         }
 
         // Validate Product existence
@@ -59,11 +61,8 @@ exports.addToCart = async (req, res) => {
 // Get Cart
 exports.getCart = async (req, res) => {
     try {
-        const { userId } = req.query; // Or req.user.id if using middleware
-
-        if (!userId) {
-            return res.status(400).json({ message: "User ID is required" });
-        }
+        // Get userId from authenticated user (set by protect middleware)
+        const userId = req.user.id;
 
         const cart = await Cart.findOne({ user: userId }).populate('items.product');
 
