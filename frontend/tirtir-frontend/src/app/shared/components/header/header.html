@@ -26,14 +26,16 @@
                     <li class="nav-item has-megamenu" (mouseenter)="onMakeupHover(true)"
                         (mouseleave)="onMakeupHover(false)">
                         <a routerLink="/collections/makeup" class="nav-link">Makeup</a>
-                        <app-makeup-mega-menu [class.visible]="showMakeupMenu" [categories]="makeupCategories"></app-makeup-mega-menu>
+                        <app-makeup-mega-menu [class.visible]="showMakeupMenu"
+                            [categories]="makeupCategories"></app-makeup-mega-menu>
                     </li>
 
                     <!-- Skincare with Mega Menu (scoped class nav-skincare) -->
                     <li class="nav-item nav-skincare" (mouseenter)="onSkincareHover(true)"
                         (mouseleave)="onSkincareHover(false)">
                         <a routerLink="/collections/skincare" class="nav-link">Skincare</a>
-                        <app-skincare-mega-menu [class.visible]="showSkincareMenu" [categories]="skincareCategories"></app-skincare-mega-menu>
+                        <app-skincare-mega-menu [class.visible]="showSkincareMenu"
+                            [categories]="skincareCategories"></app-skincare-mega-menu>
                     </li>
 
                     <!-- Other items from menuItems (index 3+) -->
@@ -87,7 +89,8 @@
                         <line x1="3" y1="6" x2="21" y2="6"></line>
                         <path d="M16 10a4 4 0 0 1-8 0"></path>
                     </svg>
-                    <span class="cart-count">0</span>
+                    <!-- Show badge only if count > 0 -->
+                    <span class="cart-count" *ngIf="cartCount() > 0">{{ cartCount() }}</span>
                 </button>
             </div>
 

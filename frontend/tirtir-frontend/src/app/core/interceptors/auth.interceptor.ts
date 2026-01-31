@@ -1,13 +1,9 @@
 import { HttpInterceptorFn } from '@angular/common/http';
-import { inject } from '@angular/core';
-import { AuthService } from '../services/auth.service';
 
-/**
- * HTTP Interceptor to automatically attach JWT token to requests
- */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-    const authService = inject(AuthService);
-    const token = authService.getToken();
+    // FIX: Circular Dependency. Do not inject AuthService here.
+    // Access token directly from storage.
+    const token = localStorage.getItem('tirtir_auth_token');
 
     // Skip adding token for auth endpoints (login, register)
     const isAuthEndpoint = req.url.includes('/api/auth/login') ||

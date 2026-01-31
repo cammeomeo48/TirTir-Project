@@ -1,8 +1,9 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { Injectable, inject, signal, computed, effect } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, tap, catchError, throwError } from 'rxjs';
 import { Cart, AddToCartRequest } from '../models';
 import { environment } from '../../../environments/environment';
+import { AuthService } from './auth.service';
 
 @Injectable({
     providedIn: 'root',
@@ -10,6 +11,7 @@ import { environment } from '../../../environments/environment';
 export class CartService {
     private apiUrl = `${environment.apiUrl}/cart`;
     private http = inject(HttpClient);
+    private authService = inject(AuthService);
 
     // Cart state management
     private cartSubject = new BehaviorSubject<Cart | null>(null);
@@ -20,8 +22,15 @@ export class CartService {
     public cartCount = computed(() => this.cartCountSignal());
 
     constructor() {
-        // Load cart on initialization if user is authenticated
-        this.loadCart();
+        // Reactively load/clear cart based on auth state
+        effect(() => {
+            if (this.authService.isAuthenticated()) {
+                this.loadCart();
+            } else {
+                this.cartSubject.next(null);
+                this.cartCountSignal.set(0);
+            }
+        });
     }
 
     /**

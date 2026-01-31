@@ -20,7 +20,13 @@ const CartSchema = new mongoose.Schema({
                 min: 1
             },
             shade: {
-                type: String, // Can be null if product has no shade
+                type: String,
+                default: '' // Default to empty string if not provided
+            },
+            price: {
+                type: Number,
+                required: true,
+                default: 0
             }
         }
     ],

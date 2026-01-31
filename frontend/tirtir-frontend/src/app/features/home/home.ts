@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectorRef, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ProductCard } from '../../shared/components/product-card/product-card';
@@ -12,8 +12,9 @@ import { ProductService } from '../../core/services/product.service';
   templateUrl: './home.html',
   styleUrl: './home.css',
 })
-export class HomeComponent {
+export class HomeComponent implements OnInit {
   private productService = inject(ProductService);
+  private cdr = inject(ChangeDetectorRef); // Injected CDR
 
   bestSellers: any[] = [];
   newArrivals: any[] = [];
@@ -29,14 +30,20 @@ export class HomeComponent {
 
   loadBestSellers() {
     this.productService.getProducts({ sort: 'best_seller', limit: 4 }).subscribe({
-      next: (response) => this.bestSellers = response.data,
+      next: (response) => {
+        this.bestSellers = response.data;
+        this.cdr.detectChanges(); // Manually trigger detection
+      },
       error: (e) => console.error('Failed to load best sellers', e)
     });
   }
 
   loadNewArrivals() {
     this.productService.getProducts({ sort: 'newest', limit: 4 }).subscribe({
-      next: (response) => this.newArrivals = response.data,
+      next: (response) => {
+        this.newArrivals = response.data;
+        this.cdr.detectChanges(); // Manually trigger detection
+      },
       error: (e) => console.error('Failed to load new arrivals', e)
     });
   }
@@ -44,7 +51,10 @@ export class HomeComponent {
   loadTrending() {
     // Trending could be best sellers or another criteria. Using default for now.
     this.productService.getProducts({ limit: 4, page: 2 }).subscribe({
-      next: (response) => this.trending = response.data,
+      next: (response) => {
+        this.trending = response.data;
+        this.cdr.detectChanges(); // Manually trigger detection
+      },
       error: (e) => console.error('Failed to load trending', e)
     });
   }

@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { MenuItem, MenuService } from '../../../core/services/menu.service';
+import { CartService } from '../../../core/services/cart.service'; // Added Import
 import { MakeupMegaMenuComponent } from '../makeup-mega-menu/makeup-mega-menu';
 import { SkincareMegaMenuComponent } from '../skincare-mega-menu/skincare-mega-menu';
 
@@ -16,7 +17,11 @@ import { CommonModule } from '@angular/common'; // Ensure CommonModule is import
 export class HeaderComponent implements OnInit {
   // Use inject() pattern
   private menuService = inject(MenuService);
+  private cartService = inject(CartService); // Injected CartService
   private cdr = inject(ChangeDetectorRef);
+
+  // Expose signal for template
+  cartCount = this.cartService.cartCount;
 
   menuItems: MenuItem[] = [];
   showMakeupMenu = false;

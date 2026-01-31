@@ -74,8 +74,9 @@
                 </div>
 
                 <!-- Add to Cart -->
-                <button class="add-to-cart">
-                    ADD TO CART — ${{ (product.price * quantity).toFixed(2) }}
+                <button class="add-to-cart" (click)="addToCart()"
+                    [disabled]="addingToCart || (!selectedShade && product.shades?.length)">
+                    {{ addingToCart ? 'ADDING...' : 'ADD TO CART — $' + (product.price * quantity).toFixed(2) }}
                 </button>
 
                 <!-- Accordion Sections -->
