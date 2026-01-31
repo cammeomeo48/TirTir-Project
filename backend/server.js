@@ -39,22 +39,34 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 // app.use(mongoSanitize()); // FIXME: Causes TypeError with Express 5 (req.query getter)
 
+// HTTPS Enforcement (Production only)
+if (process.env.NODE_ENV === 'production') {
+  app.use((req, res, next) => {
+    if (req.header('x-forwarded-proto') !== 'https') {
+      res.redirect(`https://${req.header('host')}${req.url}`);
+    } else {
+      next();
+    }
+  });
+}
+
 const shadeRoutes = require("./routes/shade.routes");
 const productRoutes = require("./routes/product.routes");
 const menuRoutes = require("./routes/menu.routes");
 const { ensureSlugs } = require("./controllers/product.controller");
 
 app.get("/", (req, res) => res.send("API Running"));
-app.get("/api/health", (req, res) => res.json({ ok: true, msg: "alive" }));
+app.get("/api/v1/health", (req, res) => res.json({ ok: true, msg: "alive" }));
 
-app.use("/api/shades", shadeRoutes);
-app.use("/api/products", productRoutes);
-app.use("/api/admin/products", require("./routes/admin.products.routes"));
-app.use("/api/menus", menuRoutes);
-app.use("/api/auth", require("./routes/auth.routes"));
-app.use("/api/cart", require("./routes/cart.routes"));
-app.use("/api/chat", require("./routes/chat.routes"));
-app.use("/api/orders", require("./routes/order.routes"));
+// API Version 1 Routes
+app.use("/api/v1/shades", shadeRoutes);
+app.use("/api/v1/products", productRoutes);
+app.use("/api/v1/admin/products", require("./routes/admin.products.routes"));
+app.use("/api/v1/menus", menuRoutes);
+app.use("/api/v1/auth", require("./routes/auth.routes"));
+app.use("/api/v1/cart", require("./routes/cart.routes"));
+app.use("/api/v1/chat", require("./routes/chat.routes"));
+app.use("/api/v1/orders", require("./routes/order.routes"));
 
 // Global Error Handler
 app.use(errorHandler);
