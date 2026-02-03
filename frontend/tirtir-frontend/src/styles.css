@@ -51,6 +51,7 @@ html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 body {
@@ -59,6 +60,8 @@ body {
   line-height: 1.6;
   color: var(--color-text);
   background-color: var(--color-background);
+  overflow-x: hidden;
+  width: 100%;
 }
 
 /* =====================================================
@@ -172,7 +175,8 @@ textarea:focus {
 /* App Root Constraints for Desktop Stability */
 app-root {
   display: block;
-  min-width: 1024px; /* Prevent crushing on small windows */
+  overflow-x: hidden;
+  width: 100%;
 }
 
 .app-content {

@@ -2,17 +2,78 @@
      HOMEPAGE - TIRTIR Clone
      ===================================================== -->
 
-<!-- Hero Section -->
-<section class="hero">
-    <div class="hero-image">
-        <!-- TODO: Replace with real TIRTIR hero image -->
-        <img src="https://placehold.co/1920x800/d32f2f/fff?text=TIRTIR+RED+CUSHION" alt="TIRTIR Hero">
-    </div>
-    <div class="hero-content">
-        <span class="hero-tag">NEW</span>
-        <h1 class="hero-title">MOOD GLIDER</h1>
-        <p class="hero-subtitle">Effortless Color That Moves With You</p>
-        <a routerLink="/shop" class="hero-btn">SHOP NOW</a>
+<!-- Hero Carousel Section -->
+<section class="hero-carousel">
+    <div class="carousel-container">
+        <!-- Carousel Slides -->
+        <div class="carousel-slides" [style.transform]="'translateX(-' + (currentSlide * 100) + '%)'">
+
+            <!-- Slide 1: DEALS -->
+            <div class="carousel-slide">
+                <div class="hero-image">
+                    <!-- TODO: Replace with deals banner image (1920x800px recommended) -->
+                    <!-- Image path example: /assets/images/banners/deals-banner.jpg -->
+                    <img src="https://placehold.co/1920x800/d32f2f/fff?text=EXCLUSIVE+DEALS" alt="Exclusive Deals">
+                </div>
+                <div class="hero-content">
+                    <span class="hero-tag">LIMITED TIME OFFERS</span>
+                    <h1 class="hero-title">EXCLUSIVE DEALS</h1>
+                    <p class="hero-subtitle">Save up to 30% on bestsellers</p>
+                    <a routerLink="/deals" class="hero-btn">SHOP DEALS</a>
+                </div>
+            </div>
+
+            <!-- Slide 2: MAKEUP -->
+            <div class="carousel-slide">
+                <div class="hero-image">
+                    <!-- TODO: Replace with makeup collection image (1920x800px recommended) -->
+                    <!-- Image path example: /assets/images/banners/makeup-banner.jpg -->
+                    <img src="https://placehold.co/1920x800/e8e0f5/000?text=MAKEUP+COLLECTION" alt="Makeup Collection">
+                </div>
+                <div class="hero-content">
+                    <span class="hero-tag">DISCOVER YOUR SIGNATURE LOOK</span>
+                    <h1 class="hero-title">MAKEUP ESSENTIALS</h1>
+                    <p class="hero-subtitle">Professional-grade makeup that lasts all day</p>
+                    <a routerLink="/shop" [queryParams]="{category: 'makeup'}" class="hero-btn">EXPLORE MAKEUP</a>
+                </div>
+            </div>
+
+            <!-- Slide 3: SKINCARE -->
+            <div class="carousel-slide">
+                <div class="hero-image">
+                    <!-- TODO: Replace with skincare collection image (1920x800px recommended) -->
+                    <!-- Image path example: /assets/images/banners/skincare-banner.jpg -->
+                    <img src="https://placehold.co/1920x800/e0f5f0/000?text=SKINCARE+COLLECTION"
+                        alt="Skincare Collection">
+                </div>
+                <div class="hero-content">
+                    <span class="hero-tag">SCIENCE MEETS BEAUTY</span>
+                    <h1 class="hero-title">SKINCARE COLLECTION</h1>
+                    <p class="hero-subtitle">Transform your skin with K-beauty innovations</p>
+                    <a routerLink="/shop" [queryParams]="{category: 'skincare'}" class="hero-btn">SHOP SKINCARE</a>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Navigation Arrows -->
+        <button class="carousel-nav carousel-prev" (click)="prevSlide()" aria-label="Previous slide">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+        </button>
+        <button class="carousel-nav carousel-next" (click)="nextSlide()" aria-label="Next slide">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+        </button>
+
+        <!-- Dot Indicators -->
+        <div class="carousel-indicators">
+            <button *ngFor="let slide of [0, 1, 2]; let i = index" class="carousel-dot"
+                [class.active]="currentSlide === i" (click)="goToSlide(i)" [attr.aria-label]="'Go to slide ' + (i + 1)">
+            </button>
+        </div>
     </div>
 </section>
 
@@ -22,9 +83,6 @@
         <h2 class="section-title">BEST SELLERS</h2>
         <div class="products-grid">
             <app-product-card *ngFor="let product of bestSellers" [product]="product"></app-product-card>
-        </div>
-        <div class="section-action">
-            <a routerLink="/shop" class="view-all-btn">VIEW ALL</a>
         </div>
     </div>
 </section>

@@ -13,15 +13,31 @@
 }
 
 /* =====================================================
-   HERO SECTION
+   HERO CAROUSEL SECTION
    ===================================================== */
 
-.hero {
+.hero-carousel {
     position: relative;
+    width: 100%;
+    overflow: hidden;
+}
+
+.carousel-container {
+    position: relative;
+    width: 100%;
+    min-height: 60vh;
+}
+
+.carousel-slides {
+    display: flex;
+    transition: transform 0.5s ease-in-out;
+    width: 100%;
+}
+
+.carousel-slide {
+    min-width: 100%;
     position: relative;
     min-height: 60vh;
-    /* Responsive height */
-    display: flex;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -94,6 +110,70 @@
 .hero-btn:hover {
     background: #fff;
     color: #000;
+}
+
+/* Navigation Arrows */
+.carousel-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    color: #000;
+}
+
+.carousel-nav:hover {
+    background: rgba(255, 255, 255, 1);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.carousel-prev {
+    left: 24px;
+}
+
+.carousel-next {
+    right: 24px;
+}
+
+/* Dot Indicators */
+.carousel-indicators {
+    position: absolute;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex;
+    gap: 12px;
+}
+
+.carousel-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+    border: 2px solid #fff;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.3s;
+}
+
+.carousel-dot:hover {
+    background: rgba(255, 255, 255, 0.8);
+}
+
+.carousel-dot.active {
+    background: #fff;
+    width: 14px;
+    height: 14px;
 }
 
 /* =====================================================
@@ -283,12 +363,25 @@
         padding: 60px 0;
     }
 
-    .hero {
-        height: 500px;
+    .carousel-slide {
+        min-height: 500px;
     }
 
     .hero-title {
         font-size: 42px;
+    }
+
+    .carousel-nav {
+        width: 45px;
+        height: 45px;
+    }
+
+    .carousel-prev {
+        left: 16px;
+    }
+
+    .carousel-next {
+        right: 16px;
     }
 
     .products-grid {
@@ -310,8 +403,8 @@
 }
 
 @media (max-width: 768px) {
-    .hero {
-        height: 450px;
+    .carousel-slide {
+        min-height: 450px;
     }
 
     .hero-title {
@@ -321,6 +414,28 @@
 
     .hero-subtitle {
         font-size: 14px;
+    }
+
+    .carousel-nav {
+        width: 40px;
+        height: 40px;
+    }
+
+    .carousel-nav svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .carousel-prev {
+        left: 12px;
+    }
+
+    .carousel-next {
+        right: 12px;
+    }
+
+    .carousel-indicators {
+        bottom: 24px;
     }
 
     .section-title {
@@ -352,5 +467,20 @@
 
     .hero-title {
         font-size: 28px;
+    }
+
+    .carousel-nav {
+        width: 35px;
+        height: 35px;
+    }
+
+    .carousel-dot {
+        width: 10px;
+        height: 10px;
+    }
+
+    .carousel-dot.active {
+        width: 12px;
+        height: 12px;
     }
 }

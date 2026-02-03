@@ -42,8 +42,16 @@
 }
 
 .carousel-item {
-    min-width: 280px;
-    flex: 0 0 auto;
+    width: 224px;
+    /* 80% of grid card size to match Best Sellers/Trending */
+    min-width: 224px;
+    max-width: 224px;
+    flex: 0 0 224px;
+}
+
+.carousel-item app-product-card {
+    width: 100%;
+    max-width: 100%;
 }
 
 .nav-btn {
@@ -55,7 +63,7 @@
     border-radius: 50%;
     background: #fff;
     border: 1px solid #eee;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     cursor: pointer;
     z-index: 10;
     display: flex;
@@ -80,13 +88,14 @@
 
 @media (max-width: 768px) {
     .nav-btn {
-        display: none; /* On mobile, let user swipe naturally */
+        display: none;
+        /* On mobile, let user swipe naturally */
     }
-    
+
     .carousel-container {
         padding: 0;
     }
-    
+
     .carousel-item {
         min-width: 240px;
     }
