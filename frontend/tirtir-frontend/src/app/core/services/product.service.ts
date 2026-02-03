@@ -61,7 +61,7 @@ export class ProductService {
       if (url.startsWith('http')) return url;
       // Prepend backend URL. Remove leading slash if present to avoid double slashes.
       const cleanUrl = url.startsWith('/') ? url.substring(1) : url;
-      return `http://localhost:5000/${cleanUrl}`;
+      return `http://localhost:3000/${cleanUrl}`;
     };
 
     return {
