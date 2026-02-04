@@ -61,7 +61,7 @@ export class ProductCard {
 
       // If starts with 'assets/', prepend the backend server URL
       if (imagePath.startsWith('assets/')) {
-        return `http://localhost:3000/${imagePath}`;
+        return `http://localhost:5000/${imagePath}`;
       }
 
       // If already a full URL, return as is
@@ -70,7 +70,7 @@ export class ProductCard {
       }
 
       // Otherwise prepend backend URL with proper slashing
-      return `http://localhost:3000/${imagePath.startsWith('/') ? imagePath.slice(1) : imagePath}`;
+      return `http://localhost:5000/${imagePath.startsWith('/') ? imagePath.slice(1) : imagePath}`;
     }
 
     // Fallback to images array if Thumbnail_Images doesn't work
@@ -79,12 +79,12 @@ export class ProductCard {
 
       if (imagePath && typeof imagePath === 'string') {
         if (imagePath.startsWith('assets/')) {
-          return `http://localhost:3000/${imagePath}`;
+          return `http://localhost:5000/${imagePath}`;
         }
         if (imagePath.startsWith('http')) {
           return imagePath;
         }
-        return `http://localhost:3000/${imagePath.startsWith('/') ? imagePath.slice(1) : imagePath}`;
+        return `http://localhost:5000/${imagePath.startsWith('/') ? imagePath.slice(1) : imagePath}`;
       }
     }
 
@@ -92,12 +92,12 @@ export class ProductCard {
     if (product.image && typeof product.image === 'string' && product.image.trim() !== '') {
       const imagePath = product.image;
       if (imagePath.startsWith('assets/')) {
-        return `http://localhost:3000/${imagePath}`;
+        return `http://localhost:5000/${imagePath}`;
       }
       if (imagePath.startsWith('http') || imagePath.startsWith('/assets')) {
         return imagePath;
       }
-      return `http://localhost:3000/${imagePath.startsWith('/') ? imagePath.slice(1) : imagePath}`;
+      return `http://localhost:5000/${imagePath.startsWith('/') ? imagePath.slice(1) : imagePath}`;
     }
 
     // Final fallback to a placeholder

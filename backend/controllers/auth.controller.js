@@ -1,78 +1,139 @@
 const User = require('../models/user.model');
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const sendEmail = require('../utils/sendEmail');
 
-// Helper function to get JWT_SECRET (no fallback for security)
+/**
+ * ===== AUTHENTICATION CONTROLLER =====
+ * Handles user registration, login, email verification, and password reset
+ * Built with robust error handling and graceful degradation
+ */
+
+// ===== HELPER: Get JWT Secret =====
 const getJwtSecret = () => {
     const secret = process.env.JWT_SECRET;
     if (!secret) {
-        throw new Error('JWT_SECRET is not defined in environment variables');
+        throw new Error('FATAL: JWT_SECRET is not defined in environment variables');
     }
     return secret;
 };
 
-// Register Controller - WITH EMAIL VERIFICATION
+// ===== HELPER: Generate JWT Token =====
+const generateToken = (userId, userRole) => {
+    return jwt.sign(
+        { id: userId, role: userRole },
+        getJwtSecret(),
+        { expiresIn: '7d' } // Token valid for 7 days
+    );
+};
+
+/**
+ * @route   POST /api/v1/auth/register
+ * @desc    Register new user with email verification
+ * @access  Public
+ */
 exports.register = async (req, res) => {
     try {
-        if (!req.body) {
-            return res.status(400).json({ message: "Request body is empty" });
-        }
         const { name, email, password } = req.body;
 
-        // Validation
+        // ===== VALIDATION =====
         if (!name || !email || !password) {
-            return res.status(400).json({ message: "All fields are required" });
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide name, email, and password'
+            });
         }
 
         // Email format validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
-            return res.status(400).json({ message: "Invalid email format" });
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide a valid email address'
+            });
         }
 
-        // Password strength validation (at least 6 chars, 1 number, 1 special char)
+        // Password strength validation
         if (password.length < 6) {
-            return res.status(400).json({ message: "Password must be at least 6 characters" });
+            return res.status(400).json({
+                success: false,
+                message: 'Password must be at least 6 characters long'
+            });
         }
-        // Example stronger check (optional based on requirements, keeping it simple but better than before)
-        // const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\$%\^&\*])(?=.{8,})/;
 
-
-        // Check if user exists
+        // ===== CHECK IF USER EXISTS =====
         const existingUser = await User.findOne({ email });
         if (existingUser) {
-            return res.status(400).json({ message: "User already exists" });
+            return res.status(400).json({
+                success: false,
+                message: 'User with this email already exists'
+            });
         }
 
-        // Hash password
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
+        // ===== CHECK DEVELOPMENT MODE =====
+        const isDevelopment = process.env.NODE_ENV === 'development';
 
-        // Create user with isEmailVerified = false (default)
+        // ===== CREATE USER =====
         const newUser = new User({
             name,
             email,
-            password: hashedPassword
+            password, // Will be hashed by pre-save hook
+            isEmailVerified: isDevelopment // Auto-verify in dev mode
         });
 
-        // Generate email verification token
-        const verificationToken = newUser.getEmailVerificationToken();
+        // Generate verification token (skip in dev mode)
+        let verificationToken = null;
+        if (!isDevelopment) {
+            verificationToken = newUser.getEmailVerificationToken();
+        }
 
-        // Save user (with hashed verification token)
-        await newUser.save({ validateBeforeSave: false });
+        // Save user to database
+        await newUser.save();
 
-        // Create verification URL
+        console.log(`✅ User created: ${email} (ID: ${newUser._id})`);
+
+        // ===== DEVELOPMENT MODE: Skip Email =====
+        if (isDevelopment) {
+            console.log('🔥 DEV MODE: Email verification bypassed');
+
+            const token = generateToken(newUser._id, newUser.role);
+
+            return res.status(201).json({
+                success: true,
+                message: 'Registration successful! Auto-verified in development mode.',
+                token,
+                user: {
+                    id: newUser._id,
+                    name: newUser.name,
+                    email: newUser.email,
+                    role: newUser.role,
+                    isEmailVerified: newUser.isEmailVerified
+                }
+            });
+        }
+
+        // ===== PRODUCTION MODE: Send Verification Email =====
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
-        const verificationUrl = `${frontendUrl}/verify-email/${verificationToken}`;
+        const verificationUrl = `${req.protocol}://${req.get('host')}/api/v1/auth/verify-email/${verificationToken}`;
 
-        // Email content
-        const message = `Welcome to TirTir Shop!\n\nPlease verify your email address by clicking the link below:\n\n${verificationUrl}\n\nIf you did not create this account, please ignore this email.`;
+        const emailMessage = `
+Welcome to TirTir Cosmetics! 🎉
+
+Thank you for registering. Please verify your email address by clicking the link below:
+
+${verificationUrl}
+
+This link will expire in 24 hours.
+
+If you did not create this account, please ignore this email.
+
+Best regards,
+TirTir Team
+        `.trim();
 
         const htmlMessage = `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #FF6B9D;">Welcome to TirTir Shop! 🎉</h2>
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #FF6B9D;">Welcome to TirTir Cosmetics! 🎉</h2>
                 <p>Thank you for registering with us. Please verify your email address to activate your account.</p>
                 <div style="text-align: center; margin: 30px 0;">
                     <a href="${verificationUrl}" 
@@ -81,98 +142,194 @@ exports.register = async (req, res) => {
                     </a>
                 </div>
                 <p>Or copy and paste this link into your browser:</p>
-                <p style="color: #666; word-break: break-all;">${verificationUrl}</p>
+                <p style="color: #666; word-break: break-all; background: #f5f5f5; padding: 10px; border-radius: 5px;">${verificationUrl}</p>
                 <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
-                <p style="color: #999; font-size: 12px;">If you did not create this account, please ignore this email.</p>
+                <p style="color: #999; font-size: 12px;">This link will expire in 24 hours. If you did not create this account, please ignore this email.</p>
             </div>
         `;
 
+        // ===== TRY TO SEND EMAIL (Graceful Failure) =====
         try {
             await sendEmail({
                 email: newUser.email,
-                subject: 'Verify Your Email - TirTir Shop',
-                message,
+                subject: 'Verify Your Email - TirTir Cosmetics',
+                message: emailMessage,
                 html: htmlMessage
             });
 
-            res.status(200).json({
+            console.log(`📧 Verification email sent to: ${email}`);
+
+            // Email sent successfully
+            return res.status(201).json({
                 success: true,
                 message: 'Registration successful! Please check your email to verify your account.'
             });
-        } catch (err) {
-            console.error('Email send error:', err);
 
-            // If email fails, delete the user
-            await User.findByIdAndDelete(newUser._id);
+        } catch (emailError) {
+            // ===== GRACEFUL EMAIL FAILURE =====
+            // Log the error but DON'T crash the server
+            console.error('⚠️ Email sending failed:', emailError.message);
+            console.error('   User ID:', newUser._id);
+            console.error('   Email:', newUser.email);
 
-            return res.status(500).json({
-                success: false,
-                message: 'Email could not be sent. Please try registering again.'
+            // User is created but email failed
+            // Return 201 Created with warning message
+            return res.status(201).json({
+                success: true,
+                warning: true,
+                message: 'Registration successful, but verification email could not be sent. Please contact support or try to resend verification email.',
+                userId: newUser._id
             });
         }
 
     } catch (error) {
-        console.error("Register Error:", error);
-        res.status(500).json({ message: "Server error" });
+        console.error('❌ Registration Error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Server error during registration. Please try again later.'
+        });
     }
 };
 
+/**
+ * @route   GET /api/v1/auth/verify-email/:token
+ * @desc    Verify user email and redirect to frontend
+ * @access  Public
+ */
+exports.verifyEmail = async (req, res) => {
+    try {
+        const { token } = req.params;
 
-// Login Controller
+        if (!token) {
+            return res.status(400).send(`
+                <h1>Invalid Request</h1>
+                <p>Verification token is missing.</p>
+                <a href="http://localhost:4200/login">Go to Login</a>
+            `);
+        }
+
+        // Hash the token to match database
+        const hashedToken = crypto
+            .createHash('sha256')
+            .update(token)
+            .digest('hex');
+
+        // Find user with matching verification token
+        const user = await User.findOne({
+            emailVerificationToken: hashedToken
+        });
+
+        if (!user) {
+            return res.status(400).send(`
+                <h1>Verification Failed</h1>
+                <p>Invalid or expired verification token.</p>
+                <a href="http://localhost:4200/login">Go to Login</a>
+            `);
+        }
+
+        // Check if already verified
+        if (user.isEmailVerified) {
+            console.log(`✅ User already verified: ${user.email}`);
+            // Redirect anyway
+            return res.redirect('http://localhost:4200/login?verified=true&already=true');
+        }
+
+        // Update user: verify email and clear token
+        user.isEmailVerified = true;
+        user.emailVerificationToken = undefined;
+        await user.save();
+
+        console.log(`✅ Email verified: ${user.email} (ID: ${user._id})`);
+
+        // Redirect to frontend login page with success message
+        return res.redirect('http://localhost:4200/login?verified=true');
+
+    } catch (error) {
+        console.error('❌ Email Verification Error:', error);
+        return res.status(500).send(`
+            <h1>Server Error</h1>
+            <p>Something went wrong during email verification.</p>
+            <a href="http://localhost:4200/login">Go to Login</a>
+        `);
+    }
+};
+
+/**
+ * @route   POST /api/v1/auth/login
+ * @desc    Login user and return JWT token
+ * @access  Public
+ */
 exports.login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // Validation
+        // ===== VALIDATION =====
         if (!email || !password) {
-            return res.status(400).json({ message: "All fields are required" });
-        }
-
-        // Check if user exists
-        const user = await User.findOne({ email });
-        if (!user) {
-            return res.status(400).json({ message: "Invalid credentials" });
-        }
-
-        // Check if email is verified
-        if (!user.isEmailVerified) {
-            return res.status(403).json({
+            return res.status(400).json({
                 success: false,
-                message: "Please verify your email before logging in. Check your inbox for verification link."
+                message: 'Please provide email and password'
             });
         }
 
-        // Compare password
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(400).json({ message: "Invalid credentials" });
+        // ===== CHECK IF USER EXISTS =====
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid email or password'
+            });
         }
 
-        // Create JWT Token
-        const token = jwt.sign(
-            { id: user._id, role: user.role },
-            getJwtSecret(),
-            { expiresIn: '7d' } // Token valid for 7 days
-        );
+        // ===== CHECK EMAIL VERIFICATION =====
+        if (!user.isEmailVerified) {
+            return res.status(401).json({
+                success: false,
+                message: 'Please verify your email before logging in. Check your inbox for the verification link.',
+                requiresVerification: true
+            });
+        }
 
-        res.json({
+        // ===== VERIFY PASSWORD =====
+        const isPasswordMatch = await user.matchPassword(password);
+        if (!isPasswordMatch) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid email or password'
+            });
+        }
+
+        // ===== GENERATE JWT TOKEN =====
+        const token = generateToken(user._id, user.role);
+
+        console.log(`✅ User logged in: ${email} (ID: ${user._id})`);
+
+        // ===== SUCCESSFUL LOGIN =====
+        return res.status(200).json({
             success: true,
             token,
             user: {
                 id: user._id,
                 name: user.name,
                 email: user.email,
-                role: user.role
+                role: user.role,
+                isEmailVerified: user.isEmailVerified
             }
         });
 
     } catch (error) {
-        console.error("Login Error:", error);
-        res.status(500).json({ message: "Server error" });
+        console.error('❌ Login Error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Server error during login. Please try again later.'
+        });
     }
 };
 
-// Get current logged in user
+/**
+ * @route   GET /api/v1/auth/me
+ * @desc    Get current logged-in user
+ * @access  Private (requires protect middleware)
+ */
 exports.getMe = async (req, res) => {
     try {
         // req.user is set by protect middleware
@@ -185,102 +342,27 @@ exports.getMe = async (req, res) => {
             });
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             data: user
         });
+
     } catch (error) {
-        console.error("Get Me Error:", error);
-        res.status(500).json({
+        console.error('❌ Get Me Error:', error);
+        return res.status(500).json({
             success: false,
-            message: "Server error"
+            message: 'Server error'
         });
     }
 };
 
-// Verify Email
-exports.verifyEmail = async (req, res) => {
-    try {
-        // Get token from params
-        const { token } = req.params;
-
-        if (!token) {
-            return res.status(400).json({
-                success: false,
-                message: 'Verification token is required'
-            });
-        }
-
-        // Hash the token to match the one in database
-        const hashedToken = crypto
-            .createHash('sha256')
-            .update(token)
-            .digest('hex');
-
-        // Find user with this verification token
-        const user = await User.findOne({
-            emailVerificationToken: hashedToken
-        });
-
-        if (!user) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid or expired verification token'
-            });
-        }
-
-        // Check if already verified
-        if (user.isEmailVerified) {
-            return res.status(400).json({
-                success: false,
-                message: 'Email is already verified. You can login now.'
-            });
-        }
-
-        // Verify the user
-        user.isEmailVerified = true;
-        user.emailVerificationToken = undefined; // Clear the token
-        await user.save();
-
-        // Generate JWT token for immediate login
-        const jwtToken = jwt.sign(
-            { id: user._id, role: user.role },
-            getJwtSecret(),
-            { expiresIn: '7d' }
-        );
-
-        res.status(200).json({
-            success: true,
-            message: 'Email verified successfully! You are now logged in.',
-            token: jwtToken,
-            user: {
-                id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role
-            }
-        });
-
-    } catch (error) {
-        console.error('Verify Email Error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Server error during email verification'
-        });
-    }
-};
-
-// Forgot Password
+/**
+ * @route   POST /api/v1/auth/forgot-password
+ * @desc    Send password reset email
+ * @access  Public
+ */
 exports.forgotPassword = async (req, res) => {
     try {
-        // Safety check for undefined req.body
-        if (!req.body) {
-            return res.status(400).json({
-                success: false,
-                message: 'Request body is missing. Please send JSON data with Content-Type: application/json header'
-            });
-        }
-
         const { email } = req.body;
 
         if (!email) {
@@ -299,45 +381,48 @@ exports.forgotPassword = async (req, res) => {
             });
         }
 
-        // Get reset token
+        // Generate reset token
         const resetToken = user.getResetPasswordToken();
-
         await user.save({ validateBeforeSave: false });
 
         // Create reset URL
-        // In production, this should be your frontend URL
-        const resetUrl = `${req.protocol}://${req.get('host')}/api/auth/reset-password/${resetToken}`;
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
+        const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
 
-        // Or for frontend:
-        // const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
-
-        const message = `You are receiving this email because you (or someone else) has requested to reset your password.\n\nPlease click on the following link, or paste it into your browser to complete the process:\n\n${resetUrl}\n\nThis link will expire in 10 minutes.\n\nIf you did not request this, please ignore this email.`;
+        const message = `You are receiving this email because you (or someone else) requested to reset your password.\n\nPlease click the link below to reset your password:\n\n${resetUrl}\n\nThis link will expire in 10 minutes.\n\nIf you did not request this, please ignore this email.`;
 
         const htmlMessage = `
-            <h2>Password Reset Request</h2>
-            <p>You are receiving this email because you (or someone else) has requested to reset your password.</p>
-            <p>Please click the button below to reset your password:</p>
-            <a href="${resetUrl}" style="display: inline-block; padding: 10px 20px; background-color: #FF6B9D; color: white; text-decoration: none; border-radius: 5px;">Reset Password</a>
-            <p>Or copy and paste this link into your browser:</p>
-            <p>${resetUrl}</p>
-            <p><strong>This link will expire in 10 minutes.</strong></p>
-            <p>If you did not request this, please ignore this email.</p>
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #FF6B9D;">Password Reset Request</h2>
+                <p>You are receiving this email because you (or someone else) requested to reset your password.</p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="${resetUrl}" 
+                       style="display: inline-block; padding: 12px 30px; background-color: #FF6B9D; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                        Reset Password
+                    </a>
+                </div>
+                <p>Or copy and paste this link into your browser:</p>
+                <p style="color: #666; word-break: break-all;">${resetUrl}</p>
+                <p><strong>This link will expire in 10 minutes.</strong></p>
+                <p>If you did not request this, please ignore this email.</p>
+            </div>
         `;
 
         try {
             await sendEmail({
                 email: user.email,
-                subject: 'Password Reset Request - TirTir Shop',
+                subject: 'Password Reset Request - TirTir Cosmetics',
                 message,
                 html: htmlMessage
             });
 
-            res.status(200).json({
+            return res.status(200).json({
                 success: true,
                 message: 'Password reset email sent successfully'
             });
-        } catch (err) {
-            console.error('Email send error:', err);
+
+        } catch (emailError) {
+            console.error('⚠️ Password reset email failed:', emailError.message);
 
             // Clear reset token if email fails
             user.resetPasswordToken = undefined;
@@ -351,15 +436,19 @@ exports.forgotPassword = async (req, res) => {
         }
 
     } catch (error) {
-        console.error("Forgot Password Error:", error);
-        res.status(500).json({
+        console.error('❌ Forgot Password Error:', error);
+        return res.status(500).json({
             success: false,
-            message: "Server error"
+            message: 'Server error'
         });
     }
 };
 
-// Reset Password
+/**
+ * @route   PUT /api/v1/auth/reset-password/:resettoken
+ * @desc    Reset user password
+ * @access  Public
+ */
 exports.resetPassword = async (req, res) => {
     try {
         const { password } = req.body;
@@ -371,7 +460,6 @@ exports.resetPassword = async (req, res) => {
             });
         }
 
-        // Password strength validation
         if (password.length < 6) {
             return res.status(400).json({
                 success: false,
@@ -379,14 +467,15 @@ exports.resetPassword = async (req, res) => {
             });
         }
 
-        // Get hashed token
-        const resetPasswordToken = crypto
+        // Hash the token from URL
+        const hashedToken = crypto
             .createHash('sha256')
             .update(req.params.resettoken)
             .digest('hex');
 
+        // Find user with valid reset token
         const user = await User.findOne({
-            resetPasswordToken,
+            resetPasswordToken: hashedToken,
             resetPasswordExpire: { $gt: Date.now() }
         });
 
@@ -397,24 +486,18 @@ exports.resetPassword = async (req, res) => {
             });
         }
 
-        // Set new password
-        const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(password, salt);
-
-        // Clear reset token fields
+        // Set new password (will be hashed by pre-save hook)
+        user.password = password;
         user.resetPasswordToken = undefined;
         user.resetPasswordExpire = undefined;
-
         await user.save();
 
-        // Create new JWT token for immediate login
-        const token = jwt.sign(
-            { id: user._id, role: user.role },
-            getJwtSecret(),
-            { expiresIn: '7d' }
-        );
+        // Generate JWT token for immediate login
+        const token = generateToken(user._id, user.role);
 
-        res.status(200).json({
+        console.log(`✅ Password reset successful: ${user.email}`);
+
+        return res.status(200).json({
             success: true,
             message: 'Password reset successful',
             token,
@@ -427,46 +510,46 @@ exports.resetPassword = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Reset Password Error:", error);
-        res.status(500).json({
+        console.error('❌ Reset Password Error:', error);
+        return res.status(500).json({
             success: false,
-            message: "Server error"
+            message: 'Server error'
         });
     }
 };
 
-// Logout (Client-side token clearing, but we can also implement token blacklist later)
+/**
+ * @route   GET /api/v1/auth/logout
+ * @desc    Logout user (client-side token clearing)
+ * @access  Private
+ */
 exports.logout = async (req, res) => {
     try {
-        // For now, logout is handled on client-side by clearing the token
-        // In the future, you can implement token blacklisting using Redis
+        // Logout is handled on client-side by clearing the token
+        // In future: implement token blacklisting with Redis
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             message: 'Logged out successfully. Please clear your token from storage.'
         });
+
     } catch (error) {
-        console.error("Logout Error:", error);
-        res.status(500).json({
+        console.error('❌ Logout Error:', error);
+        return res.status(500).json({
             success: false,
-            message: "Server error"
+            message: 'Server error'
         });
     }
 };
 
-// Placeholder for Refresh Token (To be implemented with refresh token strategy)
+/**
+ * @route   POST /api/v1/auth/refresh-token
+ * @desc    Refresh JWT token (placeholder for future implementation)
+ * @access  Public
+ */
 exports.refreshToken = async (req, res) => {
-    try {
-        res.status(501).json({
-            success: false,
-            message: 'Refresh token functionality not yet implemented. Coming soon!'
-        });
-    } catch (error) {
-        console.error("Refresh Token Error:", error);
-        res.status(500).json({
-            success: false,
-            message: "Server error"
-        });
-    }
+    return res.status(501).json({
+        success: false,
+        message: 'Refresh token functionality not yet implemented'
+    });
 };
-
