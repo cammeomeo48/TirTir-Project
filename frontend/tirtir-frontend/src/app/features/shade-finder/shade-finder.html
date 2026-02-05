@@ -70,18 +70,41 @@
             <button *ngIf="!isCameraActive" (click)="startCamera()">Start Camera</button>
             <button *ngIf="isCameraActive" (click)="stopCamera()"
                 style="background: #333; margin-right: 10px;">Stop</button>
-            <button *ngIf="isCameraActive" (click)="scanShade()" [disabled]="!lightingStatus().isValid || isProcessing">
-                {{ isProcessing ? 'Analyzing...' : 'Find My Shade' }}
+            
+            <!-- Traditional Scan Button -->
+            <button *ngIf="isCameraActive" (click)="scanShade()" 
+                [disabled]="!lightingStatus().isValid || isProcessing"
+                style="background: #666; margin-right: 10px;">
+                {{ isProcessing && !isAiAnalyzing ? 'Analyzing...' : 'Quick Scan' }}
+            </button>
+            
+            <!-- AI Scan Button (Primary) -->
+            <button *ngIf="isCameraActive" (click)="scanWithAI()" 
+                [disabled]="isProcessing"
+                class="ai-scan-btn">
+                <span class="ai-icon">🤖</span>
+                {{ isAiAnalyzing ? 'AI Analyzing...' : 'AI Scan' }}
             </button>
         </div>
 
         <p *ngIf="error" style="color: red;">{{ error }}</p>
+        
+        <!-- AI Analysis Info -->
+        <div class="ai-info" *ngIf="aiAnalysis && !showResultModal()">
+            <div class="ai-badge">✨ AI Analysis</div>
+            <p><strong>Undertone:</strong> {{ aiAnalysis.undertone }} 
+               <span class="confidence">({{ (aiAnalysis.confidence * 100) | number:'1.0-0' }}% confidence)</span>
+            </p>
+            <p><strong>Brightness:</strong> {{ aiAnalysis.brightness }}</p>
+            <p class="ai-reasoning">{{ aiAnalysis.explanation }}</p>
+        </div>
     </div>
 
     <!-- Loading Overlay -->
     <div class="loading-overlay" *ngIf="isProcessing">
         <div class="spinner"></div>
-        <p>Đang phân tích tông da...</p>
+        <p *ngIf="isAiAnalyzing">🤖 Gemini AI đang phân tích da bạn...</p>
+        <p *ngIf="!isAiAnalyzing">Đang phân tích tông da...</p>
     </div>
 
     <!-- Result Modal / Bottom Sheet -->

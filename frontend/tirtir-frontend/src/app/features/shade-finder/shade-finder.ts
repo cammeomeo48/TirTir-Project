@@ -2,6 +2,7 @@ import { Component, ElementRef, ViewChild, OnDestroy, OnInit, effect, signal } f
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { AiAdvisorService, SkinAnalysis } from '../../core/services/ai-advisor.service';
 // TODO: Re-enable when MediaPipe package is installed
 // import { FaceTrackerService } from '../../core/services/face-tracker.service';
 
@@ -25,6 +26,10 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
   selectedSkinType = 'Normal';
   recommendedShades: any[] = [];
 
+  // AI Analysis Results
+  aiAnalysis: SkinAnalysis | null = null;
+  isAiAnalyzing = false;
+
   // UI States
   showResultModal = signal(false);
   explanationText = '';
@@ -42,7 +47,8 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
   constructor(
     // TODO: Re-enable when MediaPipe package is installed
     // public faceTracker: FaceTrackerService,
-    private http: HttpClient
+    private http: HttpClient,
+    private aiAdvisor: AiAdvisorService
   ) { }
 
   async ngOnInit() {
@@ -328,13 +334,141 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * NEW: AI-Powered Skin Analysis
+   * Uses Gemini Vision to analyze skin and provide intelligent recommendations
+   */
+  async scanWithAI() {
+    if (!this.videoElement?.nativeElement) {
+      this.error = 'Camera not initialized';
+      return;
+    }
+
+    this.isProcessing = true;
+    this.isAiAnalyzing = true;
+    this.error = null;
+
+    try {
+      // Capture current video frame as base64
+      const imageData = this.aiAdvisor.videoFrameToBase64(this.videoElement.nativeElement);
+
+      // Send to AI for analysis
+      console.log('🤖 Sending image to Gemini AI...');
+      this.aiAdvisor.analyzeSkin(imageData, this.selectedSkinType).subscribe({
+        next: (response) => {
+          if (response.success && response.data) {
+            this.aiAnalysis = response.data;
+
+            // Use AI analysis to enhance shade matching
+            // Extract the smoothed color from history
+            if (this.colorHistory.length > 0) {
+              const smoothedColor = this.colorHistory.reduce(
+                (acc, curr) => ({
+                  r: acc.r + curr.r,
+                  g: acc.g + curr.g,
+                  b: acc.b + curr.b
+                }),
+                { r: 0, g: 0, b: 0 }
+              );
+
+              smoothedColor.r = Math.round(smoothedColor.r / this.colorHistory.length);
+              smoothedColor.g = Math.round(smoothedColor.g / this.colorHistory.length);
+              smoothedColor.b = Math.round(smoothedColor.b / this.colorHistory.length);
+
+              // Find matches with AI-enhanced parameters
+              this.findMatchWithAI(smoothedColor, this.aiAnalysis);
+            } else {
+              this.isProcessing = false;
+              this.isAiAnalyzing = false;
+              this.error = 'Chưa có dữ liệu màu da ổn định. Vui lòng giữ yên khuôn mặt.';
+            }
+          } else {
+            this.isProcessing = false;
+            this.isAiAnalyzing = false;
+            this.error = response.message || 'AI analysis failed';
+          }
+        },
+        error: (err) => {
+          console.error('AI Analysis failed:', err);
+          this.isProcessing = false;
+          this.isAiAnalyzing = false;
+          this.error = 'Could not analyze skin. Using fallback method.';
+
+          // Fallback to traditional method
+          if (this.colorHistory.length > 0) {
+            const smoothedColor = this.colorHistory.reduce(
+              (acc, curr) => ({
+                r: acc.r + curr.r,
+                g: acc.g + curr.g,
+                b: acc.b + curr.b
+              }),
+              { r: 0, g: 0, b: 0 }
+            );
+
+            smoothedColor.r = Math.round(smoothedColor.r / this.colorHistory.length);
+            smoothedColor.g = Math.round(smoothedColor.g / this.colorHistory.length);
+            smoothedColor.b = Math.round(smoothedColor.b / this.colorHistory.length);
+
+            this.findMatch(smoothedColor);
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error('AI Scan error:', error);
+      this.isProcessing = false;
+      this.isAiAnalyzing = false;
+      this.error = 'Failed to capture image for AI analysis';
+    }
+  }
+
+  /**
+   * Find shade matches enhanced with AI analysis
+   */
+  findMatchWithAI(color: { r: number, g: number, b: number }, aiAnalysis: SkinAnalysis) {
+    const payload = {
+      ...color,
+      skinType: this.selectedSkinType,
+      // Include AI insights
+      undertone: aiAnalysis.undertone,
+      brightness: aiAnalysis.brightness,
+      toneShift: aiAnalysis.recommendedToneShift
+    };
+
+    this.http.post<any[]>('http://localhost:5000/api/shades/match', payload).subscribe({
+      next: (res) => {
+        this.recommendedShades = res;
+
+        // Use AI-generated explanation instead of hardcoded
+        this.explanationText = aiAnalysis.explanation;
+
+        this.showResultModal.set(true);
+        this.isProcessing = false;
+        this.isAiAnalyzing = false;
+      },
+      error: (err) => {
+        console.error(err);
+        this.error = "Failed to fetch matches";
+        this.isProcessing = false;
+        this.isAiAnalyzing = false;
+      }
+    });
+  }
+
   generateExplanation() {
+    // Use AI explanation if available
+    if (this.aiAnalysis) {
+      this.explanationText = this.aiAnalysis.explanation;
+      return;
+    }
+
+    // Fallback to old logic
     if (this.selectedSkinType === 'Oily') {
       this.explanationText = "Vì da bạn là da dầu, AI chọn màu sáng hơn 1 tone để tránh bị xuống tông cuối ngày.";
     } else if (this.selectedSkinType === 'Dry') {
       this.explanationText = "Vì da bạn là da khô, AI chọn màu có độ ẩm cao và tone tự nhiên để tránh bị mốc nền.";
     } else {
-      this.explanationText = "Màu này tệp hoàn hảo với tone da tự nhiên của bạn.";
+      this.explanationText = "Màu này khớp hoàn hảo với tone da tự nhiên của bạn.";
     }
   }
 
