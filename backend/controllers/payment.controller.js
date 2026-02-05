@@ -1,3 +1,4 @@
+const axios = require('axios'); 
 const moment = require('moment');
 const querystring = require('qs');
 const crypto = require('crypto');
@@ -45,16 +46,13 @@ exports.createPaymentUrl = async (req, res, next) => {
                 break;
                 
             case 'CARD': 
-                // Nếu bên FE bạn tách nút "Thanh toán thẻ Quốc tế" riêng
-                // Chúng ta ép bankCode là INTCARD để VNPay mở thẳng form Visa/Master
-                paymentUrl = createVNPayUrl(req, orderId, amount, 'INTCARD', language);
-                break;
-
+                 paymentUrl = createVNPayUrl(req, orderId, amount, paymentMethod === 'CARD' ? 'INTCARD' : bankCode, language);
+                 break;
+            
             case 'MOMO':
-                return res.status(501).json({ message: "MoMo integration coming soon" });
-                
-            case 'ZALOPAY':
-                return res.status(501).json({ message: "ZaloPay integration coming soon" });
+                // GỌI HÀM ASYNC CỦA MOMO
+                paymentUrl = await createMomoUrl(orderId, amount); 
+                break;
                 
             default:
                 return res.status(400).json({ message: "Invalid payment method" });
@@ -214,5 +212,89 @@ exports.checkPaymentStatus = async (req, res, next) => {
         });
     } catch (err) {
         next(err);
+    }
+};
+
+async function createMomoUrl(orderId, amount) {
+    const { partnerCode, accessKey, secretKey, endpoint, returnUrl, ipnUrl } = paymentConfig.momo;
+    
+    const requestId = orderId + new Date().getTime();
+    const orderInfo = "Thanh toan don hang " + orderId;
+    const requestType = "captureWallet";
+    const extraData = ""; // Pass empty string if not used
+
+    // TẠO CHỮ KÝ (SIGNATURE) - Thứ tự field cực kỳ quan trọng
+    // format: accessKey=$accessKey&amount=$amount&extraData=$extraData&ipnUrl=$ipnUrl&orderId=$orderId&orderInfo=$orderInfo&partnerCode=$partnerCode&redirectUrl=$redirectUrl&requestId=$requestId&requestType=$requestType
+    const rawSignature = `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&ipnUrl=${ipnUrl}&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&redirectUrl=${returnUrl}&requestId=${requestId}&requestType=${requestType}`;
+
+    const signature = crypto.createHmac('sha256', secretKey)
+        .update(rawSignature)
+        .digest('hex');
+
+    // Body gửi sang MoMo
+    const requestBody = {
+        partnerCode,
+        partnerName: "TirTir Store",
+        storeId: "MomoTestStore",
+        requestId,
+        amount,
+        orderId,
+        orderInfo,
+        redirectUrl: returnUrl,
+        ipnUrl,
+        lang: 'vi',
+        requestType,
+        autoCapture: true,
+        extraData,
+        signature
+    };
+
+    // Gọi API MoMo
+    try {
+        const response = await axios.post(endpoint, requestBody);
+        return response.data.payUrl; // Trả về link thanh toán
+    } catch (error) {
+        console.error("MoMo Error:", error.response?.data || error.message);
+        throw new Error("Lỗi khi tạo giao dịch MoMo");
+    }
+}
+
+// GET /api/payments/momo-return
+exports.momoReturn = async (req, res, next) => {
+    try {
+        const { resultCode, orderId } = req.query;
+        // resultCode = 0 là thành công
+        
+        if (resultCode == '0') {
+             // Cập nhật DB
+             await Order.findByIdAndUpdate(orderId, { 
+                 paymentStatus: 'paid', 
+                 paymentMethod: 'MOMO' 
+             });
+             res.redirect(`http://localhost:4200/order-confirmation/${orderId}?status=success`);
+        } else {
+             res.redirect(`http://localhost:4200/checkout?status=failed&orderId=${orderId}`);
+        }
+    } catch (error) {
+        next(error);
+    }
+};
+
+// POST /api/payments/momo-ipn
+exports.momoIPN = async (req, res, next) => {
+    // MoMo gọi vào đây để báo kết quả (Server-to-Server)
+    try {
+        const { resultCode, orderId } = req.body; // MoMo gửi body JSON
+        
+        if (resultCode == '0') {
+            await Order.findByIdAndUpdate(orderId, { 
+                 paymentStatus: 'paid',
+                 paymentInfo: req.body 
+            });
+        }
+        res.status(204).send(); // Trả về 204 No Content để MoMo biết đã nhận
+    } catch (error) {
+        console.error(error);
+        res.status(500).send();
     }
 };
