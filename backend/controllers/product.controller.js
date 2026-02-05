@@ -311,7 +311,6 @@ exports.getStockHistory = async (req, res) => {
         }
 
         const history = await StockHistory.find({ product: product._id })
-            .populate('order', 'status')
             .populate('performedBy', 'name email')
             .sort({ createdAt: -1 });
 
@@ -374,18 +373,42 @@ exports.deleteProduct = async (req, res) => {
 exports.updateStock = async (req, res) => {
     try {
         const { id } = req.params;
-        const { stock } = req.body;
+        const { stock, reason } = req.body;
+        
         if (stock === undefined || stock < 0) {
             return res.status(400).json({ message: "Invalid stock value" });
         }
+
         const or = [{ Product_ID: id }];
         if (mongoose.Types.ObjectId.isValid(id)) or.push({ _id: id });
+        
         const product = await Product.findOne({ $or: or });
         if (!product) {
             return res.status(404).json({ message: "Product not found" });
         }
+
+        const previousStock = product.Stock_Quantity;
+        const changeAmount = stock - previousStock;
+        
+        if (changeAmount === 0) {
+            return res.json({ message: "Stock unchanged", stock: product.Stock_Quantity });
+        }
+
         product.Stock_Quantity = stock;
         await product.save();
+
+        // Create Audit Log
+        await StockHistory.create({
+            product: product._id,
+            action: 'Adjust',
+            change_type: changeAmount > 0 ? 'Increase' : 'Decrease',
+            balance_before: previousStock,
+            balance_after: stock,
+            changeAmount: Math.abs(changeAmount),
+            reason: reason || 'Admin Manual Update',
+            performedBy: req.user ? req.user._id : null
+        });
+
         res.json({ message: "Stock updated", stock: product.Stock_Quantity });
     } catch (err) {
         res.status(500).json({ message: err.message });
