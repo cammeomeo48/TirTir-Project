@@ -77,8 +77,13 @@ export class ProfileInfoComponent implements OnInit {
                 this.successMessage = 'Profile updated successfully!';
                 this.loading = false;
 
-                // Update auth service user state
-                this.authService.getCurrentUser().subscribe();
+                // Update auth service user state (optional, don't block UI)
+                this.authService.getCurrentUser().subscribe({
+                    error: () => {
+                        // Silently ignore errors from getCurrentUser
+                        console.warn('Failed to refresh user data in auth service');
+                    }
+                });
             },
             error: (error) => {
                 this.errorMessage = error.message || 'Failed to update profile';
