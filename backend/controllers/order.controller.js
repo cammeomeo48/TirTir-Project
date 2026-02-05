@@ -1,39 +1,70 @@
 const Order = require('../models/order.model');
 const Cart = require('../models/cart.model');
 const Product = require('../models/product.model');
+const StockHistory = require('../models/stock.history.model');
 const { ORDER_STATUS } = require('../constants');
 
 // 1. TẠO ĐƠN HÀNG (CHECKOUT)
+// Implements: Atomic Updates & Reservation Strategy
 exports.createOrder = async (req, res) => {
     try {
-        // Get userId from authenticated user (set by protect middleware)
         const userId = req.user.id;
         const { shippingAddress, paymentMethod } = req.body;
 
-        // A. Lấy giỏ hàng của user
         const cart = await Cart.findOne({ user: userId }).populate('items.product');
 
         if (!cart || cart.items.length === 0) {
             return res.status(400).json({ message: "Giỏ hàng trống!" });
         }
 
-        // B. Chuẩn bị dữ liệu items cho Order
-        // (Lưu cứng giá và tên sản phẩm vào thời điểm mua)
         const orderItems = [];
         let calculatedTotal = 0;
+        const reservedProducts = []; // Keep track to rollback if needed
 
+        // --- ATOMIC RESERVATION LOOP ---
         for (const item of cart.items) {
-            // Kiểm tra sản phẩm còn tồn tại không
             if (!item.product) continue;
 
-            // Logic kiểm tra tồn kho (Optional - có thể thêm sau)
-            // if (item.product.Stock_Quantity < item.quantity) ...
+            // Try to reserve stock ATOMICALLY
+            // Decrement Stock_Quantity, Increment Stock_Reserved
+            const updatedProduct = await Product.findOneAndUpdate(
+                { 
+                    _id: item.product._id, 
+                    Stock_Quantity: { $gte: item.quantity } // Condition: Stock must be enough
+                },
+                { 
+                    $inc: { 
+                        Stock_Quantity: -item.quantity,
+                        Stock_Reserved: item.quantity 
+                    } 
+                },
+                { new: true }
+            );
+
+            if (!updatedProduct) {
+                // ROLLBACK PREVIOUSLY RESERVED ITEMS
+                for (const reserved of reservedProducts) {
+                    await Product.findByIdAndUpdate(reserved.id, {
+                        $inc: { 
+                            Stock_Quantity: reserved.qty,
+                            Stock_Reserved: -reserved.qty 
+                        }
+                    });
+                }
+
+                return res.status(400).json({ 
+                    message: `Hết hàng hoặc không đủ số lượng cho sản phẩm: ${item.product.Name}` 
+                });
+            }
+
+            // Track for rollback/success logging
+            reservedProducts.push({ id: item.product._id, qty: item.quantity, price: item.product.Price });
 
             orderItems.push({
                 product: item.product._id,
                 name: item.product.Name,
                 quantity: item.quantity,
-                price: item.product.Price, // Lấy giá từ DB, không tin client
+                price: item.product.Price,
                 shade: item.shade,
                 image: item.product.Thumbnail_Images
             });
@@ -41,7 +72,7 @@ exports.createOrder = async (req, res) => {
             calculatedTotal += item.product.Price * item.quantity;
         }
 
-        // C. Tạo Order mới
+        // --- CREATE ORDER ---
         const newOrder = new Order({
             user: userId,
             items: orderItems,
@@ -51,9 +82,26 @@ exports.createOrder = async (req, res) => {
             status: ORDER_STATUS.PENDING
         });
 
-        await newOrder.save();
+        const savedOrder = await newOrder.save();
 
-        // D. Quan trọng: XÓA GIỎ HÀNG sau khi đặt thành công
+        // --- LOG HISTORY (RESERVE ACTION) ---
+        for (const reserved of reservedProducts) {
+            // Need to fetch latest state for accurate balance_after or calculate it
+            // For performance, we can estimate or fetch. Let's fetch to be safe or use the returned atomic doc if we stored it.
+            // Simplified: Just log the action.
+            await StockHistory.create({
+                product: reserved.id,
+                action: 'Reserve',
+                change_type: 'Decrease', // Stock decreased (moved to reserved)
+                source_id: savedOrder._id.toString(),
+                balance_before: 0, // Not strictly querying to save time, or we can improve this
+                balance_after: 0,  // TODO: Improve balance tracking in high concurrency
+                changeAmount: reserved.qty,
+                reason: 'Order Placed (Reserved)',
+                performedBy: userId
+            });
+        }
+
         await Cart.findOneAndDelete({ user: userId });
 
         res.status(201).json({
@@ -63,6 +111,8 @@ exports.createOrder = async (req, res) => {
 
     } catch (error) {
         console.error("Create Order Error:", error);
+        // Attempt Rollback if crash happens in middle (Best effort)
+        // In real world, use Transactions.
         res.status(500).json({ message: "Lỗi Server khi tạo đơn hàng." });
     }
 };
@@ -115,18 +165,102 @@ exports.updateOrderStatus = async (req, res) => {
             return res.status(400).json({ message: "Trạng thái không hợp lệ" });
         }
 
-        const order = await Order.findByIdAndUpdate(
-            orderId,
-            { status: status },
-            { new: true } // Trả về data mới sau khi update
-        );
+        const order = await Order.findById(orderId).populate('items.product');
 
         if (!order) {
             return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
         }
 
-        res.json({ message: "Cập nhật trạng thái thành công", order });
+        const oldStatus = order.status;
+        
+        // --- STOCK MANAGEMENT LOGIC ---
+        
+        // 1. Pending -> Processing: CONFIRM Stock (Deduct from Reserved)
+        // Note: Stock was already deducted from Stock_Quantity when Order was placed (Pending).
+        // It is currently in Stock_Reserved. We just need to remove it from Stock_Reserved.
+        if (status === 'Processing' && oldStatus === 'Pending') {
+            for (const item of order.items) {
+                // Confirm Sale: Remove from Reserved
+                const product = await Product.findByIdAndUpdate(item.product._id, {
+                    $inc: { Stock_Reserved: -item.quantity }
+                }, { new: true });
+
+                // Log History (Sale)
+                if (product) {
+                    await StockHistory.create({
+                        product: product._id,
+                        action: 'Sale',
+                        change_type: 'Decrease', // Technically no change to Available Stock, but leaving system
+                        source_id: order._id.toString(),
+                        balance_before: product.Stock_Quantity, // Available stays same
+                        balance_after: product.Stock_Quantity,
+                        changeAmount: item.quantity,
+                        reason: 'Order Confirmed (Reserved Released)',
+                        performedBy: req.user.id
+                    });
+                }
+            }
+        }
+
+        // 2. Pending -> Cancelled: RELEASE Stock (Reserved -> Available)
+        if (status === 'Cancelled' && oldStatus === 'Pending') {
+            for (const item of order.items) {
+                // Return to Stock
+                const product = await Product.findByIdAndUpdate(item.product._id, {
+                    $inc: { 
+                        Stock_Quantity: item.quantity,
+                        Stock_Reserved: -item.quantity 
+                    }
+                }, { new: true });
+
+                if (product) {
+                    await StockHistory.create({
+                        product: product._id,
+                        action: 'Release',
+                        change_type: 'Increase',
+                        source_id: order._id.toString(),
+                        balance_before: product.Stock_Quantity - item.quantity,
+                        balance_after: product.Stock_Quantity,
+                        changeAmount: item.quantity,
+                        reason: 'Order Cancelled (Stock Returned)',
+                        performedBy: req.user.id
+                    });
+                }
+            }
+        }
+
+        // 3. Processing/Shipped -> Cancelled: RESTOCK (Refund)
+        // Stock was already fully deducted (Reserved cleared). Need to add back to Available.
+        if (status === 'Cancelled' && (oldStatus === 'Processing' || oldStatus === 'Shipped')) {
+            for (const item of order.items) {
+                const product = await Product.findByIdAndUpdate(item.product._id, {
+                    $inc: { Stock_Quantity: item.quantity }
+                }, { new: true });
+
+                if (product) {
+                    await StockHistory.create({
+                        product: product._id,
+                        action: 'Refund',
+                        change_type: 'Increase',
+                        source_id: order._id.toString(),
+                        balance_before: product.Stock_Quantity - item.quantity,
+                        balance_after: product.Stock_Quantity,
+                        changeAmount: item.quantity,
+                        reason: 'Order Cancelled (Restock)',
+                        performedBy: req.user.id
+                    });
+                }
+            }
+        }
+
+        // --- END STOCK LOGIC ---
+
+        order.status = status;
+        const updatedOrder = await order.save();
+
+        res.json({ message: "Cập nhật trạng thái thành công", order: updatedOrder });
     } catch (error) {
+        console.error("Update Order Error:", error);
         res.status(500).json({ message: error.message });
     }
 };

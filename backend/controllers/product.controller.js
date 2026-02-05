@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Product = require("../models/product.model");
 const Shade = require("../models/shade.model");
+const StockHistory = require("../models/stock.history.model");
 
 // Helper to generate slug from name
 const generateSlug = (name) => {
@@ -27,6 +28,8 @@ const mapProductToFrontend = (product) => {
         images: [product.Thumbnail_Images, ...(product.Gallery_Images || [])], // Map images array for Detail page
         descriptionImages: product.Description_Images || [], // Added description images
         category: product.Category_Slug || product.Category, // Generic category field
+        Stock_Quantity: product.Stock_Quantity, // Added Stock Quantity
+        Stock_Reserved: product.Stock_Reserved || 0, // Added Reserved Stock
         // Add any other fields if FE requests them later. 
     };
 };
@@ -267,6 +270,52 @@ exports.getProductDetail = async (req, res) => {
                 // Include other shade details if needed by frontend
             }))
         });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// NEW: Get Low Stock Products (Admin Alert)
+exports.getLowStockProducts = async (req, res) => {
+    try {
+        const threshold = req.query.threshold ? parseInt(req.query.threshold) : 10;
+        
+        const products = await Product.find({ 
+            Stock_Quantity: { $lt: threshold } 
+        }).select('Product_ID Name Stock_Quantity Thumbnail_Images Category');
+
+        res.json({
+            count: products.length,
+            threshold: threshold,
+            products: products
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// NEW: Get Stock History (Log)
+exports.getStockHistory = async (req, res) => {
+    try {
+        const { id } = req.params; // Product ID (String or ObjectId)
+        
+        // Find product first to get ObjectId if custom ID is used
+        let productQuery = { Product_ID: id };
+        if (mongoose.Types.ObjectId.isValid(id)) {
+            productQuery = { _id: id };
+        }
+        
+        const product = await Product.findOne(productQuery);
+        if (!product) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        const history = await StockHistory.find({ product: product._id })
+            .populate('order', 'status')
+            .populate('performedBy', 'name email')
+            .sort({ createdAt: -1 });
+
+        res.json(history);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

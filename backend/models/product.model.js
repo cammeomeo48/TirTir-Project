@@ -25,7 +25,8 @@ const ProductSchema = new mongoose.Schema({
     slug: { type: String, unique: true, sparse: true },
 
     Status: String,
-    Stock_Quantity: Number
+    Stock_Quantity: { type: Number, default: 0, min: 0 },
+    Stock_Reserved: { type: Number, default: 0, min: 0 } // Items held in pending orders
 }, { collection: 'products', timestamps: true });
 
 module.exports = mongoose.model('Product', ProductSchema);
