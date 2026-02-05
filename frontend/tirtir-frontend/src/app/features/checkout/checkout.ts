@@ -73,7 +73,7 @@ export class CheckoutComponent implements OnInit {
     getImageUrl(url: string): string {
         if (!url) return '';
         if (url.startsWith('http')) return url;
-        return `http://localhost:5000/${url.startsWith('/') ? url.substring(1) : url}`;
+        return `http://localhost:5001/${url.startsWith('/') ? url.substring(1) : url}`;
     }
 
     getTotal(): number {

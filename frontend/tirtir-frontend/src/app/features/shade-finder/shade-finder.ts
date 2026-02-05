@@ -313,7 +313,7 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
       skinType: this.selectedSkinType
     };
 
-    this.http.post<any[]>('http://localhost:5000/api/shades/match', payload).subscribe({
+    this.http.post<any[]>('http://localhost:5001/api/shades/match', payload).subscribe({
       next: (res) => {
         this.recommendedShades = res;
         this.generateExplanation();

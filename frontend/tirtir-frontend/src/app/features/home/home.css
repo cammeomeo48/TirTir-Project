@@ -241,8 +241,9 @@
 
 .products-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 24px;
+    grid-template-columns: repeat(5, 246px);
+    gap: 20px;
+    justify-content: center;
 }
 
 /* =====================================================
@@ -354,7 +355,7 @@
 
 @media (max-width: 1200px) {
     .products-grid {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(4, 246px);
     }
 }
 
@@ -385,7 +386,7 @@
     }
 
     .products-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, 246px);
         gap: 16px;
     }
 

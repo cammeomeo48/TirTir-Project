@@ -22,8 +22,9 @@
 
 .product-img {
     width: 100%;
-    aspect-ratio: 4 / 5;
+    aspect-ratio: 1 / 1;
     object-fit: cover;
+    background: #f8f8f8;
     transition: transform 0.4s ease;
 }
 
@@ -74,6 +75,9 @@
     font-weight: 600;
     margin: 0 0 6px 0;
     line-height: 1.4;
+    min-height: 40px;
+    overflow: visible;
+    word-wrap: break-word;
 }
 
 .product-title a {
