@@ -1,0 +1,175 @@
+<div class="address-book">
+    <div class="page-header">
+        <div>
+            <h1>Address Book</h1>
+            <p class="subtitle">Manage your shipping addresses</p>
+        </div>
+        <button class="btn btn-primary" (click)="openAddForm()" [disabled]="loading">
+            + Add New Address
+        </button>
+    </div>
+
+    <!-- Success/Error Messages -->
+    @if (successMessage) {
+    <div class="alert alert-success">
+        ✓ {{ successMessage }}
+    </div>
+    }
+    @if (errorMessage) {
+    <div class="alert alert-error">
+        ✗ {{ errorMessage }}
+    </div>
+    }
+
+    <!-- Address List -->
+    @if (loading && addresses.length === 0) {
+    <div class="loading">Loading addresses...</div>
+    } @else if (addresses.length === 0) {
+    <div class="empty-state">
+        <div class="empty-icon">📍</div>
+        <h3>No addresses yet</h3>
+        <p>Add your first shipping address to get started</p>
+        <button class="btn btn-primary" (click)="openAddForm()">
+            + Add Address
+        </button>
+    </div>
+    } @else {
+    <div class="addresses-grid">
+        @for (address of addresses; track address._id) {
+        <div class="address-card" [class.default]="address.isDefault">
+            @if (address.isDefault) {
+            <div class="default-badge">✓ Default</div>
+            }
+
+            <div class="address-content">
+                <h3>{{ address.fullName }}</h3>
+                <p class="phone">📞 {{ address.phone }}</p>
+                <p class="address-details">
+                    {{ address.street }}<br>
+                    {{ address.ward }}, {{ address.district }}<br>
+                    {{ address.city }}
+                </p>
+            </div>
+
+            <div class="address-actions">
+                @if (!address.isDefault) {
+                <button class="btn-action btn-default" (click)="setAsDefault(address._id)" [disabled]="loading">
+                    Set as Default
+                </button>
+                }
+                <button class="btn-action btn-edit" (click)="openEditForm(address)" [disabled]="loading">
+                    ✏️ Edit
+                </button>
+                <button class="btn-action btn-delete" (click)="deleteAddress(address._id)" [disabled]="loading">
+                    🗑️ Delete
+                </button>
+            </div>
+        </div>
+        }
+    </div>
+    }
+
+    <!-- Address Form Modal -->
+    @if (showForm) {
+    <div class="modal-overlay" (click)="closeForm()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+                <h2>{{ editMode ? 'Edit Address' : 'Add New Address' }}</h2>
+                <button class="close-btn" (click)="closeForm()">×</button>
+            </div>
+
+            <form [formGroup]="addressForm" (ngSubmit)="onSubmit()">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="fullName">Full Name <span class="required">*</span></label>
+                        <input type="text" id="fullName" formControlName="fullName" class="form-control"
+                            placeholder="Nguyen Van A">
+                        @if (addressForm.get('fullName')?.invalid && addressForm.get('fullName')?.touched) {
+                        <div class="error-message">Full name is required</div>
+                        }
+                    </div>
+
+                    <div class="form-group">
+                        <label for="phone">Phone Number <span class="required">*</span></label>
+                        <input type="tel" id="phone" formControlName="phone" class="form-control"
+                            placeholder="0901234567">
+                        @if (addressForm.get('phone')?.invalid && addressForm.get('phone')?.touched) {
+                        <div class="error-message">Phone must be 10-11 digits</div>
+                        }
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="street">Street Address <span class="required">*</span></label>
+                    <input type="text" id="street" formControlName="street" class="form-control"
+                        placeholder="123 Nguyen Hue Street">
+                    @if (addressForm.get('street')?.invalid && addressForm.get('street')?.touched) {
+                    <div class="error-message">Street address is required</div>
+                    }
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="city">City <span class="required">*</span></label>
+                        <select id="city" formControlName="city" class="form-control">
+                            <option value="">Select City</option>
+                            @for (city of cities; track city) {
+                            <option [value]="city">{{ city }}</option>
+                            }
+                        </select>
+                        @if (addressForm.get('city')?.invalid && addressForm.get('city')?.touched) {
+                        <div class="error-message">City is required</div>
+                        }
+                    </div>
+
+                    <div class="form-group">
+                        <label for="district">District <span class="required">*</span></label>
+                        <select id="district" formControlName="district" class="form-control">
+                            <option value="">Select District</option>
+                            @for (district of districts; track district) {
+                            <option [value]="district">{{ district }}</option>
+                            }
+                        </select>
+                        @if (addressForm.get('district')?.invalid && addressForm.get('district')?.touched) {
+                        <div class="error-message">District is required</div>
+                        }
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="ward">Ward <span class="required">*</span></label>
+                    <select id="ward" formControlName="ward" class="form-control">
+                        <option value="">Select Ward</option>
+                        @for (ward of wards; track ward) {
+                        <option [value]="ward">{{ ward }}</option>
+                        }
+                    </select>
+                    @if (addressForm.get('ward')?.invalid && addressForm.get('ward')?.touched) {
+                    <div class="error-message">Ward is required</div>
+                    }
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" formControlName="isDefault">
+                        <span>Set as default address</span>
+                    </label>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" (click)="closeForm()">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary" [disabled]="loading || addressForm.invalid">
+                        @if (loading) {
+                        <span class="spinner"></span> Saving...
+                        } @else {
+                        {{ editMode ? 'Update Address' : 'Add Address' }}
+                        }
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    }
+</div>

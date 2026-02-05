@@ -28,8 +28,31 @@ export const routes: Routes = [
     { path: 'cart', component: CartComponent, canActivate: [authGuard] },
     { path: 'checkout', component: CheckoutComponent, canActivate: [authGuard] },
     { path: 'order-confirmation/:id', component: OrderConfirmationComponent, canActivate: [authGuard] },
-    // Account (protected)
-    { path: 'account/orders', component: OrderHistoryComponent, canActivate: [authGuard] },
+    // Account (protected) - Profile with nested routes
+    {
+        path: 'account',
+        loadComponent: () => import('./features/account/profile-layout/profile-layout').then(m => m.ProfileLayoutComponent),
+        canActivate: [authGuard],
+        children: [
+            { path: '', redirectTo: 'profile', pathMatch: 'full' },
+            {
+                path: 'profile',
+                loadComponent: () => import('./features/account/profile-info/profile-info').then(m => m.ProfileInfoComponent)
+            },
+            {
+                path: 'addresses',
+                loadComponent: () => import('./features/account/address-book/address-book').then(m => m.AddressBookComponent)
+            },
+            {
+                path: 'password',
+                loadComponent: () => import('./features/account/change-password/change-password').then(m => m.ChangePasswordComponent)
+            },
+            {
+                path: 'orders',
+                component: OrderHistoryComponent
+            }
+        ]
+    },
     // Collection pages (category-based product listings)
     { path: 'collections/:slug', component: CollectionComponent },
     // Virtual Services (Shade Finder)

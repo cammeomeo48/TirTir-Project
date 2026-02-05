@@ -4,6 +4,11 @@ export interface User {
   email: string;
   role: 'user' | 'admin';
   isEmailVerified?: boolean;
+  avatar?: string;
+  phone?: string;
+  gender?: 'Male' | 'Female' | 'Other';
+  birthDate?: Date | string;
+  addresses?: any[]; // Address array, imported separately to avoid circular dependency
   createdAt?: Date;
   updatedAt?: Date;
 }

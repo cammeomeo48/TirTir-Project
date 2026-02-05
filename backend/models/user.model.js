@@ -39,7 +39,68 @@ const UserSchema = new mongoose.Schema({
     },
     emailVerificationToken: String,
     resetPasswordToken: String,
-    resetPasswordExpire: Date
+    resetPasswordExpire: Date,
+    // ===== NEW PROFILE FIELDS =====
+    avatar: {
+        type: String,
+        default: null
+    },
+    phone: {
+        type: String,
+        trim: true,
+        default: null
+    },
+    gender: {
+        type: String,
+        enum: ['Male', 'Female', 'Other'],
+        default: null
+    },
+    birthDate: {
+        type: Date,
+        default: null
+    },
+    // ===== ADDRESS BOOK (Sub-document Array) =====
+    addresses: [{
+        fullName: {
+            type: String,
+            required: [true, 'Full name is required for address'],
+            trim: true
+        },
+        phone: {
+            type: String,
+            required: [true, 'Phone number is required for address'],
+            trim: true
+        },
+        street: {
+            type: String,
+            required: [true, 'Street address is required'],
+            trim: true
+        },
+        city: {
+            type: String,
+            required: [true, 'City is required'],
+            trim: true
+        },
+        district: {
+            type: String,
+            required: [true, 'District is required'],
+            trim: true
+        },
+        ward: {
+            type: String,
+            required: [true, 'Ward is required'],
+            trim: true
+        },
+        isDefault: {
+            type: Boolean,
+            default: false
+        }
+    }],
+    // ===== WISHLIST (Product References) =====
+    wishlist: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Product'
+    }]
 }, {
     timestamps: true
 });

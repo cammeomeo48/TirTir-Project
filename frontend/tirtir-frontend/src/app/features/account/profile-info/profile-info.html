@@ -1,0 +1,98 @@
+<div class="profile-info">
+    <div class="page-header">
+        <h1>Profile Information</h1>
+        <p class="subtitle">Manage your personal information</p>
+    </div>
+
+    <!-- Avatar Section -->
+    <div class="avatar-section">
+        @if (user?.avatar) {
+        <img [src]="user?.avatar" alt="Avatar" class="avatar-image">
+        } @else {
+        <div class="avatar-initials" [style.background]="getAvatarColor()">
+            {{ getUserInitials() }}
+        </div>
+        }
+        <div class="avatar-info">
+            <h3>{{ user?.name || 'User' }}</h3>
+            <p class="email">{{ user?.email }}</p>
+            <p class="hint">Avatar displays your initials. You can optionally add an image URL below.</p>
+        </div>
+    </div>
+
+    <!-- Success/Error Messages -->
+    @if (successMessage) {
+    <div class="alert alert-success">
+        ✓ {{ successMessage }}
+    </div>
+    }
+    @if (errorMessage) {
+    <div class="alert alert-error">
+        ✗ {{ errorMessage }}
+    </div>
+    }
+
+    <!-- Profile Form -->
+    <form [formGroup]="profileForm" (ngSubmit)="onSubmit()" class="profile-form">
+        <!-- Name -->
+        <div class="form-group">
+            <label for="name">Full Name <span class="required">*</span></label>
+            <input type="text" id="name" formControlName="name" class="form-control" placeholder="Enter your full name">
+            @if (profileForm.get('name')?.invalid && profileForm.get('name')?.touched) {
+            <div class="error-message">Name is required (minimum 2 characters)</div>
+            }
+        </div>
+
+        <!-- Phone -->
+        <div class="form-group">
+            <label for="phone">Phone Number</label>
+            <input type="tel" id="phone" formControlName="phone" class="form-control" placeholder="0901234567">
+            @if (profileForm.get('phone')?.invalid && profileForm.get('phone')?.touched) {
+            <div class="error-message">Phone must be 10-11 digits</div>
+            }
+        </div>
+
+        <!-- Email (Read-only) -->
+        <div class="form-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" [value]="user?.email || ''" class="form-control" readonly disabled>
+            <p class="field-hint">Email cannot be changed</p>
+        </div>
+
+        <!-- Gender -->
+        <div class="form-group">
+            <label for="gender">Gender</label>
+            <select id="gender" formControlName="gender" class="form-control">
+                <option value="">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+
+        <!-- Birth Date -->
+        <div class="form-group">
+            <label for="birthDate">Date of Birth</label>
+            <input type="date" id="birthDate" formControlName="birthDate" class="form-control">
+        </div>
+
+        <!-- Avatar URL (Optional) -->
+        <div class="form-group">
+            <label for="avatar">Avatar URL (Optional)</label>
+            <input type="url" id="avatar" formControlName="avatar" class="form-control"
+                placeholder="https://example.com/avatar.jpg">
+            <p class="field-hint">Enter an image URL or leave empty to show initials</p>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary" [disabled]="loading || profileForm.invalid">
+                @if (loading) {
+                <span class="spinner"></span> Saving...
+                } @else {
+                Save Changes
+                }
+            </button>
+        </div>
+    </form>
+</div>

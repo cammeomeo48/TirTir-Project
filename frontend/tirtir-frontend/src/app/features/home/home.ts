@@ -117,7 +117,10 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   startAutoPlay() {
     this.autoPlayInterval = setInterval(() => {
-      this.nextSlide();
+      setTimeout(() => {
+        this.nextSlide();
+        this.cdr.detectChanges();
+      }, 0);
     }, 5000); // Change slide every 5 seconds
   }
 

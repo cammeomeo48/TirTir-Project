@@ -1,0 +1,25 @@
+<div class="profile-layout">
+    <div class="container">
+        <div class="layout-grid">
+            <!-- Sidebar Navigation -->
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <h2>My Account</h2>
+                </div>
+                <nav class="sidebar-nav">
+                    @for (item of menuItems; track item.path) {
+                    <a [routerLink]="item.path" routerLinkActive="active" class="nav-item">
+                        <span class="nav-icon">{{ item.icon }}</span>
+                        <span class="nav-label">{{ item.label }}</span>
+                    </a>
+                    }
+                </nav>
+            </aside>
+
+            <!-- Main Content Area -->
+            <main class="content">
+                <router-outlet></router-outlet>
+            </main>
+        </div>
+    </div>
+</div>
