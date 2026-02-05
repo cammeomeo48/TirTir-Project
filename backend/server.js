@@ -54,6 +54,7 @@ const shadeRoutes = require("./routes/shade.routes");
 const productRoutes = require("./routes/product.routes");
 const menuRoutes = require("./routes/menu.routes");
 const { ensureSlugs } = require("./controllers/product.controller");
+const paymentRoutes = require("./routes/payment.routes");
 
 app.get("/", (req, res) => res.send("API Running"));
 app.get("/api/health", (req, res) => res.json({ ok: true, msg: "alive" }));
@@ -70,6 +71,7 @@ app.use("/api/chat", require("./routes/chat.routes"));
 app.use("/api/orders", require("./routes/order.routes"));
 app.use("/api/users", require("./routes/user.routes"));
 app.use("/api/inventory", require("./routes/inventory.routes"));
+app.use("/api/payments", paymentRoutes);
 
 // Global Error Handler
 app.use(errorHandler);

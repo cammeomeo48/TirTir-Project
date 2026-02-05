@@ -1,5 +1,6 @@
+// backend/models/order.model.js
 const mongoose = require('mongoose');
-const { ORDER_STATUS, PAYMENT_METHOD } = require('../constants');
+const { ORDER_STATUS, PAYMENT_METHOD, PAYMENT_STATUS } = require('../constants');
 
 const OrderSchema = new mongoose.Schema({
     user: {
@@ -29,8 +30,19 @@ const OrderSchema = new mongoose.Schema({
     },
     paymentMethod: {
         type: String,
-        enum: Object.values(PAYMENT_METHOD),
-        default: PAYMENT_METHOD.COD
+        // Tự động nhận:  'VNPAY', 'MOMO', 'CARD' từ file constants
+        enum: Object.values(PAYMENT_METHOD), 
+        default: PAYMENT_METHOD.VNPAY,
+        required: true
+    },
+    paymentStatus: { // THÊM TRƯỜNG NÀY ĐỂ TRACKING
+        type: String,
+        enum: Object.values(PAYMENT_STATUS),
+        default: PAYMENT_STATUS.PENDING
+    },
+    paymentInfo: { // Lưu dữ liệu trả về từ VNPay/Momo để đối soát
+        type: Object,
+        default: {}
     },
     totalAmount: {
         type: Number,
