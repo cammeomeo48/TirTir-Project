@@ -46,13 +46,17 @@ export class LoginComponent {
 
         this.authService.login(credentials).subscribe({
             next: (response) => {
-                this.loading = false;
+                setTimeout(() => {
+                    this.loading = false;
+                }, 0);
                 // Navigate to return URL or home
                 this.router.navigate([this.returnUrl]);
             },
             error: (error) => {
-                this.loading = false;
-                this.errorMessage = error.message || 'Login failed. Please try again.';
+                setTimeout(() => {
+                    this.loading = false;
+                    this.errorMessage = error.message || 'Login failed. Please try again.';
+                }, 0);
             },
         });
     }
