@@ -15,6 +15,7 @@ import { CheckoutComponent } from './features/checkout/checkout';
 import { OrderConfirmationComponent } from './features/order-confirmation/order-confirmation';
 import { OrderHistoryComponent } from './features/account/order-history/order-history';
 import { authGuard } from './core/guards/auth.guard';
+import { canDeactivateGuard } from './core/guards/can-deactivate.guard';
 
 export const routes: Routes = [
     { path: '', component: HomeComponent },
@@ -37,7 +38,8 @@ export const routes: Routes = [
             { path: '', redirectTo: 'profile', pathMatch: 'full' },
             {
                 path: 'profile',
-                loadComponent: () => import('./features/account/profile-info/profile-info').then(m => m.ProfileInfoComponent)
+                loadComponent: () => import('./features/account/profile-info/profile-info').then(m => m.ProfileInfoComponent),
+                canDeactivate: [canDeactivateGuard]
             },
             {
                 path: 'addresses',

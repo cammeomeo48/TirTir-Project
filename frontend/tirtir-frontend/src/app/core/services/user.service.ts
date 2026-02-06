@@ -41,6 +41,22 @@ export class UserService {
         );
     }
 
+    /**
+     * Upload avatar image
+     */
+    uploadAvatar(file: File): Observable<{ avatar: string; user: User }> {
+        const formData = new FormData();
+        formData.append('avatar', file);
+
+        return this.http.post<{ success: boolean; data: { avatar: string; user: User } }>(
+            `${this.apiUrl}/avatar/upload`,
+            formData
+        ).pipe(
+            map(response => response.data)
+        );
+    }
+
+
     // ===== ADDRESS OPERATIONS =====
 
     /**

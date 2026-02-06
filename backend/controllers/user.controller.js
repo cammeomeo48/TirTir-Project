@@ -151,6 +151,60 @@ exports.changePassword = async (req, res) => {
     }
 };
 
+/**
+ * @desc    Upload avatar image
+ * @route   POST /api/users/avatar/upload
+ * @access  Private (Protected)
+ */
+exports.uploadAvatar = async (req, res) => {
+    try {
+        // Check if file was uploaded
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: 'No file uploaded'
+            });
+        }
+
+        // Generate avatar URL (relative path from server root)
+        const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+
+        // Update user's avatar in database
+        const updatedUser = await User.findByIdAndUpdate(
+            req.user._id,
+            { avatar: avatarUrl },
+            {
+                new: true, // Return updated document
+                runValidators: true
+            }
+        ).select('-password -emailVerificationToken -resetPasswordToken -resetPasswordExpire');
+
+        if (!updatedUser) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Avatar uploaded successfully',
+            data: {
+                avatar: avatarUrl,
+                user: updatedUser
+            }
+        });
+    } catch (error) {
+        console.error('Upload Avatar Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to upload avatar',
+            error: error.message
+        });
+    }
+};
+
+
 // ===== ADDRESS MANAGEMENT =====
 
 /**

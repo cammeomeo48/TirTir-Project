@@ -6,19 +6,83 @@
 
     <!-- Avatar Section -->
     <div class="avatar-section">
-        @if (user?.avatar) {
-        <img [src]="user?.avatar" alt="Avatar" class="avatar-image">
-        } @else {
-        <div class="avatar-initials" [style.background]="getAvatarColor()">
-            {{ getUserInitials() }}
+        <div class="avatar-container" (click)="openAvatarUpload()" title="Click to change avatar">
+            @if (user?.avatar) {
+            <img [src]="getAvatarUrl(user?.avatar!)" alt="Avatar" class="avatar-image">
+            } @else {
+            <div class="avatar-initials" [style.background]="getAvatarColor()">
+                {{ getUserInitials() }}
+            </div>
+            }
+            <div class="avatar-overlay">
+                <span class="camera-icon">📷</span>
+            </div>
         </div>
-        }
         <div class="avatar-info">
             <h3>{{ user?.name || 'User' }}</h3>
             <p class="email">{{ user?.email }}</p>
-            <p class="hint">Avatar displays your initials. You can optionally add an image URL below.</p>
+            <p class="hint">Click avatar to upload new photo</p>
         </div>
     </div>
+
+    <!-- TEMPORARY TEST BUTTON - Remove after testing -->
+    <button type="button" (click)="openAvatarUpload()"
+        style="margin-bottom: 20px; padding: 10px 20px; background: red; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+        🧪 TEST BUTTON: Click to open modal (if this works, the avatar click handler also works)
+    </button>
+
+    <!-- Hidden file input -->
+    <input type="file" #fileInput style="display: none" accept="image/jpeg,image/jpg,image/png,image/webp"
+        (change)="onFileSelected($event)">
+
+    <!-- Upload Modal -->
+    @if (showUploadModal) {
+    <div class="upload-modal-overlay" (click)="closeUploadModal()">
+        <div class="upload-modal" (click)="$event.stopPropagation()">
+            <h2>Change Avatar</h2>
+
+            @if (!selectedFile) {
+            <div class="upload-options">
+                <button type="button" class="upload-option-btn" (click)="triggerFileInput()">
+                    <span class="icon">📁</span>
+                    <span>Upload from Device</span>
+                </button>
+                <button type="button" class="upload-option-btn" (click)="openCamera()">
+                    <span class="icon">📷</span>
+                    <span>Capture from Camera</span>
+                </button>
+            </div>
+            } @else {
+            <div class="preview-section">
+                <img [src]="previewUrl" alt="Preview" class="avatar-preview">
+                <div class="preview-actions">
+                    @if (uploadProgress === null) {
+                    <button type="button" class="btn btn-primary" (click)="confirmUpload()" [disabled]="uploading">
+                        @if (uploading) {
+                        <span class="spinner"></span> Uploading...
+                        } @else {
+                        Upload Avatar
+                        }
+                    </button>
+                    <button type="button" class="btn btn-secondary" (click)="cancelUpload()" [disabled]="uploading">
+                        Cancel
+                    </button>
+                    } @else {
+                    <div class="upload-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" [style.width.%]="uploadProgress"></div>
+                        </div>
+                        <span>{{ uploadProgress }}%</span>
+                    </div>
+                    }
+                </div>
+            </div>
+            }
+
+            <button type="button" class="close-btn" (click)="closeUploadModal()" [disabled]="uploading">×</button>
+        </div>
+    </div>
+    }
 
     <!-- Success/Error Messages -->
     @if (successMessage) {
@@ -76,13 +140,6 @@
             <input type="date" id="birthDate" formControlName="birthDate" class="form-control">
         </div>
 
-        <!-- Avatar URL (Optional) -->
-        <div class="form-group">
-            <label for="avatar">Avatar URL (Optional)</label>
-            <input type="url" id="avatar" formControlName="avatar" class="form-control"
-                placeholder="https://example.com/avatar.jpg">
-            <p class="field-hint">Enter an image URL or leave empty to show initials</p>
-        </div>
 
         <!-- Submit Button -->
         <div class="form-actions">
