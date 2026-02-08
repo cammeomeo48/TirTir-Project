@@ -87,23 +87,46 @@ exports.getAllProducts = async (req, res) => {
             limit = 12,
         } = req.query;
 
-        // 1. Build MATCH stage (Filter)
-        const matchStage = {};
+        // 1. Build BASE MATCH stage (Price, Skin, Concern, Keyword)
+        // These filters apply to EVERYTHING (products AND counts).
+        const baseMatch = {};
 
         if (keyword) {
-            matchStage.Name = { $regex: keyword, $options: "i" };
+            baseMatch.Name = { $regex: keyword, $options: "i" };
         }
+
+        if (isSkincare !== undefined) {
+            baseMatch.Is_Skincare = isSkincare === "true";
+        }
+
+        if (skinType) {
+            baseMatch.Skin_Type_Target = { $regex: skinType, $options: "i" };
+        }
+
+        if (concern) {
+            const concernList = concern.split(',').map(c => c.trim());
+            // Create regex for each concern and use $in equivalent (or $or with regex)
+            // Since we want ANY match (OR logic) like Category
+            const regexList = concernList.map(c => new RegExp(c, 'i'));
+            baseMatch.Main_Concern = { $in: regexList };
+        }
+
+        // 2. Build CATEGORY MATCH stage
+        // This filter ONLY applies to the product list, NOT the sidebar counts.
+        const categoryMatch = {};
 
         // Handle 'category' (Sidebar Filter - Multi-select)
         if (category) {
             const catList = category.split(',').map(c => c.trim());
             if (catList.length > 0) {
-                // Map Display Names (e.g. "Lip", "Cushion") to Database Slugs
+                // Map Display Names (e.g. "Lip", "Cushion") to Database Slugs AND regex for Name
                 let targetSlugs = [];
+                let targetNames = []; // Fallback for regex on 'Name' or 'Category'
 
                 catList.forEach(catName => {
                     // Normalize: "Lip" -> "lip", "Facial Oil" -> "facial-oil"
                     const normalized = catName.toLowerCase().replace(/\s+/g, '-');
+                    targetNames.push(new RegExp(catName, 'i')); // Regex for Name/Category field
 
                     // Check Umbrella Mappings
                     if (CATEGORY_MAPPINGS[normalized]) {
@@ -114,35 +137,29 @@ exports.getAllProducts = async (req, res) => {
                     }
                 });
 
-                // Filter by Category_Slug (Indexed & Consistent)
-                if (targetSlugs.length > 0) {
-                    matchStage.Category_Slug = { $in: targetSlugs };
-                }
+                // ROBUST FILTER: Check Category_Slug OR Category (Field) OR Name (Regex)
+                // This fixes "Issue 1: Inverse Logic" where missing slugs caused empty results.
+                categoryMatch.$or = [
+                    { Category_Slug: { $in: targetSlugs } },
+                    { Category: { $in: targetNames } },
+                    // Fallback: If Category field is inconsistent, maybe checking Name helps?
+                    // { Name: { $in: targetNames } } // Removed for now to be safe, stick to Category field.
+                ];
             }
         }
 
         // Handle 'categorySlug' (Collection Pages - specialized)
+        // This usually defines the "Scope" of the page (e.g. /collections/makeup), so it SHOULD limit counts too?
+        // Let's treat it as a BASE filter for now if it's a page context.
         if (categorySlug) {
             if (CATEGORY_MAPPINGS[categorySlug]) {
-                matchStage.Category_Slug = { $in: CATEGORY_MAPPINGS[categorySlug] };
+                baseMatch.Category_Slug = { $in: CATEGORY_MAPPINGS[categorySlug] };
             } else {
-                matchStage.Category_Slug = categorySlug;
+                baseMatch.Category_Slug = categorySlug;
             }
         }
 
-        if (isSkincare !== undefined) {
-            matchStage.Is_Skincare = isSkincare === "true";
-        }
-
-        if (skinType) {
-            matchStage.Skin_Type_Target = { $regex: skinType, $options: "i" };
-        }
-
-        if (concern) {
-            matchStage.Main_Concern = { $regex: concern, $options: "i" };
-        }
-
-        // 2. Build SORT stage
+        // 3. Build SORT stage
         let sortStage = { _id: -1 };
         if (sort) {
             switch (sort) {
@@ -150,36 +167,58 @@ exports.getAllProducts = async (req, res) => {
                 case "price_desc": sortStage = { Price: -1 }; break;
                 case "best_seller": sortStage = { Is_Best_Seller: -1 }; break;
                 case "newest": sortStage = { _id: -1 }; break;
+                case "title-asc": sortStage = { Name: 1 }; break; // Added Title Sort
                 default: sortStage = { _id: -1 }; break;
             }
         }
 
-        // 3. Pagination
+        // 4. Pagination
         const pageNum = Math.max(parseInt(page, 10) || 1, 1);
         const limitNum = Math.max(parseInt(limit, 10) || 12, 1);
         const skip = (pageNum - 1) * limitNum;
 
-        // 4. AGGREGATION PIPELINE
+        // 5. AGGREGATION PIPELINE
+        // Strategy: 
+        // - First Match: Base Filters (Skin, Price, PageContext, Concern)
+        // - Facet A (Products): Apply Category Filter -> Sort -> Skip -> Limit
+        // - Facet B (Total Count): Apply Category Filter -> Count
+        // - Facet C (Categories): Group by Category (IGNORING Category Filter)
+        // - Facet D (Concerns): Group by Main_Concern (IGNORING Concern Filter? OR applying it?)
+        //   Usually "Regimens" (Concerns) should show counts available under current CATEGORY context?
+        //   But our current architecture separates Category Filter from Base Filters.
+        //   If we want "Regimen" counts to reflect the selected Category, we must APPLY categoryMatch to them.
+        //   If we want "Regimen" counts to be global (like Category counts), we ignore categoryMatch.
+        //   Let's ignore categoryMatch for now to keep them visible.
         const pipeline = [
-            { $match: matchStage },
+            { $match: baseMatch },
             {
                 $facet: {
-                    // Pipeline A: Get Data
+                    // Pipeline A: Get Data (Applied Category Filter)
                     "products": [
+                        { $match: categoryMatch }, // <--- Apply Category Filter HERE
                         { $sort: sortStage },
                         { $skip: skip },
                         { $limit: limitNum }
                     ],
-                    // Pipeline B: Get Counts (for Pagination & Sidebar)
+                    // Pipeline B: Get Total Count (For Pagination - MUST apply Category Filter)
                     "totalCount": [
+                        { $match: categoryMatch }, // <--- Apply Category Filter HERE
                         { $count: "count" }
                     ],
-                    // Pipeline C: Global Category Counts (Filtered by current criteria)
-                    // If you want GLOBAL counts ignoring filters, you'd need a separate aggregation or move $match into facets.
-                    // Usually users want to know "How many Cushions are there with my current search?".
+                    // Pipeline C: Global Category Counts (Available options in current Scope)
                     "categories": [
                         { $group: { _id: "$Category", count: { $sum: 1 } } },
-                        { $sort: { _id: 1 } } // Alphabetical sort
+                        { $sort: { _id: 1 } }
+                    ],
+                    // Pipeline D: Global Concern Counts
+                    "concerns": [
+                        { $group: { _id: "$Main_Concern", count: { $sum: 1 } } },
+                        { $sort: { _id: 1 } }
+                    ],
+                    // Pipeline E: Global SkinType Counts
+                    "skinTypes": [
+                        { $group: { _id: "$Skin_Type_Target", count: { $sum: 1 } } },
+                        { $sort: { _id: 1 } }
                     ]
                 }
             }
@@ -191,8 +230,10 @@ exports.getAllProducts = async (req, res) => {
         const products = result.products;
         const total = result.totalCount[0] ? result.totalCount[0].count : 0;
         const categories = result.categories.map(c => ({ name: c._id, count: c.count }));
+        const concerns = result.concerns.map(c => ({ name: c._id, count: c.count }));
+        const skinTypes = result.skinTypes.map(c => ({ name: c._id, count: c.count }));
 
-        // 5. Map Data for Frontend
+        // 6. Map Data for Frontend
         const mappedProducts = products.map(p => mapProductToFrontend(p));
 
         res.json({
@@ -200,7 +241,9 @@ exports.getAllProducts = async (req, res) => {
             page: pageNum,
             limit: limitNum,
             data: mappedProducts,
-            categories: categories // Return category counts for sidebar
+            categories: categories, // Return category counts for sidebar
+            concerns: concerns,
+            skinTypes: skinTypes
         });
 
     } catch (err) {
@@ -279,9 +322,9 @@ exports.getProductDetail = async (req, res) => {
 exports.getLowStockProducts = async (req, res) => {
     try {
         const threshold = req.query.threshold ? parseInt(req.query.threshold) : 10;
-        
-        const products = await Product.find({ 
-            Stock_Quantity: { $lt: threshold } 
+
+        const products = await Product.find({
+            Stock_Quantity: { $lt: threshold }
         }).select('Product_ID Name Stock_Quantity Thumbnail_Images Category');
 
         res.json({
@@ -298,13 +341,13 @@ exports.getLowStockProducts = async (req, res) => {
 exports.getStockHistory = async (req, res) => {
     try {
         const { id } = req.params; // Product ID (String or ObjectId)
-        
+
         // Find product first to get ObjectId if custom ID is used
         let productQuery = { Product_ID: id };
         if (mongoose.Types.ObjectId.isValid(id)) {
             productQuery = { _id: id };
         }
-        
+
         const product = await Product.findOne(productQuery);
         if (!product) {
             return res.status(404).json({ message: "Product not found" });
@@ -374,14 +417,14 @@ exports.updateStock = async (req, res) => {
     try {
         const { id } = req.params;
         const { stock, reason } = req.body;
-        
+
         if (stock === undefined || stock < 0) {
             return res.status(400).json({ message: "Invalid stock value" });
         }
 
         const or = [{ Product_ID: id }];
         if (mongoose.Types.ObjectId.isValid(id)) or.push({ _id: id });
-        
+
         const product = await Product.findOne({ $or: or });
         if (!product) {
             return res.status(404).json({ message: "Product not found" });
@@ -389,7 +432,7 @@ exports.updateStock = async (req, res) => {
 
         const previousStock = product.Stock_Quantity;
         const changeAmount = stock - previousStock;
-        
+
         if (changeAmount === 0) {
             return res.json({ message: "Stock unchanged", stock: product.Stock_Quantity });
         }
@@ -444,6 +487,131 @@ exports.bulkImport = async (req, res) => {
             }
         }
         res.json({ message: "Bulk import processed", created, updated, errors });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// ==========================================
+// NEW: ADVANCED SEARCH & FILTER APIs
+// ==========================================
+
+// A. Advanced Search (Full-text + Filters)
+exports.advancedSearch = async (req, res) => {
+    try {
+        const { q, minPrice, maxPrice, rating, category, finish, page = 1, limit = 12 } = req.query;
+        const query = {};
+
+        // 1. Full-text Search
+        if (q) {
+            query.$text = { $search: q };
+        }
+
+        // 2. Filters
+        if (minPrice || maxPrice) {
+            query.Price = {};
+            if (minPrice) query.Price.$gte = Number(minPrice);
+            if (maxPrice) query.Price.$lte = Number(maxPrice);
+        }
+
+        if (category) query.Category = category;
+
+        // 3. Regex Filters for Attributes
+        if (req.query['skin-type']) {
+            query.Skin_Type_Target = { $regex: req.query['skin-type'], $options: 'i' };
+        }
+        if (req.query.concern) {
+            query.Main_Concern = { $regex: req.query.concern, $options: 'i' };
+        }
+
+        // 4. Pagination
+        const pageNum = Math.max(1, parseInt(page));
+        const limitNum = parseInt(limit);
+        const skip = (pageNum - 1) * limitNum;
+
+        // 5. Execution
+        // Sort by textScore if searching, otherwise by newness
+        const sort = q ? { score: { $meta: "textScore" } } : { createdAt: -1 };
+
+        const products = await Product.find(query)
+            .sort(sort)
+            .skip(skip)
+            .limit(limitNum)
+            .select(q ? { score: { $meta: "textScore" } } : {});
+
+        const total = await Product.countDocuments(query);
+
+        res.json({
+            total,
+            page: pageNum,
+            limit: limitNum,
+            data: products.map(p => ({
+                Product_ID: p.Product_ID,
+                Name: p.Name,
+                Price: p.Price,
+                Thumbnail_Images: p.Thumbnail_Images,
+                Category: p.Category,
+                Description_Short: p.Description_Short
+            }))
+        });
+
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// B. Search Suggestions (Header)
+exports.getSearchSuggestions = async (req, res) => {
+    try {
+        const { q } = req.query;
+        if (!q) return res.json([]);
+
+        const suggestions = await Product.find({
+            Name: { $regex: q, $options: 'i' }
+        })
+            .select('_id Name Thumbnail_Images')
+            .limit(5);
+
+        res.json(suggestions);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// C. Dynamic Filters (Sidebar)
+exports.getProductFilters = async (req, res) => {
+    try {
+        const stats = await Product.aggregate([
+            {
+                $facet: {
+                    priceRange: [
+                        { $group: { _id: null, min: { $min: "$Price" }, max: { $max: "$Price" } } }
+                    ],
+                    categories: [
+                        { $group: { _id: "$Category" } },
+                        { $sort: { _id: 1 } }
+                    ],
+                    skinTypes: [
+                        { $group: { _id: "$Skin_Type_Target" } },
+                        { $sort: { _id: 1 } }
+                    ],
+                    concerns: [
+                        { $group: { _id: "$Main_Concern" } },
+                        { $sort: { _id: 1 } }
+                    ]
+                }
+            }
+        ]);
+
+        const result = stats[0];
+
+        res.json({
+            minPrice: result.priceRange[0]?.min || 0,
+            maxPrice: result.priceRange[0]?.max || 0,
+            categories: result.categories.map(c => c._id).filter(Boolean),
+            skinTypes: result.skinTypes.map(s => s._id).filter(Boolean),
+            concerns: result.concerns.map(c => c._id).filter(Boolean)
+        });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

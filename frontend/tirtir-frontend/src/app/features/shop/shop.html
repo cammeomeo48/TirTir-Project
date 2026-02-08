@@ -88,9 +88,10 @@
                         <li *ngFor="let type of productTypes">
                             <label class="filter-checkbox">
                                 <input type="checkbox" [value]="type.value"
-                                    (change)="onFilterChange($event, type.value)">
+                                    [checked]="selectedCategories.includes(type.value)"
+                                    (change)="toggleCategory(type.value)">
                                 <span class="checkbox-label">{{ type.label }}</span>
-                                <span class="count">({{ type.count }})</span>
+                                <span class="count">({{ type.count || 0 }})</span>
                             </label>
                         </li>
                     </ul>
@@ -105,9 +106,11 @@
                     <ul class="filter-options" *ngIf="expandedFilters['regimen']">
                         <li *ngFor="let regimen of regimens">
                             <label class="filter-checkbox">
-                                <input type="checkbox" [value]="regimen.value">
+                                <input type="checkbox" [value]="regimen.value"
+                                    [checked]="selectedRegimens.includes(regimen.value)"
+                                    (change)="toggleRegimen(regimen.value)">
                                 <span class="checkbox-label">{{ regimen.label }}</span>
-                                <span class="count">({{ regimen.count }})</span>
+                                <span class="count">({{ regimen.count || 0 }})</span>
                             </label>
                         </li>
                     </ul>

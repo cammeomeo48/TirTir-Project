@@ -71,8 +71,9 @@ export class ShopComponent implements OnInit {
 
   constructor() { }
 
-  // Track selected categories for server-side filtering
-  selectedCategories: Set<string> = new Set();
+  // Track selected categories for filtering
+  selectedCategories: string[] = [];
+  selectedRegimens: string[] = [];
 
   ngOnInit(): void {
     this.isMakeupCollection = this.route.snapshot.routeConfig?.path === 'collections/makeup';
@@ -80,7 +81,6 @@ export class ShopComponent implements OnInit {
     if (this.isMakeupCollection) {
       this.collectionTitle = 'MAKEUP';
       this.collectionDescription = 'Discover TIRTIR makeup essentials for a long-lasting, luminous finish.';
-      // Pre-select makeup categories if needed, or leave open
     }
 
     // Initial Load
@@ -89,65 +89,89 @@ export class ShopComponent implements OnInit {
 
   loadProducts() {
     const params: any = {
-      limit: 1000 // We still fetch many, but backend aggregates can handle pagination if we switch to it
+      limit: 1000 // Determine if pagination is handled by backend or frontend
     };
 
-    // Add category filter if any selected
-    if (this.selectedCategories.size > 0) {
-      // Map internal values ('cushion') back to Display Names ('Cushion') for backend?
-      // The backend expects Comma Separated Display Names (e.g. "Cushion,Toner")
-      // We need to map our values to the labels or keys expected by backend
+    // Construct Param: category=Cushion,Mask
+    if (this.selectedCategories.length > 0) {
+      // Map 'cushion' (value) -> 'Cushion' (Label) IF backend expects Labels. 
+      // Based on controller, it expects "Display Names":
       const selectedLabels = this.productTypes
-        .filter(t => this.selectedCategories.has(t.value))
-        .map(t => t.label) // "Cushion", "Lip"
+        .filter(t => this.selectedCategories.includes(t.value))
+        .map(t => t.label)
         .join(',');
 
-      if (selectedLabels) {
-        params.category = selectedLabels;
-      }
+      params.category = selectedLabels;
+    }
+
+    // Construct Param: concern=Hydration,Soothing
+    if (this.selectedRegimens.length > 0) {
+      const selectedConcernLabels = this.regimens
+        .filter(r => this.selectedRegimens.includes(r.value))
+        .map(r => r.label)
+        .join(',');
+
+      params.concern = selectedConcernLabels;
     }
 
     this.productService.getProducts(params).subscribe({
       next: (response) => {
         this.allProducts = response.data;
-        // Update counts (optional: if you want counts to reflect "remaining" or "global")
-        // Usually facets show GLOBAL counts even when filtered, or filtered counts. 
-        // Our backend returns "Global" counts if we don't apply filters in the facet pipeline, 
-        // BUT currently it applies matchStage to everything. So counts will shrink.
-        if (response.categories && response.categories.length > 0) {
-          this.updateSidebarCounts(response.categories);
-        }
+
+        // Fix Count Mapping
+        this.mapCounts(response);
+
         this.updateDisplayProducts();
       },
       error: (err) => console.error('Failed to load products', err)
     });
   }
 
-  onFilterChange(event: any, typeValue: string) {
-    if (event.target.checked) {
-      this.selectedCategories.add(typeValue);
+  // FIXED: Toggle Logic
+  toggleCategory(value: string) {
+    const index = this.selectedCategories.indexOf(value);
+    if (index >= 0) {
+      this.selectedCategories.splice(index, 1); // Remove
     } else {
-      this.selectedCategories.delete(typeValue);
+      this.selectedCategories.push(value); // Add
     }
-    // Reload from server with new filters
     this.loadProducts();
   }
 
-  updateSidebarCounts(backendCategories: any[]) {
-    // Map backend count to frontend options
-    this.productTypes.forEach(type => {
-      // Find matching category (Backend returns Display Name e.g. "Cushion", "Toner")
-      const match = backendCategories.find(c => c.name.toLowerCase() === type.label.toLowerCase());
-      // Only update count if we found a match? Or set to 0? 
-      // If we are filtering, missing items happen.
-      type.count = match ? match.count : 0;
+  toggleRegimen(value: string) {
+    const index = this.selectedRegimens.indexOf(value);
+    if (index >= 0) {
+      this.selectedRegimens.splice(index, 1);
+    } else {
+      this.selectedRegimens.push(value);
+    }
+    this.loadProducts();
+  }
+
+  // FIXED: Map API Counts to UI Options
+  mapCounts(response: any) {
+    const apiCategories = response.categories || [];
+    const apiConcerns = response.concerns || [];
+
+    // Map Categories
+    this.productTypes.forEach(uiItem => {
+      const match = apiCategories.find(
+        (c: any) => c.name && c.name.toLowerCase() === uiItem.label.toLowerCase()
+      );
+      uiItem.count = match ? match.count : 0;
+    });
+
+    // Map Regimens (Concerns)
+    this.regimens.forEach(uiItem => {
+      const match = apiConcerns.find(
+        (c: any) => c.name && c.name.toLowerCase() === uiItem.label.toLowerCase()
+      );
+      uiItem.count = match ? match.count : 0;
     });
   }
 
   calculateCounts() {
-    this.productTypes.forEach(type => {
-      type.count = this.allProducts.filter(p => p.category === type.value).length;
-    });
+    // Deprecated in favor of mapCounts from API
   }
 
   updateDisplayProducts() {
