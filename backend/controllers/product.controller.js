@@ -163,12 +163,33 @@ exports.getAllProducts = async (req, res) => {
         let sortStage = { _id: -1 };
         if (sort) {
             switch (sort) {
-                case "price_asc": sortStage = { Price: 1 }; break;
-                case "price_desc": sortStage = { Price: -1 }; break;
-                case "best_seller": sortStage = { Is_Best_Seller: -1 }; break;
-                case "newest": sortStage = { _id: -1 }; break;
-                case "title-asc": sortStage = { Name: 1 }; break; // Added Title Sort
-                default: sortStage = { _id: -1 }; break;
+                case "best-selling":
+                    sortStage = { Sold_Quantity: -1 };
+                    break;
+                case "price-asc":
+                case "price_asc":
+                    sortStage = { Price: 1 };
+                    break;
+                case "price-desc":
+                case "price_desc":
+                    sortStage = { Price: -1 };
+                    break;
+                case "newest":
+                    sortStage = { _id: -1 };
+                    break;
+                case "top-rated":
+                    sortStage = { Rating_Average: -1 };
+                    break;
+                case "title-asc":
+                    sortStage = { Name: 1 };
+                    break;
+                // Legacy support
+                case "best_seller":
+                    sortStage = { Sold_Quantity: -1 };
+                    break;
+                default:
+                    sortStage = { _id: -1 };
+                    break;
             }
         }
 
@@ -499,7 +520,7 @@ exports.bulkImport = async (req, res) => {
 // A. Advanced Search (Full-text + Filters)
 exports.advancedSearch = async (req, res) => {
     try {
-        const { q, minPrice, maxPrice, rating, category, finish, page = 1, limit = 12 } = req.query;
+        const { q, minPrice, maxPrice, rating, category, finish, sort, page = 1, limit = 12 } = req.query;
         const query = {};
 
         // 1. Full-text Search
@@ -529,12 +550,41 @@ exports.advancedSearch = async (req, res) => {
         const limitNum = parseInt(limit);
         const skip = (pageNum - 1) * limitNum;
 
-        // 5. Execution
-        // Sort by textScore if searching, otherwise by newness
-        const sort = q ? { score: { $meta: "textScore" } } : { createdAt: -1 };
+        // 5. Sorting Logic
+        let sortOption = { _id: -1 }; // Default: newest by _id (works for all existing docs)
 
+        if (sort) {
+            switch (sort) {
+                case "best-selling":
+                    sortOption = { Sold_Quantity: -1 };
+                    break;
+                case "price-asc":
+                    sortOption = { Price: 1 };
+                    break;
+                case "price-desc":
+                    sortOption = { Price: -1 };
+                    break;
+                case "newest":
+                    sortOption = { _id: -1 }; // Using _id instead of createdAt for backward compatibility
+                    break;
+                case "top-rated":
+                    sortOption = { Rating_Average: -1 };
+                    break;
+                default:
+                    // If searching with text, sort by relevance score
+                    if (q) {
+                        sortOption = { score: { $meta: "textScore" } };
+                    }
+                    break;
+            }
+        } else if (q) {
+            // If no sort param but there's a search query, use text score
+            sortOption = { score: { $meta: "textScore" } };
+        }
+
+        // 6. Execution
         const products = await Product.find(query)
-            .sort(sort)
+            .sort(sortOption)
             .skip(skip)
             .limit(limitNum)
             .select(q ? { score: { $meta: "textScore" } } : {});

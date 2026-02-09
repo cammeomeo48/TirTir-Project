@@ -43,7 +43,6 @@ export class ProductService {
       map(response => {
         try {
           // 1. Filter out the specific variants we don't want to show in list
-          console.log('DEBUG: Product IDs from backend:', response.data.map(p => p.Product_ID));
           const hiddenVariants = ['tirtir-gift-card-25', 'tirtir-gift-card-50', 'tirtir-gift-card-100'];
 
           const filteredBackendData = response.data.filter(p => {

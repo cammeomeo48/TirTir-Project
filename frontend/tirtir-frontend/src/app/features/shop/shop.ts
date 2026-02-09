@@ -116,6 +116,11 @@ export class ShopComponent implements OnInit {
       params.concern = selectedConcernLabels;
     }
 
+    // Add sorting parameter for backend
+    if (this.sortBy) {
+      params.sort = this.sortBy;
+    }
+
     this.isLoading = true;
     this.productService.getProducts(params).subscribe({
       next: (response) => {
@@ -194,16 +199,7 @@ export class ShopComponent implements OnInit {
       filtered = filtered.filter(p => makeupCategories.includes(p.category)); // API must map this correctly
     }
 
-    // Apply sorting
-    if (this.sortBy === 'price-low') {
-      filtered.sort((a, b) => a.price - b.price);
-    } else if (this.sortBy === 'price-high') {
-      filtered.sort((a, b) => b.price - a.price);
-    } else if (this.sortBy === 'newest') {
-      // Mock sort by ID/index for now as we don't have date
-      filtered = [...filtered].reverse();
-    }
-    // Default 'best-selling' - leave as is (mock order)
+    // Backend handles sorting via 'sort' parameter, no need for client-side sorting anymore
 
     this.displayProducts = filtered;
     this.currentPage = 1; // Reset to page 1 on filter change

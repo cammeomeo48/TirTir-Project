@@ -115,9 +115,10 @@ export class CartService {
     private updateCartCount(cart: Cart | null): void {
         if (cart && cart.items) {
             const totalCount = cart.items.reduce((sum, item) => sum + item.quantity, 0);
-            this.cartCountSignal.set(totalCount);
+            // Wrap in setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError
+            setTimeout(() => this.cartCountSignal.set(totalCount), 0);
         } else {
-            this.cartCountSignal.set(0);
+            setTimeout(() => this.cartCountSignal.set(0), 0);
         }
     }
 

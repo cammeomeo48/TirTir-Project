@@ -60,11 +60,12 @@
 
             <div class="sort-control">
                 <span class="sort-label">SORT BY:</span>
-                <select class="sort-select" [(ngModel)]="sortBy">
+                <select class="sort-select" [(ngModel)]="sortBy" (ngModelChange)="loadProducts()">
                     <option value="best-selling">Best Selling</option>
                     <option value="price-asc">Price: Low to High</option>
                     <option value="price-desc">Price: High to Low</option>
                     <option value="newest">Newest</option>
+                    <option value="top-rated">Top Rated</option>
                     <option value="title-asc">Alphabetically: A-Z</option>
                 </select>
             </div>
