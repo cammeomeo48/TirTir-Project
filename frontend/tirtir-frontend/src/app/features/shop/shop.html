@@ -118,13 +118,18 @@
             </aside>
 
             <!-- Product Grid -->
-            <div class="product-grid-container">
+            <div class="product-grid-container" [class.loading]="isLoading">
+                <div class="loading-overlay" *ngIf="isLoading">
+                    <div class="spinner"></div>
+                </div>
+
                 <div class="products-grid">
-                    <app-product-card *ngFor="let product of paginatedProducts" [product]="product"></app-product-card>
+                    <app-product-card *ngFor="let product of paginatedProducts; trackBy: trackByProduct"
+                        [product]="product"></app-product-card>
                 </div>
 
                 <!-- Pagination -->
-                <nav class="pagination">
+                <nav class="pagination" *ngIf="!isLoading && displayProducts.length > 0">
                     <button class="page-btn" [disabled]="currentPage === 1" (click)="goToPage(currentPage - 1)">
                         ← Previous
                     </button>

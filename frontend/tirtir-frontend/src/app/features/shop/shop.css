@@ -434,3 +434,57 @@
         margin-top: 8px;
     }
 }
+
+/* =====================================================
+   LOADING SPINNER
+   ===================================================== */
+
+.product-grid-container {
+    position: relative;
+    min-height: 400px;
+    /* Prevent collapse during loading */
+}
+
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 100px;
+    z-index: 10;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #000;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.product-grid-container.loading .products-grid {
+    opacity: 0.3;
+    transition: opacity 0.3s ease;
+}
+
+/* Smooth transition for products */
+.products-grid {
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}

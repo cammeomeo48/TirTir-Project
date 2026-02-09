@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -16,12 +16,14 @@ import { ProductService } from '../../core/services/product.service';
 export class ShopComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private productService = inject(ProductService);
+  private cdr = inject(ChangeDetectorRef);
 
   isMakeupCollection = false;
   collectionTitle = 'SHOP ALL';
   collectionDescription = 'Discover all TIRTIR products.';
   // Filter state
   showFilters = true;
+  isLoading = false;
   sortBy = 'best-selling';
 
   // Expandable filter groups
@@ -114,16 +116,24 @@ export class ShopComponent implements OnInit {
       params.concern = selectedConcernLabels;
     }
 
+    this.isLoading = true;
     this.productService.getProducts(params).subscribe({
       next: (response) => {
+        this.isLoading = false;
         this.allProducts = response.data;
-
-        // Fix Count Mapping
+        // Update counts (optional: if you want counts to reflect "remaining" or "global")
+        // Usually facets show GLOBAL counts even when filtered, or filtered counts. 
+        // Our backend returns "Global" counts if we don't apply filters in the facet pipeline, 
+        // BUT currently it applies matchStage to everything. So counts will shrink.
         this.mapCounts(response);
-
         this.updateDisplayProducts();
+        this.cdr.detectChanges();
       },
-      error: (err) => console.error('Failed to load products', err)
+      error: (err) => {
+        console.error('Failed to load products', err);
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      }
     });
   }
 
@@ -227,5 +237,9 @@ export class ShopComponent implements OnInit {
       this.updatePagination();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+  }
+
+  trackByProduct(index: number, product: ProductData): string {
+    return product.id;
   }
 }
