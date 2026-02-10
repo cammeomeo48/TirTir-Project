@@ -218,7 +218,8 @@ async function createMomoUrl(orderId, amount) {
     const endpoint = "https://test-payment.momo.vn/v2/gateway/api/create";
     
     // Redirect về Frontend
-    const returnUrl = "http://localhost:4200/order-confirmation/" + orderId;
+    //const returnUrl = "http://localhost:4200/order-confirmation/" + orderId;
+    const returnUrl = "http://localhost:5001/api/payments/momo-return";
     const ipnUrl = "http://localhost:5001/api/payments/momo-ipn"; // Localhost k nhận dc IPN thật nhưng kệ nó
 
     const requestId = partnerCode + new Date().getTime();
