@@ -85,6 +85,7 @@ app.use("/api/v1/orders", require("./routes/order.routes"));
 app.use("/api/v1/users", require("./routes/user.routes"));
 app.use("/api/v1/inventory", require("./routes/inventory.routes"));
 app.use("/api/v1/payments", paymentRoutes);
+app.use("/api/v1/coupons", require("./routes/coupon.routes"));
 
 // Global Error Handler
 app.use(errorHandler);
