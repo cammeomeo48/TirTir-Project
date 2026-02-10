@@ -219,8 +219,8 @@ async function createMomoUrl(orderId, amount) {
     
     // Redirect về Frontend
     //const returnUrl = "http://localhost:4200/order-confirmation/" + orderId;
-    const returnUrl = "http://localhost:5001/api/payments/momo-return";
-    const ipnUrl = "http://localhost:5001/api/payments/momo-ipn"; // Localhost k nhận dc IPN thật nhưng kệ nó
+    const returnUrl = "http://localhost:5001/api/v1/payments/momo-return";
+    const ipnUrl = "http://localhost:5001/api/v1/payments/momo-ipn"; // Localhost k nhận dc IPN thật nhưng kệ nó
 
     const requestId = partnerCode + new Date().getTime();
     const orderInfo = "Thanh toan don hang " + orderId;

@@ -87,7 +87,7 @@ export class CheckoutComponent implements OnInit {
             paymentMethod: method === 'CARD' ? 'CARD' : 'VNPAY',
             bankCode: '' 
         };
-        this.http.post<{ paymentUrl: string }>('http://localhost:5001/api/payments/create-url', body)
+        this.http.post<{ paymentUrl: string }>('http://localhost:5001/api/v1/payments/create-url', body)
             .subscribe({
                 next: (res) => window.location.href = res.paymentUrl,
                 error: (err) => {
