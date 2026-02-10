@@ -3,7 +3,7 @@ const moment = require('moment');
 const querystring = require('qs');
 const crypto = require('crypto');
 const paymentConfig = require('../config/payment.config');
-const Order = require('../models/order.model'); // Import model Order hiện có
+const Order = require('../models/order.model')
 
 // Hàm sort object bắt buộc của VNPay để tạo chữ ký đúng
 function sortObject(obj) {
@@ -24,11 +24,8 @@ function sortObject(obj) {
 
 exports.createPaymentUrl = async (req, res, next) => {
     try {
-        // bankCode: Tùy chọn. Nếu user chọn cụ thể ngân hàng ở FE thì truyền lên.
-        // Nếu muốn user sang VNPay mới chọn (QR/Thẻ) thì để null/empty.
         const { orderId, amount, paymentMethod, bankCode, language = 'vn' } = req.body;
 
-        // Validate cơ bản
         if (!orderId || !amount) {
             return res.status(400).json({ message: "Missing orderId or amount" });
         }
@@ -37,23 +34,16 @@ exports.createPaymentUrl = async (req, res, next) => {
 
         switch (paymentMethod) {
             case 'VNPAY':
-                // Đây là cổng chung: Bao gồm cả Thẻ ATM, Chuyển khoản QR, Ví VNPay
-                // Nếu bankCode = null -> Ra trang chọn phương thức của VNPay
-                // Nếu bankCode = 'VNPAYQR' -> Ra thẳng trang QR
-                // Nếu bankCode = 'VNBANK' -> Ra thẳng trang chọn ngân hàng ATM
-                // Nếu bankCode = 'INTCARD' -> Ra thẳng trang thẻ Visa/Master
                 paymentUrl = createVNPayUrl(req, orderId, amount, bankCode, language);
                 break;
-                
-            case 'CARD': 
-                 paymentUrl = createVNPayUrl(req, orderId, amount, paymentMethod === 'CARD' ? 'INTCARD' : bankCode, language);
-                 break;
-            
-            case 'MOMO':
-                // GỌI HÀM ASYNC CỦA MOMO
-                paymentUrl = await createMomoUrl(orderId, amount); 
+            case 'CARD':
+                // Ép kiểu sang thẻ quốc tế
+                paymentUrl = createVNPayUrl(req, orderId, amount, 'INTCARD', language);
                 break;
-                
+            case 'MOMO':
+                // Gọi hàm xử lý MoMo mới đã fix lỗi
+                paymentUrl = await createMomoUrl(orderId, amount);
+                break;
             default:
                 return res.status(400).json({ message: "Invalid payment method" });
         }
@@ -61,7 +51,12 @@ exports.createPaymentUrl = async (req, res, next) => {
         res.status(200).json({ paymentUrl });
 
     } catch (error) {
-        next(error);
+        console.error("Payment Controller Error:", error);
+        // Trả lỗi chi tiết về Postman để dễ debug
+        res.status(500).json({ 
+            message: error.message || "Lỗi tạo thanh toán",
+            detail: error.response?.data || "No details"
+        });
     }
 };
 
@@ -216,16 +211,26 @@ exports.checkPaymentStatus = async (req, res, next) => {
 };
 
 async function createMomoUrl(orderId, amount) {
-    const { partnerCode, accessKey, secretKey, endpoint, returnUrl, ipnUrl } = paymentConfig.momo;
+    // Config Test Cứng (Dùng luôn để test)
+    const partnerCode = "MOMO";
+    const accessKey = "F8BBA842ECF85";
+    const secretKey = "K951B6PE1waDMi640xX08PD3vg6EkVlz";
+    const endpoint = "https://test-payment.momo.vn/v2/gateway/api/create";
     
-    const requestId = orderId + new Date().getTime();
+    // Redirect về Frontend
+    const returnUrl = "http://localhost:4200/order-confirmation/" + orderId;
+    const ipnUrl = "http://localhost:5001/api/payments/momo-ipn"; // Localhost k nhận dc IPN thật nhưng kệ nó
+
+    const requestId = partnerCode + new Date().getTime();
     const orderInfo = "Thanh toan don hang " + orderId;
     const requestType = "captureWallet";
-    const extraData = ""; // Pass empty string if not used
+    const extraData = "";
+    
+    // FIX QUAN TRỌNG: Chuyển amount sang string
+    const amountStr = amount.toString(); 
 
-    // TẠO CHỮ KÝ (SIGNATURE) - Thứ tự field cực kỳ quan trọng
-    // format: accessKey=$accessKey&amount=$amount&extraData=$extraData&ipnUrl=$ipnUrl&orderId=$orderId&orderInfo=$orderInfo&partnerCode=$partnerCode&redirectUrl=$redirectUrl&requestId=$requestId&requestType=$requestType
-    const rawSignature = `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&ipnUrl=${ipnUrl}&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&redirectUrl=${returnUrl}&requestId=${requestId}&requestType=${requestType}`;
+    // Tạo chữ ký
+    const rawSignature = `accessKey=${accessKey}&amount=${amountStr}&extraData=${extraData}&ipnUrl=${ipnUrl}&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&redirectUrl=${returnUrl}&requestId=${requestId}&requestType=${requestType}`;
 
     const signature = crypto.createHmac('sha256', secretKey)
         .update(rawSignature)
@@ -237,7 +242,7 @@ async function createMomoUrl(orderId, amount) {
         partnerName: "TirTir Store",
         storeId: "MomoTestStore",
         requestId,
-        amount,
+        amount: amountStr, // Gửi string
         orderId,
         orderInfo,
         redirectUrl: returnUrl,
@@ -249,14 +254,9 @@ async function createMomoUrl(orderId, amount) {
         signature
     };
 
-    // Gọi API MoMo
-    try {
-        const response = await axios.post(endpoint, requestBody);
-        return response.data.payUrl; // Trả về link thanh toán
-    } catch (error) {
-        console.error("MoMo Error:", error.response?.data || error.message);
-        throw new Error("Lỗi khi tạo giao dịch MoMo");
-    }
+    // Gọi API
+    const response = await axios.post(endpoint, requestBody);
+    return response.data.payUrl;
 }
 
 // GET /api/payments/momo-return

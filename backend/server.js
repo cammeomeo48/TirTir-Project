@@ -90,7 +90,7 @@ app.use("/api/v1/coupons", require("./routes/coupon.routes"));
 // Global Error Handler
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 const MONGO_URI = process.env.MONGO_URI;
 
 async function start() {

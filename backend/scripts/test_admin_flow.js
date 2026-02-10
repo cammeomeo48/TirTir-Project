@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'http://localhost:5001/api';
 const ADMIN_EMAIL = 'admin_test_auto@tirtir.com';
 const ADMIN_PASS = 'admin123';
 
