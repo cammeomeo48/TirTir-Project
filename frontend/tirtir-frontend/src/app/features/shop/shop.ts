@@ -56,7 +56,7 @@ export class ShopComponent implements OnInit {
     { label: 'Sunscreen', value: 'sunscreen', count: 0 },
     { label: 'Mask', value: 'mask', count: 0 },
     { label: 'Lip', value: 'lip', count: 0 },
-    { label: 'Fixer', value: 'fixer', count: 0 },
+    { label: 'Setting Spray', value: 'setting-spray', count: 0 }, // Renamed from Fixer
     { label: 'Primer', value: 'primer', count: 0 },
     { label: 'Facial Oil', value: 'facial-oil', count: 0 },
     { label: 'Eye Cream', value: 'eye-cream', count: 0 },
@@ -170,10 +170,23 @@ export class ShopComponent implements OnInit {
 
     // Map Categories
     this.productTypes.forEach(uiItem => {
-      const match = apiCategories.find(
-        (c: any) => c.name && c.name.toLowerCase() === uiItem.label.toLowerCase()
-      );
-      uiItem.count = match ? match.count : 0;
+      let count = 0;
+
+      // Umbrella Logic
+      if (uiItem.value === 'lip') {
+        const tints = apiCategories.find((c: any) => c.name === 'tint')?.count || 0;
+        const balms = apiCategories.find((c: any) => c.name === 'balm')?.count || 0;
+        const lips = apiCategories.find((c: any) => c.name === 'lip')?.count || 0;
+        count = tints + balms + lips;
+      } else {
+        // Direct Match by SLUG (value)
+        const match = apiCategories.find(
+          (c: any) => c.name && c.name.toLowerCase() === uiItem.value.toLowerCase()
+        );
+        count = match ? match.count : 0;
+      }
+
+      uiItem.count = count;
     });
 
     // Map Regimens (Concerns)

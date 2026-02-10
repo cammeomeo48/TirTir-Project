@@ -228,7 +228,7 @@ exports.getAllProducts = async (req, res) => {
                     ],
                     // Pipeline C: Global Category Counts (Available options in current Scope)
                     "categories": [
-                        { $group: { _id: "$Category", count: { $sum: 1 } } },
+                        { $group: { _id: "$Category_Slug", count: { $sum: 1 } } }, // Changed from Category to Category_Slug for better grouping
                         { $sort: { _id: 1 } }
                     ],
                     // Pipeline D: Global Concern Counts
@@ -648,6 +648,22 @@ exports.getProductFilters = async (req, res) => {
                     concerns: [
                         { $group: { _id: "$Main_Concern" } },
                         { $sort: { _id: 1 } }
+                    ],
+                    // NEW: Cushion Variant Counts (Server-Side)
+                    cushionTypes: [
+                        { $match: { Category: { $regex: 'Cushion', $options: 'i' } } },
+                        {
+                            $group: {
+                                _id: {
+                                    $cond: [
+                                        { $regexMatch: { input: "$Name", regex: "Mini", options: "i" } },
+                                        "mini",      // If Name contains "Mini"
+                                        "full-size"  // Else "Full Size"
+                                    ]
+                                },
+                                count: { $sum: 1 }
+                            }
+                        }
                     ]
                 }
             }
@@ -660,7 +676,8 @@ exports.getProductFilters = async (req, res) => {
             maxPrice: result.priceRange[0]?.max || 0,
             categories: result.categories.map(c => c._id).filter(Boolean),
             skinTypes: result.skinTypes.map(s => s._id).filter(Boolean),
-            concerns: result.concerns.map(c => c._id).filter(Boolean)
+            concerns: result.concerns.map(c => c._id).filter(Boolean),
+            cushionTypes: result.cushionTypes.map(c => ({ name: c._id, count: c.count }))
         });
     } catch (err) {
         res.status(500).json({ message: err.message });

@@ -89,6 +89,10 @@ export class ProductService {
     );
   }
 
+  getProductFilters(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/filters`);
+  }
+
   private mapToProductData(bp: BackendProduct): ProductData {
     // Helper to ensure full URL for images
     const fixUrl = (url: string) => {

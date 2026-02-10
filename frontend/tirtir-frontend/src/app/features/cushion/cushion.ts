@@ -70,9 +70,27 @@ export class CushionComponent implements OnInit {
     constructor(private productService: ProductService) { }
 
     ngOnInit(): void {
+        // 1. Fetch Products
         this.productService.getProducts({ keyword: 'cushion', limit: 20 }).subscribe({
             next: (response) => this.products = response.data,
             error: (err) => console.error('Error loading cushions:', err)
+        });
+
+        // 2. Fetch Dynamic Counts (Cushion Types)
+        this.productService.getProductFilters().subscribe({
+            next: (filters) => {
+                if (filters.cushionTypes) {
+                    this.productTypes.forEach(type => {
+                        const match = filters.cushionTypes.find((c: any) => c.name === type.value);
+                        if (match) {
+                            type.count = match.count;
+                        } else {
+                            type.count = 0;
+                        }
+                    });
+                }
+            },
+            error: (err) => console.error('Error loading filters:', err)
         });
     }
 
