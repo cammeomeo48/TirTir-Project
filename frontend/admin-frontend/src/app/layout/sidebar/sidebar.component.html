@@ -1,0 +1,16 @@
+<aside class="sidebar" [class.collapsed]="collapsed">
+    <div class="sidebar-header">
+        <h2 class="sidebar-title">{{ collapsed ? 'T' : 'TirTir Admin' }}</h2>
+    </div>
+
+    <nav class="sidebar-nav">
+        @for (item of menuItems; track item.route) {
+        <a [routerLink]="item.route" routerLinkActive="active" class="nav-item" [title]="item.label">
+            <span class="nav-icon">{{ item.icon }}</span>
+            @if (!collapsed) {
+            <span class="nav-label">{{ item.label }}</span>
+            }
+        </a>
+        }
+    </nav>
+</aside>

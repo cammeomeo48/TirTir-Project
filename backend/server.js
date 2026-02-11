@@ -11,7 +11,7 @@ const app = express();
 
 // CORS Configuration - MUST BE FIRST
 app.use(cors({
-  origin: ['http://localhost:4200', 'http://127.0.0.1:4200'],
+  origin: ['http://localhost:4200', 'http://127.0.0.1:4200', 'http://localhost:4201', 'http://127.0.0.1:4201'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -70,12 +70,12 @@ const { ensureSlugs } = require("./controllers/product.controller");
 const paymentRoutes = require("./routes/payment.routes");
 
 app.get("/", (req, res) => res.send("API Running"));
-app.get("/api/v1/health", (req, res) => res.json({ ok: true, msg: "alive" })); 
+app.get("/api/v1/health", (req, res) => res.json({ ok: true, msg: "alive" }));
 
 // API Routes
 app.use("/api/v1/shades", shadeRoutes);
 app.use("/api/v1/products", productRoutes);
-app.use("/api/v1/admin/products", require("./routes/admin.products.routes"));  
+app.use("/api/v1/admin/products", require("./routes/admin.products.routes"));
 app.use("/api/v1/admin", require("./routes/admin.dashboard.routes"));
 app.use("/api/v1/menus", menuRoutes);
 app.use("/api/v1/auth", require("./routes/auth.routes"));
