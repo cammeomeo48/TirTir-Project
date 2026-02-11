@@ -32,7 +32,10 @@ const ProductSchema = new mongoose.Schema({
 
     Status: String,
     Stock_Quantity: { type: Number, default: 0, min: 0 },
-    Stock_Reserved: { type: Number, default: 0, min: 0 } // Items held in pending orders
+    Stock_Reserved: { type: Number, default: 0, min: 0 }, // Items held in pending orders
+    
+    // Analytics
+    views: { type: Number, default: 0 }
 }, { collection: 'products', timestamps: true });
 
 // Add Text Index for Advanced Search

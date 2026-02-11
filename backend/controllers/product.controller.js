@@ -30,6 +30,7 @@ const mapProductToFrontend = (product) => {
         category: product.Category_Slug || product.Category, // Generic category field
         Stock_Quantity: product.Stock_Quantity, // Added Stock Quantity
         Stock_Reserved: product.Stock_Reserved || 0, // Added Reserved Stock
+        Rating_Average: product.Rating_Average || 0, // Added Rating Average
         // Add any other fields if FE requests them later. 
     };
 };

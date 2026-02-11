@@ -13,6 +13,7 @@ const {
     deleteAddress,
     setDefaultAddress
 } = require('../controllers/user.controller');
+const { getMyReviews } = require('../controllers/review.controller'); // Import review controller
 
 /**
  * User Profile & Address Management Routes
@@ -20,6 +21,8 @@ const {
  */
 
 // ===== PROFILE ROUTES =====
+router.get('/my-reviews', protect, getMyReviews); // Get my reviews
+
 router.route('/profile')
     .get(protect, getProfile)        // Get user profile
     .put(protect, updateProfile);     // Update user profile

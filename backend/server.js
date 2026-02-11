@@ -83,7 +83,10 @@ app.use("/api/v1/cart", require("./routes/cart.routes"));
 app.use("/api/v1/chat", require("./routes/chat.routes"));
 app.use("/api/v1/orders", require("./routes/order.routes"));
 app.use("/api/v1/users", require("./routes/user.routes"));
+app.use("/api/v1/reviews", require("./routes/review.routes")); // Add Review Routes
 app.use("/api/v1/inventory", require("./routes/inventory.routes"));
+app.use("/api/v1/admin/stats", require("./routes/admin.stats.routes"));
+app.use("/api/v1/analytics", require("./routes/analytics.routes"));
 app.use("/api/v1/payments", paymentRoutes);
 app.use("/api/v1/coupons", require("./routes/coupon.routes"));
 app.use("/api/v1/ai", require("./routes/ai.routes"));

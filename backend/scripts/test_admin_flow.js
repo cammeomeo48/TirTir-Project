@@ -3,19 +3,26 @@ const bcrypt = require('bcryptjs');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
-const API_URL = 'http://localhost:5001/api';
-const ADMIN_EMAIL = 'admin_test_auto@tirtir.com';
+const API_URL = 'http://localhost:5001/api/v1';
+const ADMIN_EMAIL = 'admin@tirtir.com';
 const ADMIN_PASS = 'admin123';
+const USER_EMAIL = 'user_test_flow@tirtir.com';
 
-async function setupAdmin() {
-  await mongoose.connect(process.env.MONGO_URI);
-  const User = require('../models/user.model');
-  await User.deleteOne({ email: ADMIN_EMAIL });
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(ADMIN_PASS, salt);
-  const admin = new User({ name: 'Auto Admin', email: ADMIN_EMAIL, password: hashedPassword, role: 'admin', isEmailVerified: true });
-  await admin.save();
-  await mongoose.connection.close();
+async function setupData() {
+    await mongoose.connect(process.env.MONGO_URI);
+    const User = require('../models/user.model');
+    const Order = require('../models/order.model');
+
+    // Only cleanup test user and test orders, KEEP ADMIN
+    await User.deleteOne({ email: USER_EMAIL });
+    await Order.deleteMany({ 'shippingAddress.email': USER_EMAIL });
+
+    const user = new User({ name: 'Test User', email: USER_EMAIL, password: 'password123', isEmailVerified: true });
+    await user.save();
+    
+    // Admin is now persistent, do not delete/recreate
+    
+    await mongoose.connection.close();
 }
 
 async function loginAdmin() {

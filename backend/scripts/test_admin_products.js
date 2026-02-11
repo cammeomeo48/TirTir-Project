@@ -2,23 +2,20 @@ const mongoose = require('mongoose');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
-const API_URL = 'http://localhost:5001/api';
-const ADMIN_EMAIL = 'admin_product_test@tirtir.com';
+const API_URL = 'http://localhost:5001/api/v1';
+const ADMIN_EMAIL = 'admin@tirtir.com';
 const ADMIN_PASS = 'admin123';
 const TEST_PRODUCT_ID = 'TEST-CRUD-001';
 
 async function setupAdmin() {
   await mongoose.connect(process.env.MONGO_URI);
-  const User = require('../models/user.model');
+  // No longer needed to delete/recreate admin every time
+  // Just ensure products are clean
   const Product = require('../models/product.model');
   
   // Cleanup
-  await User.deleteOne({ email: ADMIN_EMAIL });
   await Product.deleteOne({ Product_ID: TEST_PRODUCT_ID });
   await Product.deleteMany({ Product_ID: { $regex: 'BULK-' } });
-
-  const admin = new User({ name: 'Product Admin', email: ADMIN_EMAIL, password: ADMIN_PASS, role: 'admin', isEmailVerified: true });
-  await admin.save();
   
   await mongoose.connection.close();
 }

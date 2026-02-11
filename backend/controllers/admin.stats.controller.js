@@ -1,0 +1,163 @@
+const Order = require('../models/order.model');
+const Product = require('../models/product.model');
+const DailyStats = require('../models/daily.stats.model');
+const ChatLog = require('../models/chat.log.model');
+const mongoose = require('mongoose');
+
+// GET /api/admin/stats/revenue?range=7days
+exports.getRevenueChart = async (req, res) => {
+    try {
+        const { range } = req.query;
+        let startDate = new Date();
+        
+        if (range === '30days') {
+            startDate.setDate(startDate.getDate() - 30);
+        } else {
+            startDate.setDate(startDate.getDate() - 7); // Default 7 days
+        }
+
+        const revenue = await Order.aggregate([
+            {
+                $match: {
+                    createdAt: { $gte: startDate },
+                    status: { $ne: 'Cancelled' }
+                }
+            },
+            {
+                $group: {
+                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                    totalRevenue: { $sum: "$totalPrice" },
+                    orderCount: { $sum: 1 }
+                }
+            },
+            { $sort: { _id: 1 } }
+        ]);
+
+        res.json(revenue);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// GET /api/admin/stats/conversion
+exports.getConversionFunnel = async (req, res) => {
+    try {
+        // Aggregate all time (or add date filter if needed)
+        const stats = await DailyStats.aggregate([
+            {
+                $group: {
+                    _id: null,
+                    totalViews: { $sum: "$views" },
+                    totalAddToCart: { $sum: "$addToCart" },
+                    // Orders in DailyStats might not be synced yet if we didn't update order controller
+                    // So we can use DailyStats.orders if we sync it, or count from Orders.
+                    // For now, let's assume DailyStats.orders is updated via a hook or controller.
+                    // BUT, since we haven't updated Order Controller to push to DailyStats, 
+                    // let's count Orders directly for accuracy.
+                }
+            }
+        ]);
+        
+        const totalOrders = await Order.countDocuments({ status: { $ne: 'Cancelled' } });
+        
+        const funnel = {
+            views: stats[0]?.totalViews || 0,
+            addToCart: stats[0]?.totalAddToCart || 0,
+            orders: totalOrders
+        };
+
+        res.json(funnel);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// GET /api/admin/stats/top-products
+exports.getTopProducts = async (req, res) => {
+    try {
+        // 1. Top Selling (Based on Order Items)
+        const topSelling = await Order.aggregate([
+            { $match: { status: { $ne: 'Cancelled' } } },
+            { $unwind: "$items" },
+            {
+                $group: {
+                    _id: "$items.product",
+                    totalSold: { $sum: "$items.quantity" },
+                    revenue: { $sum: { $multiply: ["$items.quantity", "$items.price"] } }
+                }
+            },
+            { $sort: { totalSold: -1 } },
+            { $limit: 10 },
+            {
+                $lookup: {
+                    from: "products",
+                    localField: "_id",
+                    foreignField: "_id",
+                    as: "productInfo"
+                }
+            },
+            { $unwind: "$productInfo" },
+            {
+                $project: {
+                    _id: 1,
+                    name: "$productInfo.Name",
+                    totalSold: 1,
+                    revenue: 1,
+                    image: "$productInfo.Thumbnail_Images"
+                }
+            }
+        ]);
+
+        // 2. Top Viewed (Based on Product.views)
+        const topViewed = await Product.find()
+            .sort({ views: -1 })
+            .limit(10)
+            .select('Name views Thumbnail_Images Price Category');
+
+        res.json({ topSelling, topViewed });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// GET /api/admin/stats/inventory
+exports.getInventoryForecast = async (req, res) => {
+    try {
+        // Products with stock < 20 (Low Stock)
+        const lowStock = await Product.find({ Stock_Quantity: { $lt: 20 } })
+            .select('Name Stock_Quantity Price Category')
+            .sort({ Stock_Quantity: 1 })
+            .limit(20);
+            
+        // Dead Stock (High Stock but Low Views/Sales - simplified to just High Stock + Oldest for now)
+        // Or just return lowStock as "Forecast" for restocking.
+        
+        res.json({ 
+            lowStock, 
+            message: "Products with less than 20 items in stock" 
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// GET /api/admin/stats/ai-insights
+exports.getAiInsights = async (req, res) => {
+    try {
+        const topKeywords = await ChatLog.aggregate([
+            { $unwind: "$keywords" },
+            {
+                $group: {
+                    _id: "$keywords",
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { count: -1 } },
+            { $limit: 20 }
+        ]);
+
+        res.json({ topKeywords });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};

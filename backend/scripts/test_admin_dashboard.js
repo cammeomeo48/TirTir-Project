@@ -3,18 +3,12 @@ const bcrypt = require('bcryptjs');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
-const API_URL = 'http://localhost:5000/api';
-const ADMIN_EMAIL = 'admin_dashboard_test@tirtir.com';
+const API_URL = 'http://localhost:5001/api/v1';
+const ADMIN_EMAIL = 'admin@tirtir.com';
 const ADMIN_PASS = 'admin123';
 
 async function setupAdmin() {
-  await mongoose.connect(process.env.MONGO_URI);
-  const User = require('../models/user.model');
-  await User.deleteOne({ email: ADMIN_EMAIL });
-  // Pass plain password, let User model pre-save hook hash it
-  const admin = new User({ name: 'Dashboard Admin', email: ADMIN_EMAIL, password: ADMIN_PASS, role: 'admin', isEmailVerified: true });
-  await admin.save();
-  await mongoose.connection.close();
+  // Admin is already persistent, no need to recreate
 }
 
 async function loginAdmin() {

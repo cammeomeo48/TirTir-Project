@@ -1,7 +1,11 @@
 const express = require("express");
 const router = express.Router();
 const productController = require("../controllers/product.controller");
+const reviewRouter = require("./review.routes"); // Import review routes
 const { protect, authorize } = require('../middlewares/auth');
+
+// Re-route into other resource routers
+router.use('/:id/reviews', reviewRouter);
 
 router.get("/", productController.getAllProducts);
 
