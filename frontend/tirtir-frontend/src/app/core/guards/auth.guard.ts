@@ -10,7 +10,17 @@ export const authGuard: CanActivateFn = (route, state) => {
     const authService = inject(AuthService);
     const router = inject(Router);
 
-    // Check if user is authenticated
+    // CRITICAL: Check token in localStorage first
+    // This handles page reload case where auth signal hasn't updated yet
+    const token = authService.getToken();
+
+    if (token) {
+        // Token exists, allow access
+        // The checkAuthStatus() in AuthService constructor will validate it
+        return true;
+    }
+
+    // Also check signal state for in-app navigation
     if (authService.isAuthenticated()) {
         return true;
     }

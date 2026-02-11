@@ -1,4 +1,4 @@
-const ORDER_STATUS = {
+exports.ORDER_STATUS = {
     PENDING: 'Pending',
     PROCESSING: 'Processing',
     SHIPPED: 'Shipped',
@@ -6,18 +6,15 @@ const ORDER_STATUS = {
     CANCELLED: 'Cancelled'
 };
 
-const PAYMENT_METHOD = {
-    COD: 'COD',
-    BANK_TRANSFER: 'BANK_TRANSFER'
+exports.PAYMENT_METHOD = {
+    VNPAY: 'VNPAY',
+    MOMO: 'MOMO',
+    CARD: 'CARD' // Visa, Master, etc.
 };
 
-const ROLES = {
-    USER: 'user',
-    ADMIN: 'admin'
-};
-
-module.exports = {
-    ORDER_STATUS,
-    PAYMENT_METHOD,
-    ROLES
+exports.PAYMENT_STATUS = {
+    PENDING: 'pending',
+    PAID: 'paid',
+    FAILED: 'failed',
+    REFUNDED: 'refunded'
 };

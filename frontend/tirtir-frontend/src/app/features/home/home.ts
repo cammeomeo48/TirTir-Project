@@ -25,12 +25,12 @@ export class HomeComponent implements OnInit, OnDestroy {
   totalSlides = 3;
   private autoPlayInterval: any;
 
+  allProducts: any[] = [];
+
   constructor() { }
 
   ngOnInit() {
-    this.loadBestSellers();
-    this.loadNewArrivals();
-    this.loadTrending();
+    this.loadCatalogAndSetup();
     this.startAutoPlay();
   }
 
@@ -38,17 +38,26 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.stopAutoPlay();
   }
 
-
-  loadBestSellers() {
-    // Best Sellers: Mask Fit Red Cushion, Waterism Glow Tint, Milk Skin Toner, SOS Serum
-    const slugs = ['mask-fit-red-cushion', 'waterism-glow-tint', 'milk-skin-toner', 'sos-serum'];
-    this.loadProductsBySlug(slugs, 'bestSellers');
+  loadCatalogAndSetup() {
+    this.productService.getProducts({ limit: 1000 }).subscribe({
+      next: (response) => {
+        this.allProducts = response.data;
+        this.setupCollections();
+        this.cdr.detectChanges();
+      },
+      error: (e) => console.error('Failed to load catalog', e)
+    });
   }
 
-  loadNewArrivals() {
-    // New Arrivals: Matcha Calming Duo Set, Hydro UV Shield Sunscreen, Organic Jojoba Oil, 
-    // Collagen Core Glow Mask, Matcha Skin Toner, Water Mellow Lip Balm
-    const slugs = [
+  setupCollections() {
+    // 1. Best Sellers: 4 Fixed + 1 Random
+    const bsSlugs = ['mask-fit-red-cushion', 'waterism-glow-tint', 'milk-skin-toner', 'sos-serum'];
+    const bsFixed = this.getProductsBySlugs(bsSlugs);
+    const bsRandom = this.pickRandom(1, bsSlugs);
+    this.bestSellers = [...bsFixed, ...bsRandom];
+
+    // 2. New Arrivals: 6 Fixed + 2 Random
+    const naSlugs = [
       'matcha-calming-duo-set',
       'hydro-uv-shield-sunscreen',
       'organic-jojoba-oil',
@@ -56,47 +65,48 @@ export class HomeComponent implements OnInit, OnDestroy {
       'matcha-skin-toner',
       'water-mellow-lip-balm'
     ];
-    this.loadProductsBySlug(slugs, 'newArrivals');
-  }
+    const naFixed = this.getProductsBySlugs(naSlugs);
+    // Exclude BS randoms? User didn't specify, but let's just exclude current section's fixed
+    const naRandom = this.pickRandom(2, naSlugs);
+    this.newArrivals = [...naFixed, ...naRandom];
 
-  loadTrending() {
-    // Trending: Mask Fit Red Cushion, Waterism Glow Tint, Mask Fit Aura Cushion, Milk Creamy Foam Cleanser
-    const slugs = [
+    // 3. Trending: 4 Fixed + 1 Random
+    const trSlugs = [
       'mask-fit-red-cushion',
       'waterism-glow-tint',
       'mask-fit-aura-cushion',
       'milk-creamy-foam-cleanser'
     ];
-    this.loadProductsBySlug(slugs, 'trending');
+    const trFixed = this.getProductsBySlugs(trSlugs);
+    // Exclude current section's fixed
+    const trRandom = this.pickRandom(1, trSlugs);
+    this.trending = [...trFixed, ...trRandom];
   }
 
-  private loadProductsBySlug(slugs: string[], target: 'bestSellers' | 'newArrivals' | 'trending') {
-    // Fetch products with search query to get them by name
-    this.productService.getProducts({ limit: 100 }).subscribe({
-      next: (response) => {
-        // Filter products by matching slugs or names
-        const products = response.data.filter(product => {
-          const productSlug = product.slug?.toLowerCase() || product.name.toLowerCase().replace(/\s+/g, '-');
-          return slugs.some(slug =>
-            productSlug.includes(slug) ||
-            slug.includes(productSlug) ||
-            product.name.toLowerCase().replace(/\s+/g, '-').includes(slug)
-          );
-        });
+  private getProductsBySlugs(slugs: string[]): any[] {
+    // Sort to match slug order
+    return slugs.map(slug =>
+      this.allProducts.find(p => {
+        const pSlug = p.slug?.toLowerCase() || p.name.toLowerCase().replace(/\s+/g, '-');
+        return pSlug.includes(slug) || slug.includes(pSlug) || p.name.toLowerCase().replace(/\s+/g, '-').includes(slug);
+      })
+    ).filter(p => p !== undefined);
+  }
 
-        // Sort products to match the order of slugs
-        const sortedProducts = slugs.map(slug =>
-          products.find(p => {
-            const pSlug = p.slug?.toLowerCase() || p.name.toLowerCase().replace(/\s+/g, '-');
-            return pSlug.includes(slug) || slug.includes(pSlug) || p.name.toLowerCase().replace(/\s+/g, '-').includes(slug);
-          })
-        ).filter(p => p !== undefined);
-
-        this[target] = sortedProducts;
-        this.cdr.detectChanges();
-      },
-      error: (e) => console.error(`Failed to load ${target}`, e)
+  private pickRandom(count: number, excludeSlugs: string[]): any[] {
+    // Pool: Items NOT in excludeSlugs
+    const pool = this.allProducts.filter(p => {
+      const pSlug = p.slug?.toLowerCase() || p.name.toLowerCase().replace(/\s+/g, '-');
+      // Check if this product matches any excluded slug
+      const isExcluded = excludeSlugs.some(ex =>
+        pSlug.includes(ex) || ex.includes(pSlug) || p.name.toLowerCase().replace(/\s+/g, '-').includes(ex)
+      );
+      return !isExcluded;
     });
+
+    // Shuffle and pick
+    const shuffled = [...pool].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, count);
   }
 
   // Carousel Methods

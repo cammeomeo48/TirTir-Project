@@ -22,7 +22,7 @@ export interface ProductData {
     descriptionImages: string[];
     shades?: ProductShade[];
     sizes?: { name: string; price: number }[];
-    category: 'makeup' | 'skincare' | 'other';
+    category: 'makeup' | 'skincare' | 'other' | 'Gift Card' | string;
     subcategory?: 'face' | 'lip' | 'cleanse-tone' | 'treatments' | 'moisturize-sunscreen';
 }
 

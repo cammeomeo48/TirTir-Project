@@ -39,12 +39,12 @@ npm install
 - Copy and paste it, then rename the copy to .env.
 - Update the content: You need the MONGO_URI (Database Connection String). Ask the Team Leader for the connection string. DO NOT share this string publicly.
 Your .env file should look like this:
-PORT=5000
+PORT=5001
 MONGO_URI=mongodb+srv://<username>:<password>@cluster0....mongodb.net/TirTir-Project
 
 4. Start the Server:
 npm run dev
--> Success: You should see Server running on port 5000 and MongoDB Connected.nn
+-> Success: You should see Server running on port 5001 and MongoDB Connected.nn
 
 ### Step 3: Frontend Setup (Client)
 - Keep the Backend terminal running. Open a new terminal window.

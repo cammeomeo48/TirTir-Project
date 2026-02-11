@@ -1,0 +1,38 @@
+<section class="deals-page">
+    <div class="deals-header">
+        <h1>MONTHLY DEALS</h1>
+        <p>Exclusive limited-time offers on our best-selling sets.</p>
+    </div>
+
+    <div class="container" *ngIf="!isLoading">
+        <div class="deals-grid">
+            <div class="deal-card" *ngFor="let deal of deals">
+                <div class="deal-header">
+                    <span class="discount-badge">{{ deal.discount }}% OFF</span>
+                    <h2>{{ deal.title }}</h2>
+                    <p>{{ deal.description }}</p>
+                </div>
+
+                <div class="deal-products-preview">
+                    <div class="product-preview" *ngFor="let product of deal.products">
+                        <img [src]="product.images[0]" [alt]="product.name">
+                        <div class="product-info-mini">
+                            <span class="p-name">{{ product.name }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="deal-footer">
+                    <div class="price-box">
+                        <span class="original-price">${{ deal.originalPrice }}</span>
+                        <span class="sale-price">${{ deal.price }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading-overlay" *ngIf="isLoading">
+        <div class="spinner"></div>
+    </div>
+</section>

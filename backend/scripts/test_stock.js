@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'http://localhost:5001/api';
 const ADMIN_EMAIL = 'stock_test_admin@tirtir.com';
 const ADMIN_PASS = 'admin123';
 const PRODUCT_CODE = 'TEST-STOCK-001';

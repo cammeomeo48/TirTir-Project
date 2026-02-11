@@ -6,6 +6,7 @@ import { CartService } from '../../core/services/cart.service';
 import { OrderService } from '../../core/services/order.service';
 import { Cart } from '../../core/models';
 import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
     selector: 'app-checkout',
@@ -19,6 +20,7 @@ export class CheckoutComponent implements OnInit {
     private cartService = inject(CartService);
     private orderService = inject(OrderService);
     private router = inject(Router);
+    private http = inject(HttpClient);
 
     checkoutForm: FormGroup;
     cart: Cart | null = null;
@@ -31,7 +33,7 @@ export class CheckoutComponent implements OnInit {
             phone: ['', Validators.required],
             address: ['', Validators.required],
             city: ['', Validators.required],
-            paymentMethod: ['COD', Validators.required],
+            paymentMethod: ['VNPAY', Validators.required],
         });
     }
 
@@ -59,17 +61,41 @@ export class CheckoutComponent implements OnInit {
             shippingAddress: { fullName, phone, address, city },
             paymentMethod,
         }).subscribe({
-            next: (response) => {
-                this.loading = false;
-                this.router.navigate(['/order-confirmation', response.orderId]);
+            next: (response: any) => {
+                // 2. CHUYỂN HƯỚNG THANH TOÁN LUÔN (KHÔNG CÒN CASE COD)
+                if (paymentMethod === 'VNPAY' || paymentMethod === 'CARD') {
+                    this.createVnPayUrl(response.orderId, this.getTotal(), paymentMethod);
+                } else if (paymentMethod === 'MOMO') {
+                    // Logic Momo (Sắp có)
+                    alert('Ví Momo đang bảo trì. Vui lòng chọn VNPay.');
+                    this.loading = false;
+                    // Hoặc chuyển hướng nếu đã tích hợp xong
+                }
             },
             error: (err) => {
                 this.loading = false;
-                this.error = err.message || 'Failed to place order';
+                this.error = err.error?.message || 'Lỗi đặt hàng';
             },
         });
     }
 
+    // Hàm createVnPayUrl giữ nguyên như cũ
+    createVnPayUrl(orderId: string, amount: number, method: string): void {
+        const body = {
+            orderId: orderId,
+            amount: amount,
+            paymentMethod: method === 'CARD' ? 'CARD' : 'VNPAY',
+            bankCode: '' 
+        };
+        this.http.post<{ paymentUrl: string }>('http://localhost:5001/api/v1/payments/create-url', body)
+            .subscribe({
+                next: (res) => window.location.href = res.paymentUrl,
+                error: (err) => {
+                    this.loading = false;
+                    alert('Lỗi kết nối cổng thanh toán');
+                }
+            });
+    }
     getImageUrl(url: string): string {
         if (!url) return '';
         if (url.startsWith('http')) return url;

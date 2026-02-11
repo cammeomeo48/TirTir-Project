@@ -9,13 +9,13 @@ export interface MenuItem {
 // 2. Xuất biến với kiểu dữ liệu đã định nghĩa
 export const MENU_ITEMS: MenuItem[] = [
   { label: 'Shop All', routerLink: '/shop' },
-  { 
-    label: 'Makeup', 
+  {
+    label: 'Makeup',
     routerLink: '/collections/makeup',
     children: [
-      { 
-        label: 'Face', 
-        routerLink: '/collections/face-makeup', 
+      {
+        label: 'Face',
+        routerLink: '/collections/face-makeup',
         children: [
           { label: 'Shop TIRTIR Cushions', routerLink: '/makeup/cushions' },
           { label: 'Mask Fit Red Cushion', routerLink: '/products/mask-fit-red-cushion' },
@@ -25,9 +25,9 @@ export const MENU_ITEMS: MenuItem[] = [
           { label: 'Mask Fit Make Up Fixer', routerLink: '/products/mask-fit-makeup-fixer' }
         ]
       },
-      { 
-        label: 'Lip', 
-        routerLink: '/collections/lip-makeup', 
+      {
+        label: 'Lip',
+        routerLink: '/collections/lip-makeup',
         children: [
           { label: 'Waterism Glow Tint', routerLink: '/products/waterism-glow-tint' },
           { label: 'Mini Waterism Glow Tint', routerLink: '/products/mini-waterism-glow-tint' },
@@ -37,22 +37,22 @@ export const MENU_ITEMS: MenuItem[] = [
       }
     ]
   },
-  { 
-    label: 'Skincare', 
+  {
+    label: 'Skincare',
     routerLink: '/collections/skincare',
     children: [
-      { 
-        label: 'Cleanse & Toner', 
+      {
+        label: 'Cleanse & Toner',
         routerLink: '/collections/cleansers-toners',
         children: [
           { label: 'Hydro Boost Enzyme Cleansing Balm', routerLink: '/products/hydro-boost-enzyme-cleansing-balm' },
           { label: 'Milk Creamy Foam Cleanser', routerLink: '/products/milk-creamy-foam-cleanser' },
           { label: 'Milk Skin Toner', routerLink: '/products/milk-skin-toner' },
           { label: 'Matcha Skin Toner', routerLink: '/products/matcha-skin-toner' }
-        ] 
+        ]
       },
-      { 
-        label: 'Treatments', 
+      {
+        label: 'Treatments',
         routerLink: '/collections/treatments',
         children: [
           { label: 'SOS Serum', routerLink: '/products/sos-serum' },
@@ -61,21 +61,22 @@ export const MENU_ITEMS: MenuItem[] = [
           { label: 'Collagen Lifting Eye Cream', routerLink: '/products/collagen-lifting-eye-cream' },
           { label: 'Collagen Core Glow Mask', routerLink: '/products/collagen-core-glow-mask' },
           { label: 'Dermatir Pure Rosemary Calming Mask', routerLink: '/products/dermatir-pure-rosemary-calming-mask' }
-        ] 
+        ]
       },
-      { 
-        label: 'Moisturize & Sunscreen', 
+      {
+        label: 'Moisturize & Sunscreen',
         routerLink: '/collections/moisturize-sunscreen',
         children: [
           { label: 'Ceramic Cream', routerLink: '/products/ceramic-cream' },
           { label: 'Matcha Calming Cream', routerLink: '/products/matcha-calming-cream' },
           { label: 'Hydro UV Shield Sunscreen', routerLink: '/products/hydro-uv-shield-sunscreen' },
           { label: 'Matcha Calming Duo Set', routerLink: '/products/matcha-calming-duo-set' }
-        ] 
+        ]
       }
     ]
   },
-  { label: 'Virtual Services', routerLink: '/virtual-services' },
+  { label: 'Gift Card', routerLink: '/products/tirtir-gift-card' },
   { label: 'Deals', routerLink: '/deals' },
+  { label: 'Virtual Services', routerLink: '/virtual-services' },
   { label: 'Contact', routerLink: '/contact' }
 ];

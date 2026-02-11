@@ -21,12 +21,21 @@ const ProductSchema = new mongoose.Schema({
 
     // Additional Fields
     Is_Best_Seller: { type: Boolean, default: false },
+    Rating_Average: { type: Number, default: 0 },
+    Sold_Quantity: { type: Number, default: 0 },
     Category_Slug: { type: String, index: true },
     slug: { type: String, unique: true, sparse: true },
+
+    // Attributes for filtering
+    Skin_Type_Target: String,
+    Main_Concern: String,
 
     Status: String,
     Stock_Quantity: { type: Number, default: 0, min: 0 },
     Stock_Reserved: { type: Number, default: 0, min: 0 } // Items held in pending orders
 }, { collection: 'products', timestamps: true });
+
+// Add Text Index for Advanced Search
+ProductSchema.index({ Name: 'text', Description_Short: 'text', Full_Description: 'text' });
 
 module.exports = mongoose.model('Product', ProductSchema);

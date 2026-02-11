@@ -15,6 +15,7 @@ import { CheckoutComponent } from './features/checkout/checkout';
 import { OrderConfirmationComponent } from './features/order-confirmation/order-confirmation';
 import { OrderHistoryComponent } from './features/account/order-history/order-history';
 import { authGuard } from './core/guards/auth.guard';
+import { canDeactivateGuard } from './core/guards/can-deactivate.guard';
 
 export const routes: Routes = [
     { path: '', component: HomeComponent },
@@ -37,7 +38,8 @@ export const routes: Routes = [
             { path: '', redirectTo: 'profile', pathMatch: 'full' },
             {
                 path: 'profile',
-                loadComponent: () => import('./features/account/profile-info/profile-info').then(m => m.ProfileInfoComponent)
+                loadComponent: () => import('./features/account/profile-info/profile-info').then(m => m.ProfileInfoComponent),
+                canDeactivate: [canDeactivateGuard]
             },
             {
                 path: 'addresses',
@@ -54,12 +56,23 @@ export const routes: Routes = [
         ]
     },
     // Collection pages (category-based product listings)
+    { path: 'deals', loadComponent: () => import('./features/deals/deals').then(m => m.DealsComponent) },
     { path: 'collections/:slug', component: CollectionComponent },
     // Virtual Services (Shade Finder)
     { path: 'virtual-services', component: ShadeFinderComponent },
     // Legacy routes for backward compatibility
     { path: 'makeup/cushions', component: CushionComponent },
+    // Gift Card route (must be before :slug)
+    {
+        path: 'products/tirtir-gift-card',
+        loadComponent: () => import('./features/gift-card/gift-card').then(m => m.GiftCardComponent)
+    },
     // Product detail page
     { path: 'products/:slug', component: ProductDetailComponent },
+    // Policy pages
+    { path: 'policies/terms-of-service', loadComponent: () => import('./features/policies/terms/terms').then(m => m.TermsComponent) },
+    { path: 'policies/privacy-policy', loadComponent: () => import('./features/policies/privacy/privacy').then(m => m.PrivacyComponent) },
+    { path: 'policies/shipping-policy', loadComponent: () => import('./features/policies/shipping/shipping').then(m => m.ShippingComponent) },
+    { path: 'policies/refund-policy', loadComponent: () => import('./features/policies/refund/refund').then(m => m.RefundComponent) },
     { path: '**', redirectTo: '' }
 ];

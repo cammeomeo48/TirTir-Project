@@ -40,11 +40,46 @@ export class ProductService {
       });
     }
     return this.http.get<{ data: BackendProduct[], total: number, categories: any[] }>(this.apiUrl, { params: httpParams }).pipe(
-      map(response => ({
-        data: response.data.map(this.mapToProductData),
-        total: response.total,
-        categories: response.categories
-      }))
+      map(response => {
+        try {
+          // 1. Filter out the specific variants we don't want to show in list
+          const hiddenVariants = ['tirtir-gift-card-25', 'tirtir-gift-card-50', 'tirtir-gift-card-100'];
+
+          const filteredBackendData = response.data.filter(p => {
+            // Filter hidden variants
+            if (hiddenVariants.includes(p.Product_ID)) return false;
+
+            // Filter junk data
+            const name = p.Name.toLowerCase();
+            if (name.includes('bulk')) return false;
+            if (name.includes('test')) return false;
+            if (name.includes('demo')) return false;
+
+            return true;
+          });
+
+          const mappedData = filteredBackendData.map(item => {
+            const product = this.mapToProductData(item);
+            // 2. Remap the main Gift Card to generic slug
+            if (product.id === 'tirtir-gift-card-10') {
+              product.slug = 'tirtir-gift-card';
+              product.name = 'TIRTIR GIFT CARD';
+              product.category = 'Gift Card';
+              product.price = 10; // Ensure display starts at lowest
+            }
+            return product;
+          });
+
+          return {
+            data: mappedData,
+            total: mappedData.length,
+            categories: response.categories
+          };
+        } catch (e) {
+          console.error('ProductService: Error mapping data', e);
+          throw e;
+        }
+      })
     );
   }
 
@@ -52,6 +87,10 @@ export class ProductService {
     return this.http.get<BackendProduct>(`${this.apiUrl}/${idOrSlug}`).pipe(
       map(this.mapToProductData)
     );
+  }
+
+  getProductFilters(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/filters`);
   }
 
   private mapToProductData(bp: BackendProduct): ProductData {
