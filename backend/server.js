@@ -70,22 +70,23 @@ const { ensureSlugs } = require("./controllers/product.controller");
 const paymentRoutes = require("./routes/payment.routes");
 
 app.get("/", (req, res) => res.send("API Running"));
-app.get("/api/health", (req, res) => res.json({ ok: true, msg: "alive" })); 
+app.get("/api/v1/health", (req, res) => res.json({ ok: true, msg: "alive" })); 
 
 // API Routes
-app.use("/api/shades", shadeRoutes);
-app.use("/api/products", productRoutes);
-app.use("/api/admin/products", require("./routes/admin.products.routes"));  
-app.use("/api/admin", require("./routes/admin.dashboard.routes"));
-app.use("/api/menus", menuRoutes);
-app.use("/api/auth", require("./routes/auth.routes"));
-app.use("/api/cart", require("./routes/cart.routes"));
-app.use("/api/chat", require("./routes/chat.routes"));
-app.use("/api/orders", require("./routes/order.routes"));
-app.use("/api/users", require("./routes/user.routes"));
-app.use("/api/inventory", require("./routes/inventory.routes"));
-app.use("/api/payments", paymentRoutes);
-app.use("/api/coupons", require("./routes/coupon.routes"));
+app.use("/api/v1/shades", shadeRoutes);
+app.use("/api/v1/products", productRoutes);
+app.use("/api/v1/admin/products", require("./routes/admin.products.routes"));  
+app.use("/api/v1/admin", require("./routes/admin.dashboard.routes"));
+app.use("/api/v1/menus", menuRoutes);
+app.use("/api/v1/auth", require("./routes/auth.routes"));
+app.use("/api/v1/cart", require("./routes/cart.routes"));
+app.use("/api/v1/chat", require("./routes/chat.routes"));
+app.use("/api/v1/orders", require("./routes/order.routes"));
+app.use("/api/v1/users", require("./routes/user.routes"));
+app.use("/api/v1/inventory", require("./routes/inventory.routes"));
+app.use("/api/v1/payments", paymentRoutes);
+app.use("/api/v1/coupons", require("./routes/coupon.routes"));
+app.use("/api/v1/ai", require("./routes/ai.routes"));
 
 // Global Error Handler
 app.use(errorHandler);

@@ -286,8 +286,31 @@ exports.cancelOrder = async (req, res) => {
         order.status = 'Cancelled';
         await order.save();
 
-        // (Optional) Nếu có trừ kho lúc đặt, thì ở đây phải cộng lại kho (Restock)
-        // await restockProducts(order.items);
+        // FIX: Restock Logic (Release Reserved Stock)
+        for (const item of order.items) {
+            // Return to Stock: Increase Available, Decrease Reserved
+            const product = await Product.findByIdAndUpdate(item.product._id, {
+                $inc: { 
+                    Stock_Quantity: item.quantity, 
+                    Stock_Reserved: -item.quantity 
+                }
+            }, { new: true });
+
+            if (product) {
+                // Log History
+                await StockHistory.create({
+                    product: product._id,
+                    action: 'Release',
+                    change_type: 'Increase',
+                    source_id: order._id.toString(),
+                    balance_before: product.Stock_Quantity - item.quantity,
+                    balance_after: product.Stock_Quantity,
+                    changeAmount: item.quantity,
+                    reason: 'Order Cancelled by User (Stock Returned)',
+                    performedBy: userId
+                });
+            }
+        }
 
         res.json({ message: "Đã hủy đơn hàng thành công", order });
 
