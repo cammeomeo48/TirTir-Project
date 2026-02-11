@@ -3,8 +3,9 @@
      Reference: https://tirtir.global/collections/shop-all
      ===================================================== -->
 
+<!-- Makeup Hero -->
 <section class="collection-hero" *ngIf="isMakeupCollection">
-    <div class="collection-hero-media"></div>
+    <div class="collection-hero-media makeup-bg"></div>
     <div class="container">
         <div class="collection-hero-content">
             <div class="breadcrumbs">
@@ -13,27 +14,58 @@
                 <span>Makeup</span>
             </div>
             <h1 class="collection-title">{{ collectionTitle }}</h1>
-            <p class="collection-description">{{ collectionDescription }}</p>
+            <p class="hero-subtitle">{{ collectionDescription }}</p>
         </div>
     </div>
 </section>
 
-<!-- Category Banners -->
-<section class="category-banners" *ngIf="!isMakeupCollection">
+<!-- Skincare Hero (Restored) -->
+<section class="collection-hero" *ngIf="isSkincareCollection">
+    <div class="collection-hero-media skincare-bg"></div>
+    <div class="container">
+        <div class="collection-hero-content">
+            <div class="breadcrumbs">
+                <a routerLink="/">Home</a>
+                <span>/</span>
+                <span>Skincare</span>
+            </div>
+            <h1 class="collection-title">{{ collectionTitle }}</h1>
+            <p class="hero-subtitle">{{ collectionDescription }}</p>
+        </div>
+    </div>
+</section>
+
+<!-- Shop All Hero -->
+<section class="collection-hero" *ngIf="!isMakeupCollection && !isSkincareCollection">
+    <div class="collection-hero-media shop-all-bg"></div>
+    <div class="container">
+        <div class="collection-hero-content">
+            <div class="breadcrumbs">
+                <a routerLink="/">Home</a>
+                <span>/</span>
+                <span>Shop All</span>
+            </div>
+            <h1 class="collection-title">SHOP ALL</h1>
+            <p class="hero-subtitle">Explore all TIRTIR products in one place.</p>
+        </div>
+    </div>
+</section>
+
+<!-- Category Banners (Shop All Only) -->
+<section class="category-banners" *ngIf="!isMakeupCollection && !isSkincareCollection">
     <div class="banners-grid">
         <a routerLink="/shop" [queryParams]="{category: 'makeup'}" class="banner-card">
-            <!-- TODO: Replace with real TIRTIR Makeup banner image -->
-            <img src="https://placehold.co/600x300/f5e6e0/000?text=MAKEUP" alt="Makeup">
+            <img src="/assets/images/additional/landingpage/MakeupMain.jpg" alt="Makeup">
             <span class="banner-label">MAKEUP</span>
         </a>
         <a routerLink="/shop" [queryParams]="{category: 'skincare'}" class="banner-card">
-            <!-- TODO: Replace with real TIRTIR Skincare banner image -->
-            <img src="https://placehold.co/600x300/e0e8f5/000?text=SKINCARE" alt="Skincare">
+            <img src="/assets/images/additional/landingpage/SkincareMain.jpg" alt="Skincare">
             <span class="banner-label">SKINCARE</span>
         </a>
-        <a routerLink="/shop" [queryParams]="{category: 'gift-card'}" class="banner-card">
-            <!-- TODO: Replace with real TIRTIR Gift Card banner image -->
-            <img src="https://placehold.co/600x300/f0e0f5/000?text=GIFT+CARD" alt="Gift Card">
+        <a routerLink="/products/tirtir-gift-card" class="banner-card">
+            <!-- Reuse generic or make specific -->
+            <img src="/assets/images/additional/landingpage/Banner_Carousel_ExclusiveDeals.jpg" alt="Gift Card"
+                style="object-fit: cover;">
             <span class="banner-label">GIFT CARD</span>
         </a>
     </div>
@@ -55,7 +87,7 @@
                     </svg>
                     {{ showFilters ? 'HIDE FILTERS' : 'SHOW FILTERS' }}
                 </button>
-                <span class="product-count" *ngIf="isMakeupCollection">{{ displayProducts.length }} PRODUCTS</span>
+                <span class="product-count">{{ displayProducts.length }} PRODUCTS</span>
             </div>
 
             <div class="sort-control">
@@ -82,7 +114,7 @@
                 <!-- Product Type Filter -->
                 <div class="filter-group">
                     <h4 class="filter-title" (click)="toggleFilterGroup('type')">
-                        Product type
+                        CATEGORIES
                         <span class="toggle-icon">{{ expandedFilters['type'] ? '−' : '+' }}</span>
                     </h4>
                     <ul class="filter-options" *ngIf="expandedFilters['type']">
@@ -99,9 +131,9 @@
                 </div>
 
                 <!-- Regimens Filter -->
-                <div class="filter-group">
+                <div class="filter-group" *ngIf="regimens.length > 0">
                     <h4 class="filter-title" (click)="toggleFilterGroup('regimen')">
-                        Regimens
+                        SHOP BY REGIMEN
                         <span class="toggle-icon">{{ expandedFilters['regimen'] ? '−' : '+' }}</span>
                     </h4>
                     <ul class="filter-options" *ngIf="expandedFilters['regimen']">
@@ -124,10 +156,24 @@
                     <div class="spinner"></div>
                 </div>
 
-                <div class="products-grid">
+                <div class="products-grid" *ngIf="!isLoading && paginatedProducts.length > 0; else noProducts">
                     <app-product-card *ngFor="let product of paginatedProducts; trackBy: trackByProduct"
                         [product]="product"></app-product-card>
                 </div>
+
+                <ng-template #noProducts>
+                    <div class="no-products" *ngIf="!isLoading">
+                        <div class="no-results-content">
+                            <span class="no-results-icon">🔍</span>
+                            <h3>No products found</h3>
+                            <p *ngIf="searchTerm">We couldn't find any products matching "{{searchTerm}}".</p>
+                            <p *ngIf="!searchTerm">No products match the selected filters.</p>
+                            <button class="clear-search-btn" routerLink="/shop">
+                                BACK TO ALL PRODUCTS
+                            </button>
+                        </div>
+                    </div>
+                </ng-template>
 
                 <!-- Pagination -->
                 <nav class="pagination" *ngIf="!isLoading && displayProducts.length > 0">

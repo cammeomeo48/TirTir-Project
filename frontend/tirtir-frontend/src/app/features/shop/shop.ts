@@ -19,8 +19,10 @@ export class ShopComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
 
   isMakeupCollection = false;
+  isSkincareCollection = false; // Added
   collectionTitle = 'SHOP ALL';
   collectionDescription = 'Discover all TIRTIR products.';
+  searchTerm = '';
   // Filter state
   showFilters = true;
   isLoading = false;
@@ -45,31 +47,37 @@ export class ShopComponent implements OnInit {
   // Explicit array for current page items
   paginatedProducts: ProductData[] = [];
 
-  // Filter options
-  productTypes = [
-    { label: 'Cushion', value: 'cushion', count: 0 },
-    { label: 'Cleanser', value: 'cleanser', count: 0 },
-    { label: 'Toner', value: 'toner', count: 0 },
-    { label: 'Serum', value: 'serum', count: 0 },
-    { label: 'Cream', value: 'cream', count: 0 },
-    { label: 'Ampoule', value: 'ampoule', count: 0 },
-    { label: 'Sunscreen', value: 'sunscreen', count: 0 },
-    { label: 'Mask', value: 'mask', count: 0 },
-    { label: 'Lip', value: 'lip', count: 0 },
-    { label: 'Setting Spray', value: 'setting-spray', count: 0 }, // Renamed from Fixer
-    { label: 'Primer', value: 'primer', count: 0 },
-    { label: 'Facial Oil', value: 'facial-oil', count: 0 },
-    { label: 'Eye Cream', value: 'eye-cream', count: 0 },
+  // Filter options definitions (Source of Truth)
+  private readonly allProductTypes = [
+    { label: 'Cushion', value: 'cushion', count: 0, category: 'makeup' },
+    { label: 'Cleanser', value: 'cleanser', count: 0, category: 'skincare' },
+    { label: 'Toner', value: 'toner', count: 0, category: 'skincare' },
+    { label: 'Serum', value: 'serum', count: 0, category: 'skincare' },
+    { label: 'Cream', value: 'cream', count: 0, category: 'skincare' },
+    { label: 'Ampoule', value: 'ampoule', count: 0, category: 'skincare' },
+    { label: 'Sunscreen', value: 'sunscreen', count: 0, category: 'skincare' },
+    { label: 'Mask', value: 'mask', count: 0, category: 'skincare' },
+    { label: 'Lip', value: 'lip', count: 0, category: 'makeup' },
+    { label: 'Setting Spray', value: 'setting-spray', count: 0, category: 'makeup' },
+    { label: 'Primer', value: 'primer', count: 0, category: 'makeup' },
+    { label: 'Facial Oil', value: 'facial-oil', count: 0, category: 'skincare' },
+    { label: 'Eye Cream', value: 'eye-cream', count: 0, category: 'skincare' },
   ];
 
-  // Regimen options
-  regimens = [
+  // Regimen options definitions
+  private readonly allRegimens = [
     { label: 'Hydration', value: 'hydration', count: 0 },
     { label: 'Soothing', value: 'soothing', count: 0 },
     { label: 'Brightening', value: 'brightening', count: 0 },
     { label: 'Pore Care', value: 'pore-care', count: 0 },
-    { label: 'Anti-Aging', value: 'anti-aging', count: 0 },
+    { label: 'Wrinkle Care', value: 'wrinkle-care', count: 0 },
+    { label: 'Dark Circles', value: 'dark-circles', count: 0 },
+    { label: 'Skin Barrier', value: 'barrier', count: 0 },
   ];
+
+  // Active Filter Options (Displayed in Sidebar)
+  productTypes = [...this.allProductTypes];
+  regimens = [...this.allRegimens];
 
   constructor() { }
 
@@ -78,27 +86,101 @@ export class ShopComponent implements OnInit {
   selectedRegimens: string[] = [];
 
   ngOnInit(): void {
-    this.isMakeupCollection = this.route.snapshot.routeConfig?.path === 'collections/makeup';
+    // Combine route params and query params handling
+    this.route.queryParams.subscribe(params => {
+      const categoryParam = params['category'];
 
-    if (this.isMakeupCollection) {
-      this.collectionTitle = 'MAKEUP';
-      this.collectionDescription = 'Discover TIRTIR makeup essentials for a long-lasting, luminous finish.';
-    }
+      // Reset state on nav change
+      this.selectedCategories = [];
+      this.selectedRegimens = [];
+      this.searchTerm = params['q'] || '';
 
-    // Initial Load
-    this.loadProducts();
+      if (categoryParam === 'makeup') {
+        this.setupMakeupView();
+      } else if (categoryParam === 'skincare') {
+        this.setupSkincareView();
+      } else if (this.searchTerm) {
+        this.setupSearchView();
+      } else {
+        this.setupShopAllView();
+      }
+
+      // Pre-select category if passed and valid (and not just defining the view)
+      // If the view is 'makeup', we don't necessarily want to check 'makeup' box, 
+      // usually we want to see ALL makeup. But if user clicked "Cushion", that's different.
+      // For now, the 'category' param acts as the VIEW SWITCHER as per requirements.
+
+      this.loadProducts();
+    });
+  }
+
+  setupMakeupView() {
+    this.isMakeupCollection = true;
+    this.isSkincareCollection = false;
+    this.collectionTitle = 'MAKEUP';
+    this.collectionDescription = 'Discover TIRTIR makeup essentials for a long-lasting, luminous finish.';
+
+    // Filter sidebar: Show only makeup categories
+    this.productTypes = this.allProductTypes.filter(t => t.category === 'makeup');
+    // Restore regimens for makeup as user requested counts "on all pages"
+    this.regimens = [...this.allRegimens];
+
+    // Don't auto-select. Let categorySlug context handle the base filtering.
+    this.selectedCategories = [];
+  }
+
+  setupSkincareView() {
+    this.isMakeupCollection = false;
+    this.isSkincareCollection = true;
+    this.collectionTitle = 'SKINCARE';
+    this.collectionDescription = 'Discover TIRTIR skincare essentials for healthy, radiant skin.';
+
+    this.productTypes = this.allProductTypes.filter(t => t.category === 'skincare');
+    this.regimens = [...this.allRegimens];
+
+    this.selectedCategories = [];
+  }
+
+  setupShopAllView() {
+    this.isMakeupCollection = false;
+    this.isSkincareCollection = false;
+    this.collectionTitle = 'SHOP ALL';
+    this.collectionDescription = 'Discover all TIRTIR products.';
+
+    this.productTypes = [...this.allProductTypes];
+    this.regimens = [...this.allRegimens];
+    // No default selection -> Show all
+  }
+
+  setupSearchView() {
+    this.isMakeupCollection = false;
+    this.isSkincareCollection = false;
+    this.collectionTitle = `SEARCH: "${this.searchTerm}"`;
+    this.collectionDescription = `Results for your search.`;
+    this.productTypes = [...this.allProductTypes];
+    this.regimens = [...this.allRegimens];
   }
 
   loadProducts() {
     const params: any = {
-      limit: 1000 // Determine if pagination is handled by backend or frontend
+      limit: 1000
     };
 
-    // Construct Param: category=Cushion,Mask
+    if (this.searchTerm) {
+      params.keyword = this.searchTerm;
+    }
+
+    // 1. apply Context/Scope via categorySlug
+    if (this.isMakeupCollection) {
+      params.categorySlug = 'makeup';
+    } else if (this.isSkincareCollection) {
+      params.categorySlug = 'skincare';
+    }
+
+    // 2. Apply User Filters (Sidebar) via 'category' param
     if (this.selectedCategories.length > 0) {
-      // Map 'cushion' (value) -> 'Cushion' (Label) IF backend expects Labels. 
-      // Based on controller, it expects "Display Names":
-      const selectedLabels = this.productTypes
+      // Map 'cushion' (value) -> 'Cushion' (Label) as backend expects
+      const selectedLabels = this.allProductTypes
         .filter(t => this.selectedCategories.includes(t.value))
         .map(t => t.label)
         .join(',');
@@ -106,9 +188,9 @@ export class ShopComponent implements OnInit {
       params.category = selectedLabels;
     }
 
-    // Construct Param: concern=Hydration,Soothing
+    // 3. Apply Regimen Filters
     if (this.selectedRegimens.length > 0) {
-      const selectedConcernLabels = this.regimens
+      const selectedConcernLabels = this.allRegimens
         .filter(r => this.selectedRegimens.includes(r.value))
         .map(r => r.label)
         .join(',');
@@ -116,7 +198,6 @@ export class ShopComponent implements OnInit {
       params.concern = selectedConcernLabels;
     }
 
-    // Add sorting parameter for backend
     if (this.sortBy) {
       params.sort = this.sortBy;
     }
@@ -126,10 +207,6 @@ export class ShopComponent implements OnInit {
       next: (response) => {
         this.isLoading = false;
         this.allProducts = response.data;
-        // Update counts (optional: if you want counts to reflect "remaining" or "global")
-        // Usually facets show GLOBAL counts even when filtered, or filtered counts. 
-        // Our backend returns "Global" counts if we don't apply filters in the facet pipeline, 
-        // BUT currently it applies matchStage to everything. So counts will shrink.
         this.mapCounts(response);
         this.updateDisplayProducts();
         this.cdr.detectChanges();
@@ -172,16 +249,20 @@ export class ShopComponent implements OnInit {
     this.productTypes.forEach(uiItem => {
       let count = 0;
 
-      // Umbrella Logic
+      // Umbrella Logic for 'lip'
       if (uiItem.value === 'lip') {
-        const tints = apiCategories.find((c: any) => c.name === 'tint')?.count || 0;
-        const balms = apiCategories.find((c: any) => c.name === 'balm')?.count || 0;
-        const lips = apiCategories.find((c: any) => c.name === 'lip')?.count || 0;
+        const tints = apiCategories.find((c: any) => c.name?.toLowerCase() === 'tint')?.count || 0;
+        const balms = apiCategories.find((c: any) => c.name?.toLowerCase() === 'balm')?.count || 0;
+        const lips = apiCategories.find((c: any) => c.name?.toLowerCase() === 'lip')?.count || 0;
         count = tints + balms + lips;
       } else {
-        // Direct Match by SLUG (value)
+        // Direct Match by SLUG (value) or LABEL - API usually returns Name (Label)
         const match = apiCategories.find(
-          (c: any) => c.name && c.name.toLowerCase() === uiItem.value.toLowerCase()
+          (c: any) => c.name && (
+            c.name.toLowerCase() === uiItem.value.toLowerCase() ||
+            c.name.toLowerCase() === uiItem.label.toLowerCase() ||
+            c.name.toLowerCase().includes(uiItem.label.toLowerCase())
+          )
         );
         count = match ? match.count : 0;
       }
@@ -191,10 +272,22 @@ export class ShopComponent implements OnInit {
 
     // Map Regimens (Concerns)
     this.regimens.forEach(uiItem => {
-      const match = apiConcerns.find(
-        (c: any) => c.name && c.name.toLowerCase() === uiItem.label.toLowerCase()
+      // FIX: SUM all matching counts (e.g. "Hydrating" + "Hydration")
+      const matches = apiConcerns.filter(
+        (c: any) => {
+          if (!c.name) return false;
+          const dbName = c.name.trim().toLowerCase();
+          const uiLabel = uiItem.label.toLowerCase();
+
+          return dbName === uiLabel ||
+            dbName.includes(uiLabel.substring(0, 5)) ||
+            uiLabel.includes(dbName.substring(0, 5)) ||
+            (uiLabel.includes('wrinkle') && (dbName.includes('wrinkle') || dbName.includes('aging'))) ||
+            (uiLabel.includes('hydration') && dbName.includes('hydrat')) ||
+            (uiLabel.includes('skin barrier') && dbName.includes('barrier'));
+        }
       );
-      uiItem.count = match ? match.count : 0;
+      uiItem.count = matches.reduce((sum: number, m: any) => sum + (m.count || 0), 0);
     });
   }
 
@@ -203,19 +296,11 @@ export class ShopComponent implements OnInit {
   }
 
   updateDisplayProducts() {
-    let filtered = this.allProducts;
+    // Client-side filtering is no longer needed for category/regimen as it's handled via params/backend
+    // However, if we need to do any client-side post-processing, do it here.
 
-    // Filter by collection if needed
-    if (this.isMakeupCollection) {
-      // Makeup categories: cushion, lip, fixer, primer
-      const makeupCategories = ['cushion', 'lip', 'fixer', 'primer'];
-      filtered = filtered.filter(p => makeupCategories.includes(p.category)); // API must map this correctly
-    }
-
-    // Backend handles sorting via 'sort' parameter, no need for client-side sorting anymore
-
-    this.displayProducts = filtered;
-    this.currentPage = 1; // Reset to page 1 on filter change
+    this.displayProducts = this.allProducts;
+    this.currentPage = 1;
     this.updatePagination();
   }
 
