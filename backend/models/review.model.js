@@ -56,14 +56,16 @@ ReviewSchema.statics.getAverageRating = async function(productId) {
         {
             $group: {
                 _id: '$product',
-                averageRating: { $avg: '$rating' }
+                averageRating: { $avg: '$rating' },
+                count: { $sum: 1 }
             }
         }
     ]);
 
     try {
         await this.model('Product').findByIdAndUpdate(productId, {
-            Rating_Average: obj[0] ? Math.round(obj[0].averageRating * 10) / 10 : 0
+            Rating_Average: obj[0] ? Math.round(obj[0].averageRating * 10) / 10 : 0,
+            Rating_Count: obj[0] ? obj[0].count : 0
         });
     } catch (err) {
         console.error(err);

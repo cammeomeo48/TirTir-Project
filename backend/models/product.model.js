@@ -22,6 +22,7 @@ const ProductSchema = new mongoose.Schema({
     // Additional Fields
     Is_Best_Seller: { type: Boolean, default: false },
     Rating_Average: { type: Number, default: 0 },
+    Rating_Count: { type: Number, default: 0 },
     Sold_Quantity: { type: Number, default: 0 },
     Category_Slug: { type: String, index: true },
     slug: { type: String, unique: true, sparse: true },

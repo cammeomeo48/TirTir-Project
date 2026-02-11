@@ -18,7 +18,40 @@ const resolveProductId = async (idParam) => {
 // @desc    Get reviews for a product
 // @route   GET /api/v1/products/:id/reviews
 // @access  Public
+// ... existing code ...
+
+// GET /api/v1/admin/reviews (Admin Only)
+exports.getAllReviewsAdmin = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+        const rating = req.query.rating; // Filter by rating
+
+        let query = {};
+        if (rating) query.rating = rating;
+
+        const total = await Review.countDocuments(query);
+        const reviews = await Review.find(query)
+            .populate('user', 'name email')
+            .populate('product', 'Name Thumbnail_Images')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        res.json({
+            reviews,
+            page,
+            pages: Math.ceil(total / limit),
+            total
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 exports.getProductReviews = async (req, res) => {
+// ... existing code ...
     try {
         const rawId = req.params.id;
         const productId = await resolveProductId(rawId);

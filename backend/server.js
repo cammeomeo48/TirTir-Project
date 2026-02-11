@@ -76,6 +76,7 @@ app.get("/api/v1/health", (req, res) => res.json({ ok: true, msg: "alive" }));
 app.use("/api/v1/shades", shadeRoutes);
 app.use("/api/v1/products", productRoutes);
 app.use("/api/v1/admin/products", require("./routes/admin.products.routes"));
+app.use("/api/v1/admin/users", require("./routes/admin.users.routes")); // Add Admin User Routes
 app.use("/api/v1/admin", require("./routes/admin.dashboard.routes"));
 app.use("/api/v1/menus", menuRoutes);
 app.use("/api/v1/auth", require("./routes/auth.routes"));

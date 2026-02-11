@@ -33,7 +33,11 @@ const UserSchema = new mongoose.Schema({
         enum: ['user', 'admin'],
         default: 'user'
     },
-    isEmailVerified: {
+    isBlocked: { // New field for banning users
+        type: Boolean,
+        default: false
+    },
+    resetPasswordToken: String,{
         type: Boolean,
         default: false
     },

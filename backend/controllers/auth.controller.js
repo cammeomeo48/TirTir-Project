@@ -298,6 +298,14 @@ exports.login = async (req, res) => {
             });
         }
 
+        // Check if user is blocked
+        if (user.isBlocked) {
+            return res.status(403).json({
+                success: false,
+                message: 'Your account has been blocked. Please contact support.'
+            });
+        }
+
         // ===== GENERATE JWT TOKEN =====
         const token = generateToken(user._id, user.role);
 
