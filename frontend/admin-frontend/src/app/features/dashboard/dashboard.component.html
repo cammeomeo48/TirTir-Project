@@ -1,0 +1,41 @@
+<div class="dashboard">
+    <h1 class="page-title">Dashboard</h1>
+
+    @if (isLoading) {
+    <div class="loading">Loading...</div>
+    } @else if (stats) {
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">📦</div>
+            <div class="stat-details">
+                <h3>Total Orders</h3>
+                <p class="stat-value">{{ stats.totalOrders }}</p>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">💰</div>
+            <div class="stat-details">
+                <h3>Total Revenue</h3>
+                <p class="stat-value">${{ stats.totalRevenue.toFixed(2) }}</p>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-details">
+                <h3>Total Customers</h3>
+                <p class="stat-value">{{ stats.totalCustomers }}</p>
+            </div>
+        </div>
+
+        <div class="stat-card alert">
+            <div class="stat-icon">⚠️</div>
+            <div class="stat-details">
+                <h3>Low Stock Items</h3>
+                <p class="stat-value">{{ stats.lowStockProducts }}</p>
+            </div>
+        </div>
+    </div>
+    }
+</div>
