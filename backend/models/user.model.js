@@ -37,12 +37,8 @@ const UserSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-    resetPasswordToken: String,{
-        type: Boolean,
-        default: false
-    },
-    emailVerificationToken: String,
     resetPasswordToken: String,
+    emailVerificationToken: String,
     resetPasswordExpire: Date,
     // ===== NEW PROFILE FIELDS =====
     avatar: {
