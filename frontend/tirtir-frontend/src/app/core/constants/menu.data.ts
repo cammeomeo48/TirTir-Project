@@ -11,7 +11,8 @@ export const MENU_ITEMS: MenuItem[] = [
   { label: 'Shop All', routerLink: '/shop' },
   {
     label: 'Makeup',
-    routerLink: '/collections/makeup',
+    routerLink: '/shop',
+    queryParams: { category: 'makeup' },
     children: [
       {
         label: 'Face',
@@ -39,7 +40,8 @@ export const MENU_ITEMS: MenuItem[] = [
   },
   {
     label: 'Skincare',
-    routerLink: '/collections/skincare',
+    routerLink: '/shop',
+    queryParams: { category: 'skincare' },
     children: [
       {
         label: 'Cleanse & Toner',

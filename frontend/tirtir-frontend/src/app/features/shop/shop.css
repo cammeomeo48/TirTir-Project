@@ -20,15 +20,42 @@
 .collection-hero-media {
     position: absolute;
     inset: 0;
-    background-image: url('https://placehold.co/1920x520/f6e4de/000?text=MAKEUP+COLLECTION');
+    /* Default fallback */
+    background-image: url('https://placehold.co/1920x520/f6e4de/000?text=COLLECTION');
     background-size: cover;
     background-position: center;
-    opacity: 0.35;
+    opacity: 1;
+    /* Was 0.35, but real images should be fully visible, maybe slightly dimmed if text over it */
+}
+
+/* Specific Backgrounds */
+.makeup-bg {
+    background-image: url('/assets/images/additional/landingpage/Banner_Carousel_Makeup.jpg');
+}
+
+.skincare-bg {
+    background-image: url('/assets/images/additional/landingpage/Banner_Carousel_Skincare.jpg');
+}
+
+.shop-all-bg {
+    background-image: url('/assets/images/additional/landingpage/Banner_Carousel_ExclusiveDeals.jpg');
+}
+
+/* Optional: Add overlay if text readability is an issue */
+.collection-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.1);
+    /* Slight darken */
+    z-index: 1;
 }
 
 .collection-hero-content {
     position: relative;
     max-width: 520px;
+    z-index: 2;
+    /* Ensure text is above overlay */
 }
 
 .breadcrumbs {
@@ -37,8 +64,9 @@
     font-size: 12px;
     letter-spacing: 1px;
     text-transform: uppercase;
-    color: #666;
+    color: #fff;
     margin-bottom: 12px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .breadcrumbs a {
@@ -55,14 +83,19 @@
     letter-spacing: 2px;
     margin: 0 0 12px;
     font-weight: 700;
+    color: #fff;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
-.collection-description {
+.hero-subtitle {
     margin: 0;
-    font-size: 14px;
+    font-size: 16px;
     line-height: 1.6;
-    color: #333;
+    color: #fff;
+    /* White as requested */
+    font-weight: 500;
     max-width: 420px;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 /* =====================================================
@@ -224,12 +257,16 @@
     justify-content: space-between;
     align-items: center;
     font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    color: #000;
+    font-weight: 800;
+    /* Bolder */
+    letter-spacing: 1.5px;
+    /* More spaced */
+    color: #bd2625;
+    /* TIRTIR RED */
     margin: 0;
     cursor: pointer;
-    padding: 8px 0;
+    padding: 12px 0;
+    text-transform: uppercase;
 }
 
 .toggle-icon {
@@ -267,8 +304,11 @@
 }
 
 .count {
-    color: #999;
-    font-size: 12px;
+    color: #bd2625;
+    /* Match Red theme */
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 4px;
 }
 
 /* =====================================================
@@ -487,4 +527,42 @@
 .products-grid {
     opacity: 1;
     transition: opacity 0.3s ease;
+}
+
+/* No products state */
+.no-products {
+    padding: 100px 20px;
+    text-align: center;
+    width: 100%;
+}
+
+.no-results-content h3 {
+    font-size: 24px;
+    margin: 20px 0 10px;
+    font-weight: 700;
+}
+
+.no-results-content p {
+    color: #666;
+    margin-bottom: 30px;
+}
+
+.no-results-icon {
+    font-size: 48px;
+}
+
+.clear-search-btn {
+    background: #000;
+    color: #fff;
+    border: none;
+    padding: 12px 30px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: opacity 0.2s;
+}
+
+.clear-search-btn:hover {
+    opacity: 0.8;
 }

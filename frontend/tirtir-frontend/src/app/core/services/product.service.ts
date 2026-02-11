@@ -30,7 +30,7 @@ export class ProductService {
   private apiUrl = `${environment.apiUrl}/products`;
   private http = inject(HttpClient);
 
-  getProducts(params?: any): Observable<{ data: ProductData[], total: number, categories: any[] }> {
+  getProducts(params?: any): Observable<{ data: ProductData[], total: number, categories: any[], concerns: any[], skinTypes: any[] }> {
     let httpParams = new HttpParams();
     if (params) {
       Object.keys(params).forEach((key) => {
@@ -39,7 +39,7 @@ export class ProductService {
         }
       });
     }
-    return this.http.get<{ data: BackendProduct[], total: number, categories: any[] }>(this.apiUrl, { params: httpParams }).pipe(
+    return this.http.get<{ data: BackendProduct[], total: number, categories: any[], concerns: any[], skinTypes: any[] }>(this.apiUrl, { params: httpParams }).pipe(
       map(response => {
         try {
           // 1. Filter out the specific variants we don't want to show in list
@@ -72,8 +72,10 @@ export class ProductService {
 
           return {
             data: mappedData,
-            total: mappedData.length,
-            categories: response.categories
+            total: response.total, // Use total from backend for correct pagination
+            categories: response.categories || [],
+            concerns: response.concerns || [],
+            skinTypes: response.skinTypes || []
           };
         } catch (e) {
           console.error('ProductService: Error mapping data', e);

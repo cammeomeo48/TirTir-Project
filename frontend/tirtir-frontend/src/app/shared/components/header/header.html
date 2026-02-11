@@ -25,7 +25,7 @@
                     <!-- Makeup with Mega Menu -->
                     <li class="nav-item has-megamenu" (mouseenter)="onMakeupHover(true)"
                         (mouseleave)="onMakeupHover(false)">
-                        <a routerLink="/collections/makeup" class="nav-link">Makeup</a>
+                        <a routerLink="/shop" [queryParams]="{category: 'makeup'}" class="nav-link">Makeup</a>
                         <app-makeup-mega-menu [class.visible]="showMakeupMenu"
                             [categories]="makeupCategories"></app-makeup-mega-menu>
                     </li>
@@ -33,7 +33,7 @@
                     <!-- Skincare with Mega Menu (scoped class nav-skincare) -->
                     <li class="nav-item nav-skincare" (mouseenter)="onSkincareHover(true)"
                         (mouseleave)="onSkincareHover(false)">
-                        <a routerLink="/collections/skincare" class="nav-link">Skincare</a>
+                        <a routerLink="/shop" [queryParams]="{category: 'skincare'}" class="nav-link">Skincare</a>
                         <app-skincare-mega-menu [class.visible]="showSkincareMenu"
                             [categories]="skincareCategories"></app-skincare-mega-menu>
                     </li>
@@ -75,7 +75,7 @@
                         <circle cx="12" cy="7" r="4"></circle>
                     </svg>
                 </a>
-                <button class="action-btn" aria-label="Search">
+                <button class="action-btn" aria-label="Search" (click)="toggleSearch()">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="1.5">
                         <circle cx="11" cy="11" r="8"></circle>
@@ -103,5 +103,27 @@
                 </svg>
             </button>
         </div>
+    </div>
+
+    <!-- Search Overlay -->
+    <div class="search-overlay" [class.active]="showSearch">
+        <div class="search-content">
+            <div class="search-input-wrapper">
+                <svg class="search-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" [(ngModel)]="searchTerm" (keyup.enter)="onSearch()"
+                    placeholder="Search our products..." #searchInput>
+                <button class="close-btn" (click)="toggleSearch()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div class="overlay-bg" (click)="toggleSearch()"></div>
     </div>
 </header>

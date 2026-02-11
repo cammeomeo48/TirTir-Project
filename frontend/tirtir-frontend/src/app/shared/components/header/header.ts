@@ -1,5 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { MenuItem, MenuService } from '../../../core/services/menu.service';
 import { CartService } from '../../../core/services/cart.service'; // Added Import
 import { MakeupMegaMenuComponent } from '../makeup-mega-menu/makeup-mega-menu';
@@ -10,7 +11,7 @@ import { CommonModule } from '@angular/common'; // Ensure CommonModule is import
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, RouterModule, MakeupMegaMenuComponent, SkincareMegaMenuComponent],
+  imports: [CommonModule, RouterModule, FormsModule, MakeupMegaMenuComponent, SkincareMegaMenuComponent],
   templateUrl: './header.html',
   styleUrl: './header.css',
 })
@@ -19,6 +20,10 @@ export class HeaderComponent implements OnInit {
   private menuService = inject(MenuService);
   private cartService = inject(CartService); // Injected CartService
   private cdr = inject(ChangeDetectorRef);
+  private router = inject(Router);
+
+  searchTerm = '';
+  showSearch = false;
 
   // Expose signal for template
   cartCount = this.cartService.cartCount;
@@ -54,5 +59,22 @@ export class HeaderComponent implements OnInit {
 
   onSkincareHover(show: boolean) {
     this.showSkincareMenu = show;
+  }
+
+  toggleSearch() {
+    this.showSearch = !this.showSearch;
+    if (!this.showSearch) {
+      this.searchTerm = '';
+    }
+  }
+
+  onSearch() {
+    if (this.searchTerm.trim()) {
+      this.router.navigate(['/shop'], {
+        queryParams: { q: this.searchTerm.trim() }
+      });
+      this.showSearch = false;
+      this.searchTerm = '';
+    }
   }
 }// trigger reload

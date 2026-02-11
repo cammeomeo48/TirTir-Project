@@ -92,7 +92,20 @@ exports.getAllProducts = async (req, res) => {
         const baseMatch = {};
 
         if (keyword) {
-            baseMatch.Name = { $regex: keyword, $options: "i" };
+            const words = keyword.trim().split(/\s+/).filter(w => w.length > 0);
+            if (words.length > 0) {
+                baseMatch.$and = words.map(word => ({
+                    $or: [
+                        { Name: { $regex: word, $options: "i" } },
+                        { Category: { $regex: word, $options: "i" } },
+                        { Category_Slug: { $regex: word, $options: "i" } },
+                        { Description_Short: { $regex: keyword, $options: "i" } }, // Also search full keyword in short description
+                        { Full_Description: { $regex: word, $options: "i" } },
+                        { Main_Concern: { $regex: word, $options: "i" } },
+                        { Skin_Type_Target: { $regex: word, $options: "i" } }
+                    ]
+                }));
+            }
         }
 
         if (isSkincare !== undefined) {

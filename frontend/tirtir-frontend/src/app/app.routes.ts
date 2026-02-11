@@ -16,10 +16,12 @@ import { OrderConfirmationComponent } from './features/order-confirmation/order-
 import { OrderHistoryComponent } from './features/account/order-history/order-history';
 import { authGuard } from './core/guards/auth.guard';
 import { canDeactivateGuard } from './core/guards/can-deactivate.guard';
+import { ContactComponent } from './features/contact/contact';
 
 export const routes: Routes = [
     { path: '', component: HomeComponent },
     { path: 'shop', component: ShopComponent },
+    { path: 'contact', component: ContactComponent },
     // Auth routes
     { path: 'login', component: LoginComponent },
     { path: 'register', component: RegisterComponent },
