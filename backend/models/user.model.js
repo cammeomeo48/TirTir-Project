@@ -26,7 +26,8 @@ const UserSchema = new mongoose.Schema({
     password: {
         type: String,
         required: [true, 'Please provide a password'],
-        minlength: [6, 'Password must be at least 6 characters']
+        minlength: [6, 'Password must be at least 6 characters'],
+        select: false // Security: Do not return password by default
     },
     role: {
         type: String,
@@ -34,6 +35,10 @@ const UserSchema = new mongoose.Schema({
         default: 'user'
     },
     isBlocked: { // New field for banning users
+        type: Boolean,
+        default: false
+    },
+    isEmailVerified: {
         type: Boolean,
         default: false
     },
@@ -111,10 +116,10 @@ const UserSchema = new mongoose.Schema({
  * Uses async/await syntax (modern Mongoose - NO next() callback)
  * Only hashes if password field is modified
  */
-UserSchema.pre('save', async function () {
+UserSchema.pre('save', async function (next) { // Added next for compatibility, though async/await doesn't strictly need it in newer mongoose, it's safer.
     // Only hash password if it has been modified (or is new)
     if (!this.isModified('password')) {
-        return; // Exit early if password hasn't changed
+        return next();
     }
 
     try {
@@ -123,8 +128,9 @@ UserSchema.pre('save', async function () {
 
         // Hash the password
         this.password = await bcrypt.hash(this.password, salt);
+        next();
     } catch (error) {
-        throw new Error(`Password hashing failed: ${error.message}`);
+        return next(error);
     }
 });
 

@@ -272,16 +272,25 @@ exports.login = async (req, res) => {
         }
 
         // ===== CHECK IF USER EXISTS =====
-        const user = await User.findOne({ email });
+        // Explicitly select password because it's set to select: false in schema
+        const user = await User.findOne({ email }).select('+password');
+
+        console.log(`[DEBUG] Login attempt for: ${email}`);
+
         if (!user) {
+            console.log('[DEBUG] User not found');
             return res.status(401).json({
                 success: false,
                 message: 'Invalid email or password'
             });
         }
 
+        console.log(`[DEBUG] User found: ${user._id}, Verified: ${user.isEmailVerified}, Blocked: ${user.isBlocked}`);
+        console.log(`[DEBUG] Stored Hash: ${user.password ? user.password.substring(0, 10) + '...' : 'MISSING'}`);
+
         // ===== CHECK EMAIL VERIFICATION =====
         if (!user.isEmailVerified) {
+            console.log('[DEBUG] User not verified');
             return res.status(401).json({
                 success: false,
                 message: 'Please verify your email before logging in. Check your inbox for the verification link.',
@@ -291,7 +300,10 @@ exports.login = async (req, res) => {
 
         // ===== VERIFY PASSWORD =====
         const isPasswordMatch = await user.matchPassword(password);
+        console.log(`[DEBUG] Password Match Result: ${isPasswordMatch}`);
+
         if (!isPasswordMatch) {
+            console.log('[DEBUG] Password does not match');
             return res.status(401).json({
                 success: false,
                 message: 'Invalid email or password'
