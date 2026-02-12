@@ -1,6 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { CartService } from '../../core/services/cart.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Cart, CartItem } from '../../core/models';
@@ -9,7 +10,7 @@ import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner
 @Component({
     selector: 'app-cart',
     standalone: true,
-    imports: [CommonModule, RouterModule, LoadingSpinnerComponent],
+    imports: [CommonModule, RouterModule, FormsModule, LoadingSpinnerComponent],
     templateUrl: './cart.html',
     styleUrls: ['./cart.css'],
 })
@@ -21,6 +22,7 @@ export class CartComponent implements OnInit {
     cart: Cart | null = null;
     loading = true;
     error = '';
+    promoCode = '';
 
     ngOnInit(): void {
         this.loadCart();
@@ -83,5 +85,31 @@ export class CartComponent implements OnInit {
 
     continueShoppping(): void {
         this.router.navigate(['/shop']);
+    }
+
+    applyPromoCode(): void {
+        if (!this.promoCode.trim()) return;
+        // TODO: Implement promo code application with backend
+        console.log('Applying promo code:', this.promoCode);
+        // For now, just show a message
+        alert('Promo code functionality will be available soon!');
+    }
+
+    removeItem(item: CartItem): void {
+        if (!confirm('Remove this item from your cart?')) return;
+
+        // Set quantity to 0 to remove item
+        this.cartService.addToCart({
+            productId: item.product._id,
+            quantity: 0,
+            shade: item.shade,
+        }).subscribe({
+            next: () => {
+                this.loadCart();
+            },
+            error: (err) => {
+                this.error = err.message;
+            },
+        });
     }
 }

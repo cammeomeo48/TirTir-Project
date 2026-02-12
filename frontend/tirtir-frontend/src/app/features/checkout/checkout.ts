@@ -38,9 +38,19 @@ export class CheckoutComponent implements OnInit {
     }
 
     ngOnInit(): void {
-        this.cartService.cart$.subscribe(cart => {
-            this.cart = cart;
-            if (!cart || cart.items.length === 0) {
+        // Load cart data first
+        this.loading = true;
+        this.cartService.getCart().subscribe({
+            next: (cart) => {
+                this.cart = cart;
+                this.loading = false;
+                if (!cart || cart.items.length === 0) {
+                    this.router.navigate(['/cart']);
+                }
+            },
+            error: (err) => {
+                this.loading = false;
+                this.error = 'Failed to load cart';
                 this.router.navigate(['/cart']);
             }
         });
@@ -85,7 +95,7 @@ export class CheckoutComponent implements OnInit {
             orderId: orderId,
             amount: amount,
             paymentMethod: method === 'CARD' ? 'CARD' : 'VNPAY',
-            bankCode: '' 
+            bankCode: ''
         };
         this.http.post<{ paymentUrl: string }>('http://localhost:5001/api/v1/payments/create-url', body)
             .subscribe({
