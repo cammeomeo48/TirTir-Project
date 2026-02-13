@@ -13,8 +13,7 @@
             <span class="status-text">{{ lightingStatus().message }}</span>
         </div>
 
-        <!-- ROI Indicator (Follows Face) - DISABLED UNTIL MEDIAPIPE IS INSTALLED -->
-        <!-- TODO: Re-enable when MediaPipe package is installed
+        <!-- ROI Indicator (Follows Face) -->
         <div class="overlay" *ngIf="faceTracker.isFaceDetected() && faceTracker.facePoints(); let points">
             <div class="roi-container forehead"
                  [style.left.%]="(1 - points.forehead.x) * 100"
@@ -48,7 +47,6 @@
                 <div class="scanner-label">Scanning...</div>
             </div>
         </div>
-        -->
 
         <div class="overlay" *ngIf="!isCameraActive && !isProcessing"
             style="display: flex; align-items: center; justify-content: center; background: #eee; color: #666;">
@@ -107,55 +105,86 @@
         <p *ngIf="!isAiAnalyzing">Đang phân tích tông da...</p>
     </div>
 
-    <!-- Result Modal / Bottom Sheet -->
+    <!-- RESULTS MODAL (New Design) -->
     <div class="modal-overlay" *ngIf="showResultModal()">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Kết Quả Phân Tích</h3>
+        <div class="modal-content report-card">
+            <div class="report-header">
+                <h3>Kết Quả Phân Tích Da</h3>
                 <button class="close-btn" (click)="closeModal()">×</button>
             </div>
-
-            <div class="modal-body" *ngIf="recommendedShades.length > 0">
-                <!-- Best Match -->
-                <div class="best-match-section">
-                    <div class="match-badge">Perfect Match</div>
-                    <div class="product-image">
-                        <!-- Placeholder image if no image in DB, or use a generic cushion image -->
-                        <img [src]="recommendedShades[0].Image_URL || 'assets/images/cushion-placeholder.png'"
-                            alt="Best Match Shade">
+            
+            <div class="report-body">
+                <!-- 1. Left Column: Skin Profile -->
+                <div class="report-section profile-section">
+                    <div class="skin-score-circle">
+                        <span class="score">{{ 100 - ((aiAnalysis?.skinConcerns?.length || 0) * 10) }}</span>
+                        <span class="label">Điểm Da</span>
                     </div>
-                    <div class="best-shade-info">
-                        <h2 class="shade-title">{{ recommendedShades[0].Shade_Name }}</h2>
-                        <p class="shade-code">{{ recommendedShades[0].Shade_Code }}</p>
-
-                        <div class="explanation-box">
-                            <span class="icon">💡</span>
-                            <p>{{ explanationText }}</p>
+                    
+                    <div class="profile-details">
+                        <div class="detail-item">
+                            <span class="label">Loại Da:</span>
+                            <span class="value">{{ selectedSkinType }}</span>
                         </div>
-
-                        <button class="buy-now-btn">Mua Ngay</button>
+                        <div class="detail-item">
+                            <span class="label">Undertone:</span>
+                            <span class="value">{{ aiAnalysis?.undertone || 'Unknown' }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="label">Độ Sáng:</span>
+                            <span class="value">{{ aiAnalysis?.brightness || 'Medium' }}</span>
+                        </div>
                     </div>
-                </div>
 
-                <!-- Other Matches -->
-                <div class="other-matches-section">
-                    <h4>Các lựa chọn khác</h4>
-                    <div class="other-matches-list">
-                        <div class="other-match-item" *ngFor="let shade of recommendedShades.slice(1)">
-                            <div class="other-match-image-container" *ngIf="shade.Image_URL">
-                                <img [src]="shade.Image_URL" alt="{{shade.Shade_Name}}" class="other-match-img">
-                            </div>
-                            <div class="color-dot" *ngIf="!shade.Image_URL" [style.background-color]="shade.Hex_Code">
-                            </div>
-                            <div class="other-shade-info">
-                                <span class="name">{{ shade.Product_Name ? shade.Product_Name + ' - ' : '' }}{{
-                                    shade.Shade_Name }}</span>
-                                <span class="code">{{ shade.Shade_Code }}</span>
-                            </div>
-                            <div class="match-percent">{{ (100 - shade.matchScore) | number:'1.0-0' }}% Match</div>
+                    <div class="concerns-list" *ngIf="aiAnalysis?.skinConcerns?.length">
+                        <h4>Vấn Đề Cần Khắc Phục:</h4>
+                        <div class="tags">
+                            <span class="tag" *ngFor="let concern of aiAnalysis?.skinConcerns">{{ concern }}</span>
                         </div>
                     </div>
                 </div>
+
+                <!-- 2. Right Column: Recommendations -->
+                <div class="report-section recommendations-section">
+                    <!-- Cushion Match -->
+                    <div class="match-highlight" *ngIf="recommendedShades.length > 0">
+                        <h4>Tone Cushion Phù Hợp Nhất</h4>
+                        <div class="shade-display">
+                            <img [src]="recommendedShades[0].image" alt="Shade" class="shade-img">
+                            <div class="shade-info">
+                                <span class="shade-name">{{ recommendedShades[0].name }}</span>
+                                <span class="match-percent">98% Match</span>
+                            </div>
+                        </div>
+                        <p class="match-reason">{{ explanationText }}</p>
+                    </div>
+
+                    <!-- Skincare Routine (Scrollable) -->
+                    <div class="routine-container" *ngIf="recommendationData">
+                        <h4>Liệu Trình Chăm Sóc Đề Xuất (Glass Skin)</h4>
+                        <div class="routine-steps">
+                            <div class="step-card" *ngFor="let step of recommendationData.routine">
+                                <div class="step-badge">{{ step.step }}</div>
+                                <img [src]="step.product.Thumbnail_Images" [alt]="step.product.Name" class="prod-thumb">
+                                <div class="prod-details">
+                                    <span class="prod-name">{{ step.product.Name }}</span>
+                                    <span class="prod-reason">{{ step.reason }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="expert-advice">
+                            <strong>Lời khuyên chuyên gia:</strong> {{ recommendationData.advice }}
+                        </div>
+                    </div>
+                    <div *ngIf="!recommendationData" class="loading-routine">
+                        <p>🤖 Đang tổng hợp liệu trình phù hợp...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="report-footer">
+                <button class="action-btn primary">Thêm Tất Cả Vào Giỏ</button>
+                <button class="action-btn secondary" (click)="closeModal()">Quét Lại</button>
             </div>
         </div>
     </div>

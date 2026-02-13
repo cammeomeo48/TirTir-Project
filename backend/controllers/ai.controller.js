@@ -66,15 +66,37 @@ const runPythonAnalysis = (imagePath) => {
 };
 
 /**
+ * @route   GET /api/ai/history
+ * @desc    Get analysis history for user
+ * @access  Private
+ */
+exports.getHistory = async (req, res) => {
+    try {
+        if (!req.user) {
+             return res.status(401).json({ message: "Unauthorized" });
+        }
+        
+        const history = await AiAnalysis.find({ user: req.user.id })
+            .sort({ createdAt: -1 })
+            .limit(20);
+            
+        res.json({
+            success: true,
+            count: history.length,
+            data: history
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+/**
  * @route   POST /api/ai/analyze-skin
  * @desc    Analyze skin using Gemini Vision API (Legacy/Alternative)
  */
 exports.analyzeSkin = async (req, res) => {
-    // ... (Keep existing Gemini implementation if needed, or redirect to analyzeFace)
-    // For now, let's redirect logic to analyzeFace if python is preferred, 
-    // but I'll leave this here as per original file to avoid breaking changes if frontend uses it.
-    // ... (Existing code implementation)
-    return exports.analyzeFace(req, res); // Reuse the new implementation
+    // Redirect logic to analyzeFace if python is preferred
+    return exports.analyzeFace(req, res); 
 };
 
 /**
@@ -108,8 +130,6 @@ exports.analyzeFace = async (req, res) => {
             analysisResult = await runPythonAnalysis(filePath);
         } catch (err) {
             console.error('Python Analysis Error:', err);
-            // Fallback to Gemini if Python fails? Or just return error.
-            // Let's return error for now as requested stack is Python.
             // Cleanup
             if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
             return res.status(500).json({ success: false, message: 'AI Analysis failed', error: err.message });
@@ -122,7 +142,7 @@ exports.analyzeFace = async (req, res) => {
         if (req.user) {
             await AiAnalysis.create({
                 user: req.user.id,
-                imageUrl: "base64_image_placeholder", // Don't save full base64 to DB to save space, or upload to S3/Cloudinary
+                imageUrl: "base64_image_placeholder", // Don't save full base64 to DB to save space
                 analysisResult: analysisResult
             });
         }
@@ -166,7 +186,9 @@ exports.recommendRoutine = async (req, res) => {
         }
 
         // 3. Prepare Prompt for Gemini
-        // We act as a Beauty Consultant
+        // We act as a Beauty Consultant. 
+        // ROLE DEFINITION: Gemini acts as the "Dermatologist Brain", interpreting the raw scan data (from Python/MediaPipe) 
+        // to prescribe a personalized routine.
         const productListStr = products.map(p => 
             `- ID: ${p._id}, Name: ${p.Name}, Category: ${p.Category}, For: ${p.Skin_Type_Target}, Treats: ${p.Main_Concern}`
         ).join('\n');
@@ -174,11 +196,11 @@ exports.recommendRoutine = async (req, res) => {
         const prompt = `
         You are a professional Dermatologist and Beauty Consultant for Tirtir (a Korean beauty brand).
         
-        **User Profile:**
+        **User Profile (Detected by AI Scanner):**
         - Skin Type: ${skinType}
         - Skin Tone: ${skinTone}
         - Undertone: ${undertone || 'Unknown'}
-        - Primary Concerns: ${concerns ? concerns.join(', ') : 'None'}
+        - Detected Concerns: ${concerns && concerns.length > 0 ? concerns.join(', ') : 'None visible'}
         
         **Task:**
         Create a personalized "Glass Skin" Skincare Routine for this user using ONLY the available products below.
@@ -188,7 +210,7 @@ exports.recommendRoutine = async (req, res) => {
         
         **Requirements:**
         1. Select exactly 3-5 key products for a morning/night routine (Cleanser -> Toner -> Serum -> Cream -> Sunscreen/Cushion).
-        2. Explain WHY each product was chosen based on their specific skin analysis (e.g., "This serum helps with your redness...").
+        2. Explain WHY each product was chosen based on their specific skin analysis (e.g., "This serum helps with your detected redness...").
         3. Provide a short, encouraging "Expert Advice" paragraph at the end.
         4. Return the result in strict JSON format as follows:
         {

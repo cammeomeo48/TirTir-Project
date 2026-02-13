@@ -6,36 +6,41 @@ import { Observable, catchError, of } from 'rxjs';
  * AI Skin Analysis Response Interface
  */
 export interface SkinAnalysis {
+    skinTone: string; // From Python: Fair, Light, Medium, Tan, Deep
     undertone: 'Cool' | 'Warm' | 'Neutral';
     confidence: number;
-    brightness: 'Light' | 'Medium' | 'Deep';
-    skinConcerns: string[];
-    recommendedToneShift: 'lighter' | 'exact' | 'deeper';
-    explanation: string;
-    reasoning: string;
+    concerns: string[]; // From Python: Redness, Acne/Blemishes, Dark Circles, etc.
+    skinType?: string; // Derived from Oily detection
+    
+    // Optional/Legacy fields (mapped if needed)
+    brightness?: 'Light' | 'Medium' | 'Deep';
+    recommendedToneShift?: 'lighter' | 'exact' | 'deeper';
+    explanation?: string;
 }
+
+import { environment } from '../../../environments/environment';
 
 /**
  * AI Beauty Advisor Service
- * Communicates with backend to analyze skin using Gemini AI Vision
+ * Communicates with backend to analyze skin using local AI
  */
 @Injectable({
     providedIn: 'root'
 })
 export class AiAdvisorService {
-    private apiUrl = 'http://localhost:5000/api/ai';
+    private apiUrl = `${environment.apiUrl}/ai`;
 
     constructor(private http: HttpClient) { }
 
     /**
-     * Analyzes skin from camera image using Gemini AI
+     * Analyzes skin from camera image using Backend AI (Python/MediaPipe)
      * @param imageData Base64 encoded image data
      * @param skinType User's skin type (Normal, Oily, Dry, etc.)
      * @returns Observable with AI analysis results
      */
     analyzeSkin(imageData: string, skinType: string): Observable<{ success: boolean; data?: SkinAnalysis; message?: string }> {
         return this.http.post<{ success: boolean; data?: SkinAnalysis; message?: string }>(
-            `${this.apiUrl}/analyze-skin`,
+            `${this.apiUrl}/analyze-face`, // Use analyze-face (Python) instead of analyze-skin (Gemini Legacy)
             {
                 imageData,
                 skinType
@@ -46,6 +51,24 @@ export class AiAdvisorService {
                 return of({
                     success: false,
                     message: 'Could not connect to AI service. Please try again.'
+                });
+            })
+        );
+    }
+
+    /**
+     * Get product recommendations based on skin analysis
+     */
+    getRecommendations(analysisData: any): Observable<{ success: boolean; data?: { routine: any[], advice: string }; message?: string }> {
+        return this.http.post<{ success: boolean; data?: { routine: any[], advice: string }; message?: string }>(
+            `${this.apiUrl}/recommend-routine`,
+            analysisData
+        ).pipe(
+            catchError((error) => {
+                console.error('Recommendation Error:', error);
+                return of({
+                    success: false,
+                    message: 'Could not fetch recommendations.'
                 });
             })
         );

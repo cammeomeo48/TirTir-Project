@@ -15,7 +15,12 @@ const { nodeProfilingIntegration } = require("@sentry/profiling-node"); // Keep 
 const errorHandler = require('./middlewares/error');
 const logger = require('./utils/logger');
 
+const { apiLimiter } = require('./middlewares/rateLimit');
+
 const app = express();
+
+// Rate Limiting (Global API Protection)
+app.use('/api/', apiLimiter);
 
 // 1. Performance Monitoring (Response Time)
 app.use(responseTime((req, res, time) => {
