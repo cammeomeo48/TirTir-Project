@@ -53,9 +53,11 @@ const createUploader = (subDir) => {
 const avatarUploader = createUploader('avatars');
 const productUploader = createUploader('products');
 const bannerUploader = createUploader('banners');
+const reviewUploader = createUploader('reviews');
 
 module.exports = {
     uploadAvatar: avatarUploader.single('avatar'),
     uploadProductImage: productUploader.single('image'), // Expects field name 'image'
-    uploadBanner: bannerUploader.single('banner') // Expects field name 'banner'
+    uploadBanner: bannerUploader.single('banner'), // Expects field name 'banner'
+    uploadReviewImage: reviewUploader.single('image') // Expects field name 'image'
 };
