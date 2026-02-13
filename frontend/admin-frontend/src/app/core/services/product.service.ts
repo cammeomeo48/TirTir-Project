@@ -39,6 +39,15 @@ export class ProductService {
         return this.http.get(`${this.apiUrl}/products/low-stock`);
     }
 
+    // Aliases for consistency
+    getProduct(id: string): Observable<any> {
+        return this.getProductById(id);
+    }
+
+    addProduct(productData: any): Observable<any> {
+        return this.createProduct(productData);
+    }
+
     getStockHistory(id: string): Observable<any> {
         return this.http.get(`${this.apiUrl}/products/${id}/stock-history`);
     }

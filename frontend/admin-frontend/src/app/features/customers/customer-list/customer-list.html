@@ -1,0 +1,132 @@
+<div class="customer-list-container">
+    <div class="page-header">
+        <div class="header-content">
+            <h1>Customers</h1>
+            <p class="subtitle">Manage user accounts and view customer details</p>
+        </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="filters-section">
+        <div class="search-box">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                class="search-icon">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" [(ngModel)]="searchQuery" (input)="onSearch()" placeholder="Search customers..."
+                class="search-input" />
+        </div>
+
+        <div class="filter-group">
+            <select [(ngModel)]="selectedStatus" (change)="onStatusChange()" class="filter-select">
+                <option value="">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="loading" class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading customers...</p>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="error && !loading" class="error-state">
+        <p>{{ error }}</p>
+        <button (click)="loadCustomers()" class="retry-btn">Retry</button>
+    </div>
+
+    <!-- Data Table -->
+    <div class="table-container" *ngIf="!loading && !error && filteredCustomers.length > 0">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Joined Date</th>
+                    <th>Status</th>
+                    <th class="actions-col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let customer of paginatedCustomers">
+                    <td>
+                        <div class="user-info">
+                            <div class="avatar-placeholder">
+                                {{ customer.Name.charAt(0).toUpperCase() }}
+                            </div>
+                            <span class="user-name">{{ customer.Name }}</span>
+                        </div>
+                    </td>
+                    <td>{{ customer.Email }}</td>
+                    <td>
+                        <span class="role-badge" [class.admin]="customer.role === 'admin'">
+                            {{ customer.role || 'user' }}
+                        </span>
+                    </td>
+                    <td>{{ formatDate(customer.createdAt) }}</td>
+                    <td>
+                        <span class="status-badge" [class.active]="customer.status === 'active'"
+                            [class.inactive]="customer.status === 'inactive'">
+                            {{ customer.status || 'Active' }}
+                        </span>
+                    </td>
+                    <td class="actions-col">
+                        <a [routerLink]="['/customers', customer._id]" class="action-btn view-btn" title="View Details">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </a>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="!loading && !error && filteredCustomers.length === 0">
+        <div class="empty-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="1">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+        </div>
+        <h3>No customers found</h3>
+        <p>Try adjusting your search or filters</p>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" *ngIf="!loading && !error && filteredCustomers.length > 0">
+        <div class="pagination-info">
+            Showing {{ (currentPage - 1) * pageSize + 1 }} to
+            {{
+            currentPage * pageSize > filteredCustomers.length
+            ? filteredCustomers.length
+            : currentPage * pageSize
+            }}
+            of {{ filteredCustomers.length }} customers
+        </div>
+        <div class="pagination-controls">
+            <button [disabled]="currentPage === 1" (click)="changePage(currentPage - 1)" class="page-btn">
+                Previous
+            </button>
+            <span class="page-numbers">
+                Page {{ currentPage }} of {{ totalPages }}
+            </span>
+            <button [disabled]="currentPage === totalPages" (click)="changePage(currentPage + 1)" class="page-btn">
+                Next
+            </button>
+        </div>
+    </div>
+</div>

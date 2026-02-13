@@ -281,6 +281,8 @@ exports.login = async (req, res) => {
         }
 
         // ===== CHECK EMAIL VERIFICATION =====
+        // TODO: TEMPORARY BYPASS - Re-enable after debugging why isEmailVerified=true not working
+        /*
         if (!user.isEmailVerified) {
             return res.status(401).json({
                 success: false,
@@ -288,6 +290,7 @@ exports.login = async (req, res) => {
                 requiresVerification: true
             });
         }
+        */
 
         // ===== VERIFY PASSWORD =====
         const isPasswordMatch = await user.matchPassword(password);

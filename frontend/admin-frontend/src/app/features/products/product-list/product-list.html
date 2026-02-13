@@ -1,0 +1,116 @@
+<div class="product-list-container">
+    <!-- Header -->
+    <div class="page-header">
+        <div>
+            <h1>Products</h1>
+            <p class="subtitle">Manage your product catalog</p>
+        </div>
+        <button class="btn btn-primary" routerLink="/products/add">
+            <span class="icon">+</span>
+            Add Product
+        </button>
+    </div>
+
+    <!-- Filters & Search -->
+    <div class="filters-bar">
+        <div class="search-box">
+            <input type="text" placeholder="Search by name or SKU..." [(ngModel)]="searchQuery"
+                (ngModelChange)="onSearchChange()" class="search-input" />
+        </div>
+
+        <select [(ngModel)]="selectedCategory" (ngModelChange)="onCategoryChange()" class="filter-select">
+            <option *ngFor="let cat of categories" [value]="cat === 'All' ? '' : cat">
+                {{ cat }}
+            </option>
+        </select>
+
+        <select [(ngModel)]="selectedStockStatus" (ngModelChange)="onStockStatusChange()" class="filter-select">
+            <option *ngFor="let status of stockStatuses" [value]="status.value">
+                {{ status.label }}
+            </option>
+        </select>
+
+        <button class="btn btn-outline" routerLink="/products/low-stock">
+            Low Stock Alerts
+        </button>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="loading" class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading products...</p>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="error && !loading" class="error-state">
+        <p>{{ error }}</p>
+        <button class="btn btn-primary" (click)="loadProducts()">Retry</button>
+    </div>
+
+    <!-- Products Table -->
+    <div *ngIf="!loading && !error" class="table-container">
+        <table class="products-table">
+            <thead>
+                <tr>
+                    <th>Image</th>
+                    <th>Product Name</th>
+                    <th>SKU</th>
+                    <th>Category</th>
+                    <th>Price</th>
+                    <th>Stock</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let product of getPaginatedProducts()">
+                    <td>
+                        <img [src]="getMainImage(product)" [alt]="product.Product_Name" class="product-image" />
+                    </td>
+                    <td class="product-name">{{ product.Product_Name }}</td>
+                    <td class="sku">{{ product.Product_ID }}</td>
+                    <td>
+                        <span class="category-badge">{{ product.Category }}</span>
+                    </td>
+                    <td class="price">${{ product.Price.toFixed(2) }}</td>
+                    <td class="stock">{{ product.stock }}</td>
+                    <td>
+                        <span [class]="'status-badge ' + getStockStatus(product.stock)">
+                            {{ getStockLabel(product.stock) }}
+                        </span>
+                    </td>
+                    <td class="actions">
+                        <button class="btn-icon btn-edit" [routerLink]="['/products/edit', product._id]" title="Edit">
+                            ✏️
+                        </button>
+                        <button class="btn-icon btn-delete" (click)="deleteProduct(product)" title="Delete">
+                            🗑️
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Empty State -->
+        <div *ngIf="filteredProducts.length === 0" class="empty-state">
+            <p>No products found</p>
+            <button class="btn btn-primary" routerLink="/products/add">Add Your First Product</button>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <div *ngIf="!loading && filteredProducts.length > 0" class="pagination">
+        <button class="pagination-btn" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1">
+            Previous
+        </button>
+
+        <span class="pagination-info">
+            Page {{ currentPage }} of {{ totalPages }}
+            ({{ filteredProducts.length }} products)
+        </span>
+
+        <button class="pagination-btn" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages">
+            Next
+        </button>
+    </div>
+</div>

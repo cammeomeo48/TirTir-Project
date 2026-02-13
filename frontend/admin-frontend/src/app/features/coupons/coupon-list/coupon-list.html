@@ -1,0 +1,168 @@
+<div class="coupon-list-container">
+    <div class="page-header">
+        <div class="header-content">
+            <h1>Coupons</h1>
+            <p class="subtitle">Manage discount codes and promotions</p>
+        </div>
+        <a [routerLink]="['/coupons/add']" class="add-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Create Coupon
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-section">
+        <div class="search-box">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                class="search-icon">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" [(ngModel)]="searchQuery" (input)="onSearch()" placeholder="Search by code..."
+                class="search-input" />
+        </div>
+
+        <div class="filter-group">
+            <select [(ngModel)]="selectedStatus" (change)="onStatusChange()" class="filter-select">
+                <option value="">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="loading" class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading coupons...</p>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="error && !loading" class="error-state">
+        <p>{{ error }}</p>
+        <button (click)="loadCoupons()" class="retry-btn">Retry</button>
+    </div>
+
+    <!-- Data Table -->
+    <div class="table-container" *ngIf="!loading && !error && filteredCoupons.length > 0">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Discount</th>
+                    <th>Usage</th>
+                    <th>Valid Dates</th>
+                    <th>Status</th>
+                    <th class="actions-col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let coupon of paginatedCoupons">
+                    <td>
+                        <span class="coupon-code">{{ coupon.Code }}</span>
+                    </td>
+                    <td>
+                        {{
+                        coupon.Discount_Type === "percentage"
+                        ? coupon.Discount_Value + "%"
+                        : "$" + coupon.Discount_Value
+                        }}
+                    </td>
+                    <td>
+                        {{ coupon.Used_Count || 0 }}
+                        <span class="usage-limit" *ngIf="coupon.Usage_Limit">
+                            / {{ coupon.Usage_Limit }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="date-range">
+                            <span>{{ formatDate(coupon.Start_Date) }}</span>
+                            <span class="date-arrow">→</span>
+                            <span>{{ formatDate(coupon.End_Date) }}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="status-badge" [class.active]="coupon.Status === 'active'"
+                            [class.inactive]="coupon.Status === 'inactive'">
+                            {{ coupon.Status }}
+                        </span>
+                    </td>
+                    <td class="actions-col">
+                        <button class="action-btn edit-btn" [routerLink]="['/coupons/edit', coupon._id]" title="Edit">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </button>
+                        <button class="action-btn toggle-btn" (click)="toggleStatus(coupon)"
+                            [title]="coupon.Status === 'active' ? 'Deactivate' : 'Activate'">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+                                <line x1="12" y1="2" x2="12" y2="12"></line>
+                            </svg>
+                        </button>
+                        <button class="action-btn delete-btn" (click)="deleteCoupon(coupon._id!)" title="Delete">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path
+                                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
+                                </path>
+                            </svg>
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="!loading && !error && filteredCoupons.length === 0">
+        <div class="empty-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="1">
+                <rect x="2" y="6" width="20" height="14" rx="2" ry="2"></rect>
+                <path d="M22 6L12 13 2 6"></path>
+                <line x1="16" y1="21" x2="8" y2="21"></line>
+                <line x1="16" y1="3" x2="8" y2="3"></line>
+            </svg>
+        </div>
+        <h3>No coupons found</h3>
+        <p>Create a new coupon to get started</p>
+        <a [routerLink]="['/coupons/add']" class="create-link">Create Coupon</a>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" *ngIf="!loading && !error && filteredCoupons.length > 0">
+        <div class="pagination-info">
+            Showing {{ (currentPage - 1) * pageSize + 1 }} to
+            {{
+            currentPage * pageSize > filteredCoupons.length
+            ? filteredCoupons.length
+            : currentPage * pageSize
+            }}
+            of {{ filteredCoupons.length }} coupons
+        </div>
+        <div class="pagination-controls">
+            <button [disabled]="currentPage === 1" (click)="changePage(currentPage - 1)" class="page-btn">
+                Previous
+            </button>
+            <span class="page-numbers">
+                Page {{ currentPage }} of {{ totalPages }}
+            </span>
+            <button [disabled]="currentPage === totalPages" (click)="changePage(currentPage + 1)" class="page-btn">
+                Next
+            </button>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,97 @@
+<div class="order-list-container">
+    <div class="page-header">
+        <div class="header-left">
+            <h1>Orders</h1>
+            <p>Manage and track customer orders</p>
+        </div>
+    </div>
+
+    <div class="filters-section">
+        <div class="search-box">
+            <input type="text" [(ngModel)]="searchQuery" (input)="onSearchChange()"
+                placeholder="Search by order ID or customer..." class="search-input" />
+        </div>
+
+        <select [(ngModel)]="selectedStatus" (change)="onStatusChange()" class="filter-select">
+            <option *ngFor="let status of statusOptions" [value]="status.value">
+                {{ status.label }}
+            </option>
+        </select>
+
+        <select [(ngModel)]="selectedDateRange" (change)="onDateRangeChange()" class="filter-select">
+            <option value="all">All Time</option>
+            <option value="7days">Last 7 Days</option>
+            <option value="30days">Last 30 Days</option>
+            <option value="90days">Last 90 Days</option>
+        </select>
+    </div>
+
+    <div *ngIf="loading" class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading orders...</p>
+    </div>
+
+    <div *ngIf="error && !loading" class="error-state">
+        <p>{{ error }}</p>
+        <button (click)="loadOrders()" class="retry-btn">Retry</button>
+    </div>
+
+    <div *ngIf="!loading && !error" class="orders-table-container">
+        <table class="orders-table">
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Customer</th>
+                    <th>Date</th>
+                    <th>Items</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let order of getPaginatedOrders()" class="order-row">
+                    <td class="order-id">{{ order.Order_ID }}</td>
+                    <td class="customer-info">
+                        <div class="customer-name">{{ order.User?.Name || 'N/A' }}</div>
+                        <div class="customer-email">{{ order.User?.Email || 'N/A' }}</div>
+                    </td>
+                    <td>{{ formatDate(order.createdAt) }}</td>
+                    <td class="text-center">{{ order.Order_Items?.length || 0 }}</td>
+                    <td class="price">{{ formatPrice(order.Total_Price) }}</td>
+                    <td>
+                        <span class="status-badge" [ngClass]="getStatusClass(order.Order_Status)">
+                            {{ order.Order_Status }}
+                        </span>
+                    </td>
+                    <td class="actions">
+                        <a [routerLink]="['/orders', order._id]" class="action-btn view-btn" title="View Details">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </a>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div *ngIf="filteredOrders.length === 0" class="empty-state">
+            <p>No orders found</p>
+            <small>Try adjusting your filters</small>
+        </div>
+
+        <div *ngIf="totalPages > 1" class="pagination">
+            <button (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1" class="page-btn">
+                Previous
+            </button>
+            <span class="page-info">
+                Page {{ currentPage }} of {{ totalPages }}
+            </span>
+            <button (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages" class="page-btn">
+                Next
+            </button>
+        </div>
+    </div>
+</div>
