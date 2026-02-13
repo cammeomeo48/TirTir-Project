@@ -1,4 +1,5 @@
 require("dotenv").config();
+require("./instrument"); // Initialize Sentry
 
 const express = require("express");
 const cors = require("cors");
@@ -9,24 +10,12 @@ const mongoSanitize = require('express-mongo-sanitize');
 const morgan = require('morgan');
 const responseTime = require('response-time');
 const Sentry = require("@sentry/node");
-const { nodeProfilingIntegration } = require("@sentry/profiling-node");
+const { nodeProfilingIntegration } = require("@sentry/profiling-node"); // Keep this if needed for types, but init is in instrument.js
 
 const errorHandler = require('./middlewares/error');
 const logger = require('./utils/logger');
 
 const app = express();
-
-// Sentry Initialization
-if (process.env.SENTRY_DSN) {
-  Sentry.init({
-    dsn: process.env.SENTRY_DSN,
-    integrations: [
-      nodeProfilingIntegration(),
-    ],
-    tracesSampleRate: 1.0,
-    profilesSampleRate: 1.0,
-  });
-}
 
 // 1. Performance Monitoring (Response Time)
 app.use(responseTime((req, res, time) => {
@@ -115,6 +104,36 @@ const wishlistRoutes = require("./routes/wishlist.routes");
 
 app.get("/", (req, res) => res.send("API Running"));
 app.get("/api/v1/health", (req, res) => res.json({ ok: true, msg: "alive" }));
+app.get("/debug-sentry", function mainHandler(req, res) {
+  Sentry.startSpan({
+    op: "test",
+    name: "My First Test Span",
+  }, () => {
+    try {
+      // Send a log before throwing the error
+      // Note: Sentry.logger might not be exposed in all versions, using captureMessage as fallback if needed
+      // or standard console if enableLogs is true.
+      // But strictly following user snippet:
+      if (Sentry.logger) {
+          Sentry.logger.info('User triggered test error', {
+            action: 'test_error_span',
+          });
+      } else {
+          console.log('User triggered test error', { action: 'test_error_span' });
+      }
+      
+      // Send a test metric before throwing the error
+      if (Sentry.metrics) {
+          Sentry.metrics.count('test_counter', 1);
+      }
+      
+      throw new Error("Sentry Test Error with Span & Metrics!");
+    } catch (e) {
+      Sentry.captureException(e);
+      res.status(500).send("Sentry Test Error Triggered! Check Sentry Dashboard.");
+    }
+  });
+});
 
 // API Routes
 app.use("/api/v1/shades", shadeRoutes);
