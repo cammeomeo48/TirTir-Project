@@ -5,6 +5,9 @@
             <p class="subtitle">Monitor stock levels and track adjustments</p>
         </div>
         <div class="actions">
+            <button (click)="exportData()" class="btn-export" *ngIf="alerts.length > 0">
+                Export Alerts
+            </button>
             <a [routerLink]="['/inventory/logs']" class="log-btn">View Full Logs</a>
         </div>
     </div>

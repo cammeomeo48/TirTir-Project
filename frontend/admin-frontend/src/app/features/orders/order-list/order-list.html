@@ -24,6 +24,10 @@
             <option value="30days">Last 30 Days</option>
             <option value="90days">Last 90 Days</option>
         </select>
+
+        <button (click)="exportData()" class="btn-export">
+            Export to Excel
+        </button>
     </div>
 
     <div *ngIf="loading" class="loading-state">
@@ -51,17 +55,17 @@
             </thead>
             <tbody>
                 <tr *ngFor="let order of getPaginatedOrders()" class="order-row">
-                    <td class="order-id">{{ order.Order_ID }}</td>
+                    <td class="order-id">{{ order._id }}</td>
                     <td class="customer-info">
-                        <div class="customer-name">{{ order.User?.Name || 'N/A' }}</div>
-                        <div class="customer-email">{{ order.User?.Email || 'N/A' }}</div>
+                        <div class="customer-name">{{ order.user?.name || 'N/A' }}</div>
+                        <div class="customer-email">{{ order.user?.email || 'N/A' }}</div>
                     </td>
                     <td>{{ formatDate(order.createdAt) }}</td>
-                    <td class="text-center">{{ order.Order_Items?.length || 0 }}</td>
-                    <td class="price">{{ formatPrice(order.Total_Price) }}</td>
+                    <td class="text-center">{{ order.items?.length || 0 }}</td>
+                    <td class="price">{{ formatPrice(order.totalAmount) }}</td>
                     <td>
-                        <span class="status-badge" [ngClass]="getStatusClass(order.Order_Status)">
-                            {{ order.Order_Status }}
+                        <span class="status-badge" [ngClass]="getStatusClass(order.status)">
+                            {{ order.status }}
                         </span>
                     </td>
                     <td class="actions">

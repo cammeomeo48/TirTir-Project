@@ -54,6 +54,8 @@ export class CustomerService {
     }
 
     updateCustomerStatus(id: string, status: string): Observable<Customer> {
-        return this.http.patch<Customer>(`${this.apiUrl}/${id}/status`, { status });
+        // Backend expects { isBlocked: boolean } and uses PUT
+        const isBlocked = status === 'inactive';
+        return this.http.put<Customer>(`${this.apiUrl}/${id}/status`, { isBlocked });
     }
 }

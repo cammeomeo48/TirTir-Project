@@ -6,16 +6,59 @@ const mongoose = require("mongoose");
 const path = require('path');
 const helmet = require('helmet');
 const mongoSanitize = require('express-mongo-sanitize');
+const morgan = require('morgan');
+const responseTime = require('response-time');
+const Sentry = require("@sentry/node");
+const { nodeProfilingIntegration } = require("@sentry/profiling-node");
+
 const errorHandler = require('./middlewares/error');
+const logger = require('./utils/logger');
+
 const app = express();
+
+// Sentry Initialization
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    integrations: [
+      nodeProfilingIntegration(),
+    ],
+    tracesSampleRate: 1.0,
+    profilesSampleRate: 1.0,
+  });
+}
+
+// 1. Performance Monitoring (Response Time)
+app.use(responseTime((req, res, time) => {
+  const method = req.method;
+  const url = req.originalUrl;
+  const status = res.statusCode;
+  
+  // Log slow requests (> 500ms)
+  if (time > 500) {
+    logger.warn(`[SLOW REQUEST] ${method} ${url} ${status} - ${time.toFixed(2)}ms`);
+  }
+}));
+
+// 2. Request Logging (Morgan -> Winston)
+app.use(morgan('combined', { stream: logger.stream }));
 
 // CORS Configuration - MUST BE FIRST
 app.use(cors({
   origin: ['http://localhost:4200', 'http://127.0.0.1:4200', 'http://localhost:4201', 'http://127.0.0.1:4201'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'sentry-trace', 'baggage']
 }));
+
+// Mongoose Debug Logging
+if (process.env.NODE_ENV !== 'production') {
+    mongoose.set('debug', (collectionName, method, query, doc) => {
+        // Log DB queries to file/console via Winston
+        logger.info(`[MONGO] ${collectionName}.${method} - ${JSON.stringify(query)}`);
+    });
+}
+
 
 // Static Files - Add CORS headers manually
 app.use('/assets', (req, res, next) => {
@@ -91,8 +134,15 @@ app.use("/api/v1/admin/stats", require("./routes/admin.stats.routes"));
 app.use("/api/v1/analytics", require("./routes/analytics.routes"));
 app.use("/api/v1/payments", paymentRoutes);
 app.use("/api/v1/coupons", require("./routes/coupon.routes"));
+app.use("/api/v1/upload", require("./routes/upload.routes")); // Add Upload Routes
 app.use("/api/v1/ai", require("./routes/ai.routes"));
 app.use("/api/v1/wishlist", wishlistRoutes);
+app.use("/api/v1/settings", require("./routes/setting.routes")); // Add Settings Routes
+
+// Sentry Error Handler (Must be before any other error middleware)
+if (process.env.SENTRY_DSN) {
+  Sentry.setupExpressErrorHandler(app);
+}
 
 // Global Error Handler
 app.use(errorHandler);

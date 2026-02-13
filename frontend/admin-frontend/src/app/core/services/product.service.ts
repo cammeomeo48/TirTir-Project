@@ -51,4 +51,10 @@ export class ProductService {
     getStockHistory(id: string): Observable<any> {
         return this.http.get(`${this.apiUrl}/products/${id}/stock-history`);
     }
+
+    uploadImage(file: File): Observable<any> {
+        const formData = new FormData();
+        formData.append('image', file);
+        return this.http.post(`${this.apiUrl}/upload/product`, formData);
+    }
 }

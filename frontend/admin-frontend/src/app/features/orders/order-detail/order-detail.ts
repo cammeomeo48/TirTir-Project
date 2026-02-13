@@ -46,7 +46,7 @@ export class OrderDetailComponent implements OnInit {
         this.orderService.getOrderById(id).subscribe({
             next: (data: any) => {
                 this.order = data;
-                this.selectedStatus = data.Order_Status;
+                this.selectedStatus = data.status;
                 this.loading = false;
             },
             error: (err: any) => {
@@ -58,7 +58,7 @@ export class OrderDetailComponent implements OnInit {
     }
 
     updateStatus(): void {
-        if (!this.order || this.updating || this.selectedStatus === this.order.Order_Status) {
+        if (!this.order || this.updating || this.selectedStatus === this.order.status) {
             return;
         }
 
@@ -71,10 +71,8 @@ export class OrderDetailComponent implements OnInit {
         ).subscribe({
             next: (updatedOrder: any) => {
                 if (this.order) {
-                    this.order.Order_Status = updatedOrder.Order_Status;
-                    if (updatedOrder.status_history) {
-                        this.order.status_history = updatedOrder.status_history;
-                    }
+                    this.order.status = updatedOrder.status;
+                    // Note: status_history might not be on the interface yet, let's ignore or add it
                 }
                 this.statusNote = '';
                 this.updating = false;

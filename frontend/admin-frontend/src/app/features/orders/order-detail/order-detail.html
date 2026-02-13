@@ -13,7 +13,7 @@
         <div class="page-header">
             <div class="header-left">
                 <a [routerLink]="['/orders']" class="back-link">← Back to Orders</a>
-                <h1>Order {{ order.Order_ID }}</h1>
+                <h1>Order {{ order._id }}</h1>
                 <p>Placed on {{ formatDate(order.createdAt) }}</p>
             </div>
             <button (click)="printInvoice()" class="print-btn">
@@ -33,17 +33,17 @@
                 <h2>Order Summary</h2>
                 <div class="info-row">
                     <span class="label">Order ID:</span>
-                    <span class="value">{{ order.Order_ID }}</span>
+                    <span class="value">{{ order._id }}</span>
                 </div>
                 <div class="info-row">
                     <span class="label">Status:</span>
-                    <span class="status-badge" [ngClass]="getStatusClass(order.Order_Status)">
-                        {{ order.Order_Status }}
+                    <span class="status-badge" [ngClass]="getStatusClass(order.status)">
+                        {{ order.status }}
                     </span>
                 </div>
                 <div class="info-row">
                     <span class="label">Payment Method:</span>
-                    <span class="value">{{ order.Payment_Method || 'Not specified' }}</span>
+                    <span class="value">{{ order.paymentMethod || 'Not specified' }}</span>
                 </div>
                 <div class="info-row">
                     <span class="label">Order Date:</span>
@@ -56,24 +56,24 @@
                 <h2>Customer Information</h2>
                 <div class="info-row">
                     <span class="label">Name:</span>
-                    <span class="value">{{ order.User?.Name || 'N/A' }}</span>
+                    <span class="value">{{ order.user?.name || 'N/A' }}</span>
                 </div>
                 <div class="info-row">
                     <span class="label">Email:</span>
-                    <span class="value">{{ order.User?.Email || 'N/A' }}</span>
+                    <span class="value">{{ order.user?.email || 'N/A' }}</span>
                 </div>
             </div>
 
             <!-- Shipping Address -->
             <div class="info-card">
                 <h2>Shipping Address</h2>
-                <div class="address" *ngIf="order.Shipping_Address">
-                    <p>{{ order.Shipping_Address.Street }}</p>
-                    <p>{{ order.Shipping_Address.City }}, {{ order.Shipping_Address.State }} {{
-                        order.Shipping_Address.Zip_Code }}</p>
-                    <p>{{ order.Shipping_Address.Country }}</p>
+                <div class="address" *ngIf="order.shippingAddress">
+                    <p><strong>{{ order.shippingAddress.fullName }}</strong></p>
+                    <p>{{ order.shippingAddress.address }}</p>
+                    <p>{{ order.shippingAddress.city }}</p>
+                    <p>{{ order.shippingAddress.phone }}</p>
                 </div>
-                <p *ngIf="!order.Shipping_Address" class="no-data">No shipping address provided</p>
+                <p *ngIf="!order.shippingAddress" class="no-data">No shipping address provided</p>
             </div>
 
             <!-- Update Status -->
@@ -87,7 +87,7 @@
                     </select>
                     <textarea [(ngModel)]="statusNote" placeholder="Add a note (optional)" class="status-note"
                         rows="3"></textarea>
-                    <button (click)="updateStatus()" [disabled]="updating || selectedStatus === order.Order_Status"
+                    <button (click)="updateStatus()" [disabled]="updating || selectedStatus === order.status"
                         class="update-btn">
                         {{ updating ? 'Updating...' : 'Update Status' }}
                     </button>

@@ -6,7 +6,8 @@ const {
     getRevenueChart, 
     getTopProducts, 
     getCustomerStats, 
-    getAllOrders 
+    getAllOrders,
+    getOrderStats
 } = require('../controllers/admin.dashboard.controller');
 
 // All routes are protected and require admin role
@@ -24,6 +25,9 @@ router.get('/dashboard/top-products', getTopProducts);
 
 // GET /api/admin/dashboard/customers
 router.get('/dashboard/customers', getCustomerStats);
+
+// GET /api/admin/orders/stats
+router.get('/orders/stats', getOrderStats);
 
 // GET /api/admin/orders
 router.get('/orders', getAllOrders);

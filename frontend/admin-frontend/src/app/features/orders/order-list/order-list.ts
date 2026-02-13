@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { OrderService, Order } from '../../../core/services/order.service';
+import { ExportService } from '../../../core/services/export.service';
 
 @Component({
     selector: 'app-order-list',
@@ -36,7 +37,10 @@ export class OrderListComponent implements OnInit {
         { value: 'Cancelled', label: 'Cancelled' }
     ];
 
-    constructor(private orderService: OrderService) { }
+    constructor(
+        private orderService: OrderService,
+        private exportService: ExportService
+    ) { }
 
     ngOnInit(): void {
         this.loadOrders();
@@ -61,6 +65,20 @@ export class OrderListComponent implements OnInit {
         });
     }
 
+    exportData(): void {
+        const dataToExport = this.filteredOrders.map(order => ({
+            'Order ID': order._id,
+            'Date': new Date(order.createdAt).toLocaleDateString(),
+            'Customer Name': order.user?.name || 'N/A',
+            'Customer Email': order.user?.email || 'N/A',
+            'Status': order.status,
+            'Total Amount': order.totalAmount,
+            'Payment Method': order.paymentMethod,
+            'Payment Status': order.paymentStatus || 'N/A'
+        }));
+        this.exportService.exportToExcel(dataToExport, 'orders_export');
+    }
+
     applyFilters(): void {
         let filtered = [...this.orders];
 
@@ -68,15 +86,15 @@ export class OrderListComponent implements OnInit {
         if (this.searchQuery.trim()) {
             const query = this.searchQuery.toLowerCase();
             filtered = filtered.filter(o =>
-                o.Order_ID?.toLowerCase().includes(query) ||
-                o.User?.Name?.toLowerCase().includes(query) ||
-                o.User?.Email?.toLowerCase().includes(query)
+                o._id.toLowerCase().includes(query) ||
+                o.user?.name?.toLowerCase().includes(query) ||
+                o.user?.email?.toLowerCase().includes(query)
             );
         }
 
         // Status filter
         if (this.selectedStatus) {
-            filtered = filtered.filter(o => o.Order_Status === this.selectedStatus);
+            filtered = filtered.filter(o => o.status === this.selectedStatus);
         }
 
         // Date range filter

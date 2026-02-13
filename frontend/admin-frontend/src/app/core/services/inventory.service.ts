@@ -64,6 +64,6 @@ export class InventoryService {
     }
 
     adjustStock(data: StockAdjustment): Observable<any> {
-        return this.http.post<any>(`${this.apiUrl}/adjust`, data);
+        return this.http.patch<any>(`${this.apiUrl}/adjust`, data);
     }
 }

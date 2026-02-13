@@ -16,26 +16,24 @@ export interface OrderItem {
 
 export interface Order {
     _id: string;
-    Order_ID: string;
-    User: {
+    user: {
         _id: string;
-        Name: string;
-        Email: string;
+        name: string;
+        email: string;
     };
-    Order_Items: OrderItem[];
-    Total_Price: number;
-    Order_Status: 'Pending' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
-    Payment_Method: string;
-    Shipping_Address: {
-        Street: string;
-        City: string;
-        State: string;
-        Zip_Code: string;
-        Country: string;
+    items: any[];
+    totalAmount: number;
+    status: string;
+    paymentMethod: string;
+    paymentStatus?: string;
+    shippingAddress: {
+        fullName: string;
+        phone: string;
+        address: string;
+        city: string;
     };
     createdAt: string;
     updatedAt: string;
-    status_history?: StatusHistory[];
 }
 
 export interface StatusHistory {
@@ -74,7 +72,12 @@ export class OrderService {
     }
 
     updateOrderStatus(orderId: string, status: string, note?: string): Observable<any> {
-        return this.http.put(`${this.apiUrl}/${orderId}/status`, { status, note });
+        // Correct endpoint: /api/v1/orders/update-status (PUT)
+        // Correct payload: { orderId, status }
+        // Note: The backend route is /orders/update-status, NOT /admin/orders/...
+        // We need to use the base apiUrl but point to /orders
+        const baseUrl = this.apiUrl.replace('/admin/orders', '/orders'); 
+        return this.http.put(`${baseUrl}/update-status`, { orderId, status, note });
     }
 
     getOrderTracking(id: string): Observable<any> {

@@ -20,6 +20,7 @@ export const routes: Routes = [
             },
             {
                 path: 'products',
+                data: { roles: ['admin'] },
                 children: [
                     {
                         path: '',
@@ -117,6 +118,7 @@ export const routes: Routes = [
             },
             {
                 path: 'inventory',
+                data: { roles: ['admin', 'inventory_staff'] },
                 children: [
                     {
                         path: '',
@@ -140,6 +142,25 @@ export const routes: Routes = [
                             ),
                     },
                 ],
+            },
+            {
+                path: 'users',
+                data: { roles: ['admin'] },
+                children: [
+                    {
+                        path: '',
+                        loadComponent: () => import('./features/users/user-list/user-list.component').then(m => m.UserListComponent)
+                    },
+                    {
+                        path: 'add',
+                        loadComponent: () => import('./features/users/user-form/user-form.component').then(m => m.UserFormComponent)
+                    }
+                ]
+            },
+            {
+                path: 'settings',
+                data: { roles: ['admin'] },
+                loadComponent: () => import('./features/settings/settings.component').then(m => m.SettingsComponent)
             },
             {
                 path: '',

@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { InventoryService, InventoryStats } from '../../../core/services/inventory.service';
+import { ExportService } from '../../../core/services/export.service';
 
 @Component({
     selector: 'app-inventory-dashboard',
@@ -17,7 +18,10 @@ export class InventoryDashboardComponent implements OnInit {
     error: string | null = null;
     statsLoading = true;
 
-    constructor(private inventoryService: InventoryService) { }
+    constructor(
+        private inventoryService: InventoryService,
+        private exportService: ExportService
+    ) { }
 
     ngOnInit(): void {
         this.loadDashboardData();
@@ -57,6 +61,19 @@ export class InventoryDashboardComponent implements OnInit {
                 this.error = 'Failed to load inventory alerts';
             }
         });
+    }
+
+    exportData(): void {
+        if (!this.alerts || this.alerts.length === 0) return;
+        
+        const dataToExport = this.alerts.map(item => ({
+            'Product Name': item.name,
+            'SKU': item.sku || 'N/A',
+            'Current Stock': item.stock,
+            'Status': item.stock === 0 ? 'Out of Stock' : 'Low Stock',
+            'Price': item.price
+        }));
+        this.exportService.exportToExcel(dataToExport, 'low_stock_alerts_export');
     }
 
     getSeverityClass(alert: any): string {

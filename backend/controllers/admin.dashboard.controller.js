@@ -185,6 +185,39 @@ exports.getCustomerStats = async (req, res) => {
     }
 };
 
+// GET /api/admin/orders/stats
+exports.getOrderStats = async (req, res) => {
+    try {
+        const stats = await Order.aggregate([
+            {
+                $group: {
+                    _id: '$status',
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        // Transform to object: { Pending: 5, Processing: 2, ... }
+        const formattedStats = stats.reduce((acc, curr) => {
+            acc[curr._id] = curr.count;
+            return acc;
+        }, {});
+
+        // Ensure all statuses are present (even if 0)
+        const allStatuses = Object.values(ORDER_STATUS);
+        allStatuses.forEach(status => {
+            if (!formattedStats[status]) {
+                formattedStats[status] = 0;
+            }
+        });
+
+        res.json(formattedStats);
+    } catch (error) {
+        console.error("Order Stats Error:", error);
+        res.status(500).json({ message: "Lỗi khi lấy thống kê đơn hàng" });
+    }
+};
+
 // GET /api/admin/orders
 exports.getAllOrders = async (req, res) => {
     try {
