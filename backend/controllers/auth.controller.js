@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const sendEmail = require('../utils/sendEmail');
 const { logActivity } = require('../utils/activityLogger');
+const { createNotification } = require('./notification.controller');
 
 /**
  * ===== AUTHENTICATION CONTROLLER =====
@@ -95,6 +96,15 @@ exports.register = async (req, res) => {
 
         // Log Activity
         logActivity(req, 'AUTH', 'REGISTER', `New user registered: ${email}`, { userId: newUser._id });
+
+        // Send Welcome Notification
+        await createNotification(
+            newUser._id,
+            'system',
+            'Welcome to TirTir!',
+            'Thanks for joining. Here is a 10% discount code for your first order: WELCOME10',
+            '/coupons'
+        );
 
         // ===== DEVELOPMENT MODE: Skip Email =====
         if (isDevelopment) {

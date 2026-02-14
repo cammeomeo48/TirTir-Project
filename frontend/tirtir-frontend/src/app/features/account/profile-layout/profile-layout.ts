@@ -14,6 +14,7 @@ export class ProfileLayoutComponent {
         { path: 'profile', label: 'Profile Information', icon: '👤' },
         { path: 'addresses', label: 'Address Book', icon: '📍' },
         { path: 'password', label: 'Change Password', icon: '🔒' },
-        { path: 'orders', label: 'Order History', icon: '📦' }
+        { path: 'orders', label: 'Order History', icon: '📦' },
+        { path: 'notifications', label: 'Notifications', icon: '🔔' }
     ];
 }

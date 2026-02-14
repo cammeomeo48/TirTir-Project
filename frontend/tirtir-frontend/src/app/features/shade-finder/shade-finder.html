@@ -15,33 +15,28 @@
 
         <!-- ROI Indicator (Follows Face) -->
         <div class="overlay" *ngIf="faceTracker.isFaceDetected() && faceTracker.facePoints(); let points">
-            <div class="roi-container forehead"
-                 [style.left.%]="(1 - points.forehead.x) * 100"
-                 [style.top.%]="points.forehead.y * 100">
+            <div class="roi-container forehead" [style.left.%]="(1 - points.forehead.x) * 100"
+                [style.top.%]="points.forehead.y * 100">
                 <div class="scanner-ring"></div>
                 <div class="scanner-corners"></div>
             </div>
-            <div class="roi-container small"
-                 [style.left.%]="(1 - points.nose.x) * 100"
-                 [style.top.%]="points.nose.y * 100">
+            <div class="roi-container small" [style.left.%]="(1 - points.nose.x) * 100"
+                [style.top.%]="points.nose.y * 100">
                 <div class="scanner-ring"></div>
                 <div class="scanner-corners"></div>
             </div>
-            <div class="roi-container cheek"
-                 [style.left.%]="(1 - points.leftCheek.x) * 100"
-                 [style.top.%]="points.leftCheek.y * 100">
+            <div class="roi-container cheek" [style.left.%]="(1 - points.leftCheek.x) * 100"
+                [style.top.%]="points.leftCheek.y * 100">
                 <div class="scanner-ring"></div>
                 <div class="scanner-corners"></div>
             </div>
-            <div class="roi-container cheek"
-                 [style.left.%]="(1 - points.rightCheek.x) * 100"
-                 [style.top.%]="points.rightCheek.y * 100">
+            <div class="roi-container cheek" [style.left.%]="(1 - points.rightCheek.x) * 100"
+                [style.top.%]="points.rightCheek.y * 100">
                 <div class="scanner-ring"></div>
                 <div class="scanner-corners"></div>
             </div>
-            <div class="roi-container small"
-                 [style.left.%]="(1 - points.chin.x) * 100"
-                 [style.top.%]="points.chin.y * 100">
+            <div class="roi-container small" [style.left.%]="(1 - points.chin.x) * 100"
+                [style.top.%]="points.chin.y * 100">
                 <div class="scanner-ring"></div>
                 <div class="scanner-corners"></div>
                 <div class="scanner-label">Scanning...</div>
@@ -68,30 +63,27 @@
             <button *ngIf="!isCameraActive" (click)="startCamera()">Start Camera</button>
             <button *ngIf="isCameraActive" (click)="stopCamera()"
                 style="background: #333; margin-right: 10px;">Stop</button>
-            
+
             <!-- Traditional Scan Button -->
-            <button *ngIf="isCameraActive" (click)="scanShade()" 
-                [disabled]="!lightingStatus().isValid || isProcessing"
+            <button *ngIf="isCameraActive" (click)="scanShade()" [disabled]="!lightingStatus().isValid || isProcessing"
                 style="background: #666; margin-right: 10px;">
                 {{ isProcessing && !isAiAnalyzing ? 'Analyzing...' : 'Quick Scan' }}
             </button>
-            
+
             <!-- AI Scan Button (Primary) -->
-            <button *ngIf="isCameraActive" (click)="scanWithAI()" 
-                [disabled]="isProcessing"
-                class="ai-scan-btn">
+            <button *ngIf="isCameraActive" (click)="scanWithAI()" [disabled]="isProcessing" class="ai-scan-btn">
                 <span class="ai-icon">🤖</span>
                 {{ isAiAnalyzing ? 'AI Analyzing...' : 'AI Scan' }}
             </button>
         </div>
 
         <p *ngIf="error" style="color: red;">{{ error }}</p>
-        
+
         <!-- AI Analysis Info -->
         <div class="ai-info" *ngIf="aiAnalysis && !showResultModal()">
             <div class="ai-badge">✨ AI Analysis</div>
-            <p><strong>Undertone:</strong> {{ aiAnalysis.undertone }} 
-               <span class="confidence">({{ (aiAnalysis.confidence * 100) | number:'1.0-0' }}% confidence)</span>
+            <p><strong>Undertone:</strong> {{ aiAnalysis.undertone }}
+                <span class="confidence">({{ (aiAnalysis.confidence * 100) | number:'1.0-0' }}% confidence)</span>
             </p>
             <p><strong>Brightness:</strong> {{ aiAnalysis.brightness }}</p>
             <p class="ai-reasoning">{{ aiAnalysis.explanation }}</p>
@@ -112,15 +104,15 @@
                 <h3>Kết Quả Phân Tích Da</h3>
                 <button class="close-btn" (click)="closeModal()">×</button>
             </div>
-            
+
             <div class="report-body">
                 <!-- 1. Left Column: Skin Profile -->
                 <div class="report-section profile-section">
                     <div class="skin-score-circle">
-                        <span class="score">{{ 100 - ((aiAnalysis?.skinConcerns?.length || 0) * 10) }}</span>
+                        <span class="score">{{ 100 - ((aiAnalysis?.concerns?.length || 0) * 10) }}</span>
                         <span class="label">Điểm Da</span>
                     </div>
-                    
+
                     <div class="profile-details">
                         <div class="detail-item">
                             <span class="label">Loại Da:</span>
@@ -136,10 +128,10 @@
                         </div>
                     </div>
 
-                    <div class="concerns-list" *ngIf="aiAnalysis?.skinConcerns?.length">
+                    <div class="concerns-list" *ngIf="aiAnalysis?.concerns?.length">
                         <h4>Vấn Đề Cần Khắc Phục:</h4>
                         <div class="tags">
-                            <span class="tag" *ngFor="let concern of aiAnalysis?.skinConcerns">{{ concern }}</span>
+                            <span class="tag" *ngFor="let concern of aiAnalysis?.concerns">{{ concern }}</span>
                         </div>
                     </div>
                 </div>

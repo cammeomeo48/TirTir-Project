@@ -308,7 +308,7 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
     this.http.post<any[]>('http://localhost:5001/api/shades/match', payload).subscribe({
       next: (res) => {
         this.recommendedShades = res;
-        this.generateExplanation();
+        this.explanationText = `Recommended shades based on your skin analysis and ${this.selectedSkinType} skin type.`;
         this.showResultModal.set(true);
         this.isProcessing = false;
       },
@@ -447,24 +447,24 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
 
   fetchRoutine(payload: any) {
     this.aiAdvisor.getRecommendations({
-        skinType: payload.skinType,
-        skinTone: this.aiAnalysis?.skinTone || 'Medium', // Use actual detected skin tone
-        undertone: payload.undertone,
-        concerns: this.aiAnalysis?.concerns || [] // Use 'concerns' field
+      skinType: payload.skinType,
+      skinTone: this.aiAnalysis?.skinTone || 'Medium', // Use actual detected skin tone
+      undertone: payload.undertone,
+      concerns: this.aiAnalysis?.concerns || [] // Use 'concerns' field
     }).subscribe(res => {
-        if (res.success && res.data) {
-            this.recommendationData = res.data;
-        }
+      if (res.success && res.data) {
+        this.recommendationData = res.data;
+      }
     });
   }
 
   generateLocalExplanation(ai: SkinAnalysis): string {
-      // Fallback explanation generator
-      let text = `AI xác định tone da bạn là ${ai.skinTone} với undertone ${ai.undertone}.`;
-      if (ai.concerns && ai.concerns.length > 0 && !ai.concerns.includes('None')) {
-          text += ` Phát hiện một số vấn đề: ${ai.concerns.join(', ')}.`;
-      }
-      return text;
+    // Fallback explanation generator
+    let text = `AI xác định tone da bạn là ${ai.skinTone} với undertone ${ai.undertone}.`;
+    if (ai.concerns && ai.concerns.length > 0 && !ai.concerns.includes('None')) {
+      text += ` Phát hiện một số vấn đề: ${ai.concerns.join(', ')}.`;
+    }
+    return text;
   }
 
 

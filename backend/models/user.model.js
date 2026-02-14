@@ -111,26 +111,20 @@ const UserSchema = new mongoose.Schema({
 });
 
 // ===== MIDDLEWARE: Pre-Save Hook for Password Hashing =====
-/**
- * Hash password before saving to database
- * Uses async/await syntax (modern Mongoose - NO next() callback)
- * Only hashes if password field is modified
- */
-UserSchema.pre('save', async function (next) { // Added next for compatibility, though async/await doesn't strictly need it in newer mongoose, it's safer.
+UserSchema.pre('save', async function () {
     // Only hash password if it has been modified (or is new)
     if (!this.isModified('password')) {
-        return next();
+        return;
     }
 
     try {
-        // Generate salt with 10 rounds (industry standard)
+        console.log('HOOK: Hashing password...');
         const salt = await bcrypt.genSalt(10);
-
-        // Hash the password
         this.password = await bcrypt.hash(this.password, salt);
-        next();
+        console.log('HOOK: Password hashed successfully.');
     } catch (error) {
-        return next(error);
+        console.error('HOOK: Error hashing password:', error);
+        throw error; // Mongoose will catch this rejected promise
     }
 });
 

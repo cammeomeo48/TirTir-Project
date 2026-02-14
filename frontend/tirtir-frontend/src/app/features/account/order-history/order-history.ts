@@ -58,10 +58,15 @@ export class OrderHistoryComponent implements OnInit {
     this.orderService.getMyOrders().subscribe({
       next: (orders) => {
         this.orders = orders;
-        this.loading = false;
+        // Fix NG0100: Defer loading state update
+        setTimeout(() => {
+          this.loading = false;
+        }, 0);
       },
       error: () => {
-        this.loading = false;
+        setTimeout(() => {
+          this.loading = false;
+        }, 0);
       },
     });
   }

@@ -75,6 +75,62 @@
                         <circle cx="12" cy="7" r="4"></circle>
                     </svg>
                 </a>
+
+                <!-- Notification Icon -->
+                <div class="action-btn notification-wrapper" (mouseenter)="toggleNotifications(true)"
+                    (mouseleave)="toggleNotifications(false)">
+                    <a routerLink="/account/notifications" class="notif-btn" aria-label="Notifications">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                        </svg>
+                        <span class="badge" *ngIf="(unreadCount$ | async)! > 0">
+                            {{ (unreadCount$ | async) }}
+                        </span>
+                    </a>
+
+                    <!-- Notification Dropdown -->
+                    <div class="notif-dropdown" [class.visible]="showNotifications">
+                        <div class="notif-header">
+                            <span>Notifications</span>
+                            <button class="mark-read-btn" (click)="markAllRead($event)"
+                                *ngIf="(unreadCount$ | async)! > 0">
+                                Mark all read
+                            </button>
+                        </div>
+
+                        <div class="notif-list">
+                            <ng-container *ngIf="(recentNotifications$ | async) as notifications">
+                                <div class="notif-item" *ngFor="let item of notifications" [class.unread]="!item.isRead"
+                                    (click)="onNotificationClick(item)">
+                                    <div class="notif-icon" [ngClass]="item.type">
+                                        <ng-container [ngSwitch]="item.type">
+                                            <span *ngSwitchCase="'order'">📦</span>
+                                            <span *ngSwitchCase="'promotion'">🔥</span>
+                                            <span *ngSwitchDefault>🔔</span>
+                                        </ng-container>
+                                    </div>
+                                    <div class="notif-content">
+                                        <p class="notif-title">{{ item.title }}</p>
+                                        <p class="notif-message">{{ item.message }}</p>
+                                        <span class="notif-time">{{ item.createdAt | timeAgo }}</span>
+                                    </div>
+                                    <div class="unread-dot" *ngIf="!item.isRead"></div>
+                                </div>
+
+                                <div class="empty-notif" *ngIf="notifications.length === 0">
+                                    <p>No new notifications</p>
+                                </div>
+                            </ng-container>
+                        </div>
+
+                        <div class="notif-footer">
+                            <a routerLink="/account/notifications" (click)="showNotifications = false">View All</a>
+                        </div>
+                    </div>
+                </div>
+
                 <button class="action-btn" aria-label="Search" (click)="toggleSearch()">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="1.5">

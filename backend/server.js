@@ -27,7 +27,7 @@ app.use(responseTime((req, res, time) => {
   const method = req.method;
   const url = req.originalUrl;
   const status = res.statusCode;
-  
+
   // Log slow requests (> 500ms)
   if (time > 500) {
     logger.warn(`[SLOW REQUEST] ${method} ${url} ${status} - ${time.toFixed(2)}ms`);
@@ -47,10 +47,10 @@ app.use(cors({
 
 // Mongoose Debug Logging
 if (process.env.NODE_ENV !== 'production') {
-    mongoose.set('debug', (collectionName, method, query, doc) => {
-        // Log DB queries to file/console via Winston
-        logger.info(`[MONGO] ${collectionName}.${method} - ${JSON.stringify(query)}`);
-    });
+  mongoose.set('debug', (collectionName, method, query, doc) => {
+    // Log DB queries to file/console via Winston
+    logger.info(`[MONGO] ${collectionName}.${method} - ${JSON.stringify(query)}`);
+  });
 }
 
 
@@ -120,18 +120,18 @@ app.get("/debug-sentry", function mainHandler(req, res) {
       // or standard console if enableLogs is true.
       // But strictly following user snippet:
       if (Sentry.logger) {
-          Sentry.logger.info('User triggered test error', {
-            action: 'test_error_span',
-          });
+        Sentry.logger.info('User triggered test error', {
+          action: 'test_error_span',
+        });
       } else {
-          console.log('User triggered test error', { action: 'test_error_span' });
+        console.log('User triggered test error', { action: 'test_error_span' });
       }
-      
+
       // Send a test metric before throwing the error
       if (Sentry.metrics) {
-          Sentry.metrics.count('test_counter', 1);
+        Sentry.metrics.count('test_counter', 1);
       }
-      
+
       throw new Error("Sentry Test Error with Span & Metrics!");
     } catch (e) {
       Sentry.captureException(e);
@@ -162,6 +162,8 @@ app.use("/api/v1/upload", require("./routes/upload.routes")); // Add Upload Rout
 app.use("/api/v1/ai", require("./routes/ai.routes"));
 app.use("/api/v1/wishlist", wishlistRoutes);
 app.use("/api/v1/settings", require("./routes/setting.routes")); // Add Settings Routes
+app.use("/api/v1/marketing", require("./routes/marketing.routes")); // Add Marketing Routes
+app.use("/api/v1/notifications", require("./routes/notification.routes")); // Add Notification Routes
 
 // Sentry Error Handler (Must be before any other error middleware)
 if (process.env.SENTRY_DSN) {

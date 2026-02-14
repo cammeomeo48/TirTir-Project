@@ -72,7 +72,7 @@ const couponSchema = new mongoose.Schema({
 });
 
 // Index for efficient queries
-couponSchema.index({ code: 1 });
+// couponSchema.index({ code: 1 }); // Removed duplicate index
 couponSchema.index({ active: 1, validTo: 1 });
 
 // Virtual to check if coupon is currently valid

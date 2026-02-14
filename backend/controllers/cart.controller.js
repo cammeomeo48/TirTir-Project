@@ -105,6 +105,7 @@ exports.addToCart = async (req, res) => {
             total += (item.price || 0) * item.quantity;
         });
         cart.totalPrice = total;
+        cart.recoveryNotificationSent = false; // Reset abandoned cart flag
         console.log("   Total Price:", total);
 
         await cart.save();
@@ -168,6 +169,7 @@ exports.updateCartItem = async (req, res) => {
         }
 
         cart.totalPrice = calculateTotal(cart);
+        cart.recoveryNotificationSent = false; // Reset abandoned cart flag
         await cart.save();
 
         const populatedCart = await Cart.findById(cart._id).populate('items.product');
@@ -208,6 +210,7 @@ exports.removeFromCart = async (req, res) => {
         }
 
         cart.totalPrice = calculateTotal(cart);
+        cart.recoveryNotificationSent = false; // Reset abandoned cart flag
         await cart.save();
 
         const populatedCart = await Cart.findById(cart._id).populate('items.product');
