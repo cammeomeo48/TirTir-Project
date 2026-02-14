@@ -1,16 +1,37 @@
 <aside class="sidebar" [class.collapsed]="collapsed">
     <div class="sidebar-header">
-        <h2 class="sidebar-title">{{ collapsed ? 'T' : 'TirTir Admin' }}</h2>
+        <div class="logo-area">
+            <div class="logo-icon">T</div>
+            <h2 class="sidebar-title" *ngIf="!collapsed">TirTir Admin</h2>
+        </div>
+        <button class="collapse-btn" (click)="toggleCollapse()">
+            <span class="icon">☰</span>
+        </button>
     </div>
 
-    <nav class="sidebar-nav">
-        @for (item of menuItems; track item.route) {
-        <a [routerLink]="item.route" routerLinkActive="active" class="nav-item" [title]="item.label">
-            <span class="nav-icon">{{ item.icon }}</span>
-            @if (!collapsed) {
-            <span class="nav-label">{{ item.label }}</span>
-            }
-        </a>
+    <div class="sidebar-content">
+        @for (group of menuGroups; track group.title) {
+        <div class="menu-group">
+            <div class="group-title" *ngIf="!collapsed">{{ group.title }}</div>
+
+            <nav class="group-nav">
+                @for (item of group.items; track item.label) {
+                <a [routerLink]="item.route" routerLinkActive="active" class="nav-item" [title]="item.label">
+                    <span class="nav-label" *ngIf="!collapsed">{{ item.label }}</span>
+
+                    @if (item.badge && !collapsed) {
+                    <span class="nav-badge" [style.background-color]="item.badgeColor">{{ item.badge }}</span>
+                    }
+                </a>
+                }
+            </nav>
+        </div>
         }
-    </nav>
+    </div>
+
+    <div class="sidebar-footer">
+        <a href="#" class="nav-item logout">
+            <span class="nav-label" *ngIf="!collapsed">Logout</span>
+        </a>
+    </div>
 </aside>

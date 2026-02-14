@@ -3,8 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { AiAdvisorService, SkinAnalysis } from '../../core/services/ai-advisor.service';
-// TODO: Re-enable when MediaPipe package is installed
-// import { FaceTrackerService } from '../../core/services/face-tracker.service';
+import { FaceTrackerService } from '../../core/services/face-tracker.service';
 
 @Component({
   selector: 'app-shade-finder',
@@ -33,6 +32,7 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
   // UI States
   showResultModal = signal(false);
   explanationText = '';
+  recommendationData: any = null; // Store full routine data
 
   // Advanced Lighting & Validation State
   lightingStatus = signal<{ isValid: boolean, message: string, type: 'success' | 'warning' | 'error' }>({
@@ -45,27 +45,18 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
   readonly HISTORY_SIZE = 15; // Smooth over ~0.5s (assuming 30fps)
 
   constructor(
-    // TODO: Re-enable when MediaPipe package is installed
-    // public faceTracker: FaceTrackerService,
+    public faceTracker: FaceTrackerService,
     private http: HttpClient,
     private aiAdvisor: AiAdvisorService
   ) { }
 
   async ngOnInit() {
-    // TODO: Re-enable when MediaPipe package is installed
-    // await this.faceTracker.initialize();
+    await this.faceTracker.initialize();
   }
 
   ngOnDestroy() {
     this.stopCamera();
   }
-
-  // TODO: Temporary mock for faceTracker - remove when MediaPipe is installed
-  private mockFaceTracker = {
-    isFaceDetected: () => false,
-    facePoints: () => null,
-    detectFace: (video: HTMLVideoElement) => { }
-  };
 
   async startCamera() {
     try {
@@ -94,20 +85,16 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
       cancelAnimationFrame(this.animationFrameId);
     }
     this.isCameraActive = false;
-    // TODO: Re-enable when MediaPipe is installed
-    // this.faceTracker.isFaceDetected.set(false);
+    this.faceTracker.isFaceDetected.set(false);
   }
 
   detectLoop() {
     if (!this.isCameraActive || !this.videoElement.nativeElement) return;
 
-    // TODO: Re-enable when MediaPipe is installed
-    // this.faceTracker.detectFace(this.videoElement.nativeElement);
-    this.mockFaceTracker.detectFace(this.videoElement.nativeElement);
+    this.faceTracker.detectFace(this.videoElement.nativeElement);
 
     // Real-time Validation Logic
-    // TODO: Re-enable when MediaPipe is installed
-    if (this.mockFaceTracker.isFaceDetected()) {
+    if (this.faceTracker.isFaceDetected()) {
       this.processRealtimeValidation();
     } else {
       this.lightingStatus.set({ isValid: false, message: 'Không tìm thấy khuôn mặt. Vui lòng nhìn thẳng vào camera.', type: 'warning' });
@@ -178,8 +165,7 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
   }
 
   scanShade() {
-    // TODO: Re-enable when MediaPipe is installed
-    if (!this.mockFaceTracker.isFaceDetected()) return;
+    if (!this.faceTracker.isFaceDetected()) return;
 
     // Check if lighting is valid BEFORE proceeding (Double Check)
     if (!this.lightingStatus().isValid) {
@@ -322,7 +308,7 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
     this.http.post<any[]>('http://localhost:5001/api/shades/match', payload).subscribe({
       next: (res) => {
         this.recommendedShades = res;
-        this.generateExplanation();
+        this.explanationText = `Recommended shades based on your skin analysis and ${this.selectedSkinType} skin type.`;
         this.showResultModal.set(true);
         this.isProcessing = false;
       },
@@ -431,16 +417,20 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
       skinType: this.selectedSkinType,
       // Include AI insights
       undertone: aiAnalysis.undertone,
-      brightness: aiAnalysis.brightness,
-      toneShift: aiAnalysis.recommendedToneShift
+      brightness: aiAnalysis.skinTone, // Use skinTone from Python
+      toneShift: aiAnalysis.recommendedToneShift || 'exact'
     };
 
-    this.http.post<any[]>('http://localhost:5000/api/shades/match', payload).subscribe({
+    // Fix Port: Use 5001 for Backend (or use environment variable in real app)
+    this.http.post<any[]>('http://localhost:5001/api/shades/match', payload).subscribe({
       next: (res) => {
         this.recommendedShades = res;
 
-        // Use AI-generated explanation instead of hardcoded
-        this.explanationText = aiAnalysis.explanation;
+        // Use AI-generated explanation if available, otherwise generate locally
+        this.explanationText = aiAnalysis.explanation || this.generateLocalExplanation(aiAnalysis);
+
+        // Fetch Full Routine Recommendations
+        this.fetchRoutine(payload);
 
         this.showResultModal.set(true);
         this.isProcessing = false;
@@ -455,28 +445,31 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
     });
   }
 
-  generateExplanation() {
-    // Use AI explanation if available
-    if (this.aiAnalysis) {
-      this.explanationText = this.aiAnalysis.explanation;
-      return;
-    }
-
-    // Fallback to old logic
-    if (this.selectedSkinType === 'Oily') {
-      this.explanationText = "Vì da bạn là da dầu, AI chọn màu sáng hơn 1 tone để tránh bị xuống tông cuối ngày.";
-    } else if (this.selectedSkinType === 'Dry') {
-      this.explanationText = "Vì da bạn là da khô, AI chọn màu có độ ẩm cao và tone tự nhiên để tránh bị mốc nền.";
-    } else {
-      this.explanationText = "Màu này khớp hoàn hảo với tone da tự nhiên của bạn.";
-    }
+  fetchRoutine(payload: any) {
+    this.aiAdvisor.getRecommendations({
+      skinType: payload.skinType,
+      skinTone: this.aiAnalysis?.skinTone || 'Medium', // Use actual detected skin tone
+      undertone: payload.undertone,
+      concerns: this.aiAnalysis?.concerns || [] // Use 'concerns' field
+    }).subscribe(res => {
+      if (res.success && res.data) {
+        this.recommendationData = res.data;
+      }
+    });
   }
+
+  generateLocalExplanation(ai: SkinAnalysis): string {
+    // Fallback explanation generator
+    let text = `AI xác định tone da bạn là ${ai.skinTone} với undertone ${ai.undertone}.`;
+    if (ai.concerns && ai.concerns.length > 0 && !ai.concerns.includes('None')) {
+      text += ` Phát hiện một số vấn đề: ${ai.concerns.join(', ')}.`;
+    }
+    return text;
+  }
+
 
   closeModal() {
     this.showResultModal.set(false);
-    // We don't clear recommendedShades immediately so the user can see them again if needed, 
-    // or we can clear them. For now, let's keep them but hide the modal.
-    // actually, let's clear them to reset the flow
-    // this.recommendedShades = []; 
+    this.recommendationData = null; // Reset data
   }
 }

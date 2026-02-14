@@ -34,6 +34,10 @@ const CartSchema = new mongoose.Schema({
         type: Number,
         required: true,
         default: 0
+    },
+    recoveryNotificationSent: {
+        type: Boolean,
+        default: false
     }
 }, { timestamps: true });
 

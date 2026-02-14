@@ -1,38 +1,48 @@
 import { Component, OnInit, ChangeDetectorRef, inject, signal } from '@angular/core';
 import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { Subject, debounceTime, distinctUntilChanged, switchMap, of } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, switchMap, of, map } from 'rxjs'; // Added map
 import { ProductData } from '../../../core/constants/products.data';
 import { MenuItem, MenuService } from '../../../core/services/menu.service';
-import { CartService } from '../../../core/services/cart.service'; // Added Import
+import { CartService } from '../../../core/services/cart.service';
 import { MakeupMegaMenuComponent } from '../makeup-mega-menu/makeup-mega-menu';
 import { SkincareMegaMenuComponent } from '../skincare-mega-menu/skincare-mega-menu';
 import { ProductService } from '../../../core/services/product.service';
+import { NotificationService } from '../../../core/services/notification.service'; // Import
+import { TimeAgoPipe } from '../../pipes/time-ago.pipe'; // Import
+import { INotification } from '../../../core/models/notification.model'; // Import
 
-import { CommonModule } from '@angular/common'; // Ensure CommonModule is imported
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, MakeupMegaMenuComponent, SkincareMegaMenuComponent],
+  imports: [CommonModule, RouterModule, FormsModule, MakeupMegaMenuComponent, SkincareMegaMenuComponent, TimeAgoPipe], // Add TimeAgoPipe
   templateUrl: './header.html',
   styleUrl: './header.css',
 })
 export class HeaderComponent implements OnInit {
-  // Use inject() pattern
   private menuService = inject(MenuService);
-  private cartService = inject(CartService); // Injected CartService
+  private cartService = inject(CartService);
   private cdr = inject(ChangeDetectorRef);
   private router = inject(Router);
   private productService = inject(ProductService);
+  public notificationService = inject(NotificationService); // Public for template
 
   searchTerm = '';
   showSearch = false;
   suggestions = signal<ProductData[]>([]);
   private searchSubject = new Subject<string>();
 
-  // Expose signal for template
   cartCount = this.cartService.cartCount;
+
+  // Notification State
+  showNotifications = false;
+  unreadCount$ = this.notificationService.unreadCount$;
+  // Limit to 5 for dropdown
+  recentNotifications$ = this.notificationService.notifications$.pipe(
+    map(list => list.slice(0, 5))
+  );
 
   menuItems: MenuItem[] = [];
   showMakeupMenu = false;
@@ -111,4 +121,22 @@ export class HeaderComponent implements OnInit {
     this.router.navigate(['/products', product.slug]);
     this.closeSearch();
   }
-}// trigger reload
+
+  // ===== Notification Logic =====
+  toggleNotifications(show: boolean) {
+    this.showNotifications = show;
+  }
+
+  onNotificationClick(notification: INotification) {
+    if (!notification.isRead) {
+      this.notificationService.markAsRead(notification._id).subscribe();
+    }
+    this.showNotifications = false;
+    this.router.navigateByUrl(notification.link);
+  }
+
+  markAllRead(event: Event) {
+    event.stopPropagation(); // Prevent dropdown close or navigation
+    this.notificationService.markAllAsRead().subscribe();
+  }
+}

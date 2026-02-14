@@ -10,8 +10,8 @@ router.post('/create', protect, orderController.createOrder);
 // Xem lịch sử đơn hàng
 router.get('/my-orders', protect, orderController.getMyOrders);
 
-// Admin: Cập nhật trạng thái
-router.put('/update-status', protect, authorize('admin'), orderController.updateOrderStatus);
+// Admin & Staff: Cập nhật trạng thái
+router.put('/update-status', protect, authorize('admin', 'customer_service', 'inventory_staff'), orderController.updateOrderStatus);
 
 // --- CÁC ROUTE CÓ PARAM ID (QUAN TRỌNG: PHẢI ĐẶT TRƯỚC /:id) ---
 

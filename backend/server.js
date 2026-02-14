@@ -1,4 +1,5 @@
 require("dotenv").config();
+require("./instrument"); // Initialize Sentry
 
 const express = require("express");
 const cors = require("cors");
@@ -6,16 +7,52 @@ const mongoose = require("mongoose");
 const path = require('path');
 const helmet = require('helmet');
 const mongoSanitize = require('express-mongo-sanitize');
+const morgan = require('morgan');
+const responseTime = require('response-time');
+const Sentry = require("@sentry/node");
+const { nodeProfilingIntegration } = require("@sentry/profiling-node"); // Keep this if needed for types, but init is in instrument.js
+
 const errorHandler = require('./middlewares/error');
+const logger = require('./utils/logger');
+
+const { apiLimiter } = require('./middlewares/rateLimit');
+
 const app = express();
+
+// Rate Limiting (Global API Protection)
+app.use('/api/', apiLimiter);
+
+// 1. Performance Monitoring (Response Time)
+app.use(responseTime((req, res, time) => {
+  const method = req.method;
+  const url = req.originalUrl;
+  const status = res.statusCode;
+
+  // Log slow requests (> 500ms)
+  if (time > 500) {
+    logger.warn(`[SLOW REQUEST] ${method} ${url} ${status} - ${time.toFixed(2)}ms`);
+  }
+}));
+
+// 2. Request Logging (Morgan -> Winston)
+app.use(morgan('combined', { stream: logger.stream }));
 
 // CORS Configuration - MUST BE FIRST
 app.use(cors({
   origin: ['http://localhost:4200', 'http://127.0.0.1:4200', 'http://localhost:4201', 'http://127.0.0.1:4201'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'sentry-trace', 'baggage']
 }));
+
+// Mongoose Debug Logging
+if (process.env.NODE_ENV !== 'production') {
+  mongoose.set('debug', (collectionName, method, query, doc) => {
+    // Log DB queries to file/console via Winston
+    logger.info(`[MONGO] ${collectionName}.${method} - ${JSON.stringify(query)}`);
+  });
+}
+
 
 // Static Files - Add CORS headers manually
 app.use('/assets', (req, res, next) => {
@@ -72,6 +109,36 @@ const wishlistRoutes = require("./routes/wishlist.routes");
 
 app.get("/", (req, res) => res.send("API Running"));
 app.get("/api/v1/health", (req, res) => res.json({ ok: true, msg: "alive" }));
+app.get("/debug-sentry", function mainHandler(req, res) {
+  Sentry.startSpan({
+    op: "test",
+    name: "My First Test Span",
+  }, () => {
+    try {
+      // Send a log before throwing the error
+      // Note: Sentry.logger might not be exposed in all versions, using captureMessage as fallback if needed
+      // or standard console if enableLogs is true.
+      // But strictly following user snippet:
+      if (Sentry.logger) {
+        Sentry.logger.info('User triggered test error', {
+          action: 'test_error_span',
+        });
+      } else {
+        console.log('User triggered test error', { action: 'test_error_span' });
+      }
+
+      // Send a test metric before throwing the error
+      if (Sentry.metrics) {
+        Sentry.metrics.count('test_counter', 1);
+      }
+
+      throw new Error("Sentry Test Error with Span & Metrics!");
+    } catch (e) {
+      Sentry.captureException(e);
+      res.status(500).send("Sentry Test Error Triggered! Check Sentry Dashboard.");
+    }
+  });
+});
 
 // API Routes
 app.use("/api/v1/shades", shadeRoutes);
@@ -91,8 +158,17 @@ app.use("/api/v1/admin/stats", require("./routes/admin.stats.routes"));
 app.use("/api/v1/analytics", require("./routes/analytics.routes"));
 app.use("/api/v1/payments", paymentRoutes);
 app.use("/api/v1/coupons", require("./routes/coupon.routes"));
+app.use("/api/v1/upload", require("./routes/upload.routes")); // Add Upload Routes
 app.use("/api/v1/ai", require("./routes/ai.routes"));
 app.use("/api/v1/wishlist", wishlistRoutes);
+app.use("/api/v1/settings", require("./routes/setting.routes")); // Add Settings Routes
+app.use("/api/v1/marketing", require("./routes/marketing.routes")); // Add Marketing Routes
+app.use("/api/v1/notifications", require("./routes/notification.routes")); // Add Notification Routes
+
+// Sentry Error Handler (Must be before any other error middleware)
+if (process.env.SENTRY_DSN) {
+  Sentry.setupExpressErrorHandler(app);
+}
 
 // Global Error Handler
 app.use(errorHandler);

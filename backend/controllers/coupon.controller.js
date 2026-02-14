@@ -316,10 +316,73 @@ exports.deleteCoupon = async (req, res) => {
 
         res.json({
             success: true,
-            message: 'Coupon deleted successfully'
+            message: 'Coupon removed'
         });
     } catch (err) {
         console.error('Delete Coupon Error:', err);
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// @desc    Get single coupon (Admin)
+// @route   GET /api/v1/coupons/:id
+// @access  Private/Admin
+exports.getCouponById = async (req, res) => {
+    try {
+        const coupon = await Coupon.findById(req.params.id);
+        if (!coupon) {
+            return res.status(404).json({ message: 'Coupon not found' });
+        }
+        res.json(coupon);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// @desc    Toggle coupon status (Admin)
+// @route   PATCH /api/v1/coupons/:id/status
+// @access  Private/Admin
+exports.toggleCouponStatus = async (req, res) => {
+    try {
+        const { status } = req.body; // Expect 'active' | 'inactive'
+        const isActive = status === 'active';
+
+        const coupon = await Coupon.findByIdAndUpdate(req.params.id, {
+            active: isActive
+        }, { new: true });
+
+        if (!coupon) {
+            return res.status(404).json({ message: 'Coupon not found' });
+        }
+
+        res.json(coupon);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// @desc    Get coupon stats (Admin)
+// @route   GET /api/v1/coupons/stats
+// @access  Private/Admin
+exports.getCouponStats = async (req, res) => {
+    try {
+        const total = await Coupon.countDocuments();
+        const active = await Coupon.countDocuments({ active: true });
+        const expired = await Coupon.countDocuments({ validTo: { $lt: new Date() } });
+        
+        // Total usage
+        const usageResult = await Coupon.aggregate([
+            { $group: { _id: null, totalUsage: { $sum: "$usedCount" } } }
+        ]);
+        const totalUsage = usageResult.length > 0 ? usageResult[0].totalUsage : 0;
+
+        res.json({
+            total,
+            active,
+            expired,
+            totalUsage
+        });
+    } catch (err) {
         res.status(500).json({ message: err.message });
     }
 };

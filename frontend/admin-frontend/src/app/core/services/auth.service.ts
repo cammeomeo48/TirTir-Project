@@ -39,8 +39,9 @@ export class AuthService {
         }).pipe(
             tap(response => {
                 if (response.success && response.token && response.user) {
-                    // Only allow admin users
-                    if (response.user.role === 'admin') {
+                    // Allow admin and staff users
+                    const allowedRoles = ['admin', 'inventory_staff', 'customer_service'];
+                    if (allowedRoles.includes(response.user.role)) {
                         localStorage.setItem('admin_token', response.token);
                         localStorage.setItem('admin_user', JSON.stringify(response.user));
                         this.currentUserSubject.next(response.user);
@@ -68,8 +69,22 @@ export class AuthService {
     }
 
     isAdmin(): boolean {
+        return this.hasRole(['admin']);
+    }
+
+    hasRole(roles: string[]): boolean {
         const user = this.currentUserSubject.value;
-        return user?.role === 'admin';
+        if (!user) return false;
+        // If user is admin, they have access to everything (or should be explicit?)
+        // Usually admin has access to everything, but role checks might be specific.
+        // For now, simple inclusion check.
+        // But wait, if I ask hasRole(['inventory_staff']) and I am admin?
+        // Admin should probably return true?
+        // User said: "Phân quyền (Roles): Ví dụ 'Nhân viên kho' chỉ được truy cập menu Inventory"
+        // Implicitly Admin can access everything.
+        if (user.role === 'admin') return true; 
+        
+        return roles.includes(user.role);
     }
 
     getCurrentUser(): any {

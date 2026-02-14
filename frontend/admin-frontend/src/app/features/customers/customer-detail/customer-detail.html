@@ -1,0 +1,122 @@
+<div class="customer-detail-container">
+    <!-- Loading State -->
+    <div *ngIf="loading && !customer" class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading customer details...</p>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="error && !loading" class="error-state">
+        <p>{{ error }}</p>
+        <a [routerLink]="['/customers']" class="back-btn">Back to Customers</a>
+    </div>
+
+    <div *ngIf="customer" class="customer-content">
+        <div class="page-header">
+            <div class="header-left">
+                <a [routerLink]="['/customers']" class="back-link">← Back to Customers</a>
+                <div class="title-row">
+                    <h1>{{ customer.Name }}</h1>
+                    <button (click)="toggleStatus()" class="status-toggle-btn"
+                        [class.active]="customer.status === 'active'" [disabled]="updating">
+                        {{ customer.status === 'active' ? 'Deactivate' : 'Activate' }}
+                    </button>
+                </div>
+                <p class="subtitle">{{ customer.role || 'User' }} • Joined {{ formatDate(customer.createdAt) }}</p>
+            </div>
+        </div>
+
+        <div class="info-grid">
+            <!-- Contact Info -->
+            <div class="info-card">
+                <h2>Contact Information</h2>
+                <div class="info-row">
+                    <span class="label">Email</span>
+                    <span class="value">{{ customer.Email }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Phone</span>
+                    <span class="value">{{ customer.Phone || 'Not provided' }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Status</span>
+                    <span class="status-badge" [class.active]="customer.status === 'active'"
+                        [class.inactive]="customer.status === 'inactive'">
+                        {{ customer.status || 'Active' }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="info-card stats-card">
+                <h2>Customer Statistics</h2>
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <span class="stat-value">{{ customer.orders_count || orders.length || 0 }}</span>
+                        <span class="stat-label">Total Orders</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">{{ formatCurrency(customer.total_spent || 0) }}</span>
+                        <span class="stat-label">Total Spent</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Addresses -->
+            <div class="info-card">
+                <h2>Addresses</h2>
+                <div *ngIf="customer.Addresses && customer.Addresses.length > 0; else noAddress">
+                    <div *ngFor="let addr of customer.Addresses; let i = index" class="address-item">
+                        <div class="address-header">Address {{ i + 1 }}</div>
+                        <p>{{ addr.Street }}</p>
+                        <p>{{ addr.City }}, {{ addr.State }} {{ addr.Zip_Code }}</p>
+                        <p>{{ addr.Country }}</p>
+                    </div>
+                </div>
+                <ng-template #noAddress>
+                    <p class="no-data">No addresses saved</p>
+                </ng-template>
+            </div>
+        </div>
+
+        <!-- Order History -->
+        <div class="orders-section">
+            <h2>Order History</h2>
+
+            <div class="table-container" *ngIf="orders.length > 0; else noOrders">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Date</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let order of orders">
+                            <td>{{ order.Order_ID || order._id }}</td>
+                            <td>{{ formatDate(order.createdAt) }}</td>
+                            <td>{{ formatCurrency(order.Total_Price) }}</td>
+                            <td>
+                                <span class="order-status-badge" [class]="order.Order_Status?.toLowerCase()">
+                                    {{ order.Order_Status }}
+                                </span>
+                            </td>
+                            <td>
+                                <a [routerLink]="['/orders', order._id || order.Order_ID]" class="view-link">View</a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <ng-template #noOrders>
+                <div class="empty-orders">
+                    <p>No orders found for this customer.</p>
+                </div>
+            </ng-template>
+        </div>
+    </div>
+</div>

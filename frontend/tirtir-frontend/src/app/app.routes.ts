@@ -54,6 +54,10 @@ export const routes: Routes = [
             {
                 path: 'orders',
                 component: OrderHistoryComponent
+            },
+            {
+                path: 'notifications',
+                loadComponent: () => import('./features/account/notifications/notifications.component').then(m => m.NotificationsComponent)
             }
         ]
     },

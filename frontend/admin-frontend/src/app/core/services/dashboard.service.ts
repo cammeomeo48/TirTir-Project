@@ -16,9 +16,14 @@ export interface RevenueData {
 }
 
 export interface TopProduct {
-    _id: string;
-    Product_Name: string;
-    totalSold: number;
+    product: {
+        _id: string;
+        name: string;
+        sku: string;
+        mainImage?: string;
+        Thumbnail_Images?: string[];
+    };
+    salesCount: number;
     revenue: number;
 }
 

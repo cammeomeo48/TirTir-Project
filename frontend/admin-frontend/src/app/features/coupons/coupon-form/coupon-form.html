@@ -1,0 +1,112 @@
+<div class="coupon-form-container">
+    <div class="page-header">
+        <div class="header-left">
+            <a [routerLink]="['/coupons']" class="back-link">← Back to Coupons</a>
+            <h1>{{ isEditMode ? 'Edit Coupon' : 'Create Coupon' }}</h1>
+        </div>
+    </div>
+
+    <div class="form-card">
+        <form [formGroup]="couponForm" (ngSubmit)="onSubmit()">
+            <!-- Code & Status -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Coupon Code <span class="required">*</span></label>
+                    <input type="text" formControlName="Code"
+                        [class.error]="couponForm.get('Code')?.invalid && couponForm.get('Code')?.touched"
+                        placeholder="e.g. SUMMER2024">
+                    <div class="error-msg"
+                        *ngIf="couponForm.get('Code')?.errors?.['required'] && couponForm.get('Code')?.touched">
+                        Coupon code is required
+                    </div>
+                    <div class="error-msg"
+                        *ngIf="couponForm.get('Code')?.errors?.['pattern'] && couponForm.get('Code')?.touched">
+                        Only letters, numbers, hyphens and underscores allowed
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Status</label>
+                    <select formControlName="Status">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Discount Settings -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Discount Type</label>
+                    <select formControlName="Discount_Type">
+                        <option value="percentage">Percentage (%)</option>
+                        <option value="fixed">Fixed Amount ($)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Discount Value <span class="required">*</span></label>
+                    <input type="number" formControlName="Discount_Value"
+                        [class.error]="couponForm.get('Discount_Value')?.invalid && couponForm.get('Discount_Value')?.touched"
+                        min="0.01" step="0.01">
+                    <div class="error-msg"
+                        *ngIf="couponForm.get('Discount_Value')?.errors?.['required'] && couponForm.get('Discount_Value')?.touched">
+                        Discount value is required
+                    </div>
+                    <div class="error-msg"
+                        *ngIf="couponForm.get('Discount_Value')?.errors?.['min'] && couponForm.get('Discount_Value')?.touched">
+                        Must be greater than 0
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dates -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Start Date <span class="required">*</span></label>
+                    <input type="date" formControlName="Start_Date"
+                        [class.error]="couponForm.get('Start_Date')?.invalid && couponForm.get('Start_Date')?.touched">
+                </div>
+
+                <div class="form-group">
+                    <label>End Date <span class="required">*</span></label>
+                    <input type="date" formControlName="End_Date"
+                        [class.error]="couponForm.get('End_Date')?.invalid && couponForm.get('End_Date')?.touched">
+                </div>
+            </div>
+
+            <!-- Restrictions -->
+            <div class="section-title">Restrictions & Limits</div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Min Order Amount ($)</label>
+                    <input type="number" formControlName="Min_Order_Amount" min="0" placeholder="0">
+                </div>
+
+                <div class="form-group">
+                    <label>Initial Usage Limit</label>
+                    <input type="number" formControlName="Usage_Limit" min="1" placeholder="Unlimited">
+                </div>
+            </div>
+
+            <div class="form-group" *ngIf="couponForm.get('Discount_Type')?.value === 'percentage'">
+                <label>Max Discount Amount ($)</label>
+                <input type="number" formControlName="Max_Discount_Amount" min="0" placeholder="Unlimited">
+                <p class="help-text">Optional cap for percentage discounts</p>
+            </div>
+
+            <!-- Actions -->
+            <div class="form-actions">
+                <button type="button" class="cancel-btn" [routerLink]="['/coupons']">Cancel</button>
+                <button type="submit" class="submit-btn" [disabled]="submitting">
+                    {{ submitting ? 'Saving...' : (isEditMode ? 'Update Coupon' : 'Create Coupon') }}
+                </button>
+            </div>
+
+            <div class="error-message" *ngIf="error">
+                {{ error }}
+            </div>
+        </form>
+    </div>
+</div>
