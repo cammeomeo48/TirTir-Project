@@ -1,11 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DashboardService, DashboardStats } from '../../core/services/dashboard.service';
+import { RevenueChartComponent } from './revenue-chart/revenue-chart';
+import { TopProductsTableComponent } from './top-products-table/top-products-table';
+import { RecentOrdersComponent } from './recent-orders/recent-orders';
 
 @Component({
     selector: 'app-dashboard',
     standalone: true,
-    imports: [CommonModule],
+    imports: [CommonModule, RevenueChartComponent, TopProductsTableComponent, RecentOrdersComponent],
     templateUrl: './dashboard.component.html',
     styleUrls: ['./dashboard.component.css']
 })

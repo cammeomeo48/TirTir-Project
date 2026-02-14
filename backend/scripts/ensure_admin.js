@@ -21,9 +21,10 @@ async function ensureAdmin() {
             // To be safe for frontend team, let's update the password to be sure it's 'admin123'
             existingAdmin.password = ADMIN_PASSWORD; // Will be hashed by pre-save hook
             existingAdmin.role = 'admin';
-            existingAdmin.isEmailVerified = true;
+            existingAdmin.isEmailVerified = true; // Mark as verified
+            existingAdmin.emailVerificationToken = null; // Clear verification token
             await existingAdmin.save();
-            console.log(`Updated password for ${ADMIN_EMAIL} to '${ADMIN_PASSWORD}'`);
+            console.log(`Updated password for ${ADMIN_EMAIL} to '${ADMIN_PASSWORD}' and marked as verified`);
         } else {
             console.log(`Creating new admin user ${ADMIN_EMAIL}...`);
             const newAdmin = new User({
@@ -31,7 +32,8 @@ async function ensureAdmin() {
                 email: ADMIN_EMAIL,
                 password: ADMIN_PASSWORD,
                 role: 'admin',
-                isEmailVerified: true
+                isEmailVerified: true, // Admin is pre-verified
+                emailVerificationToken: null // No verification needed
             });
             await newAdmin.save();
             console.log(`Created admin user: ${ADMIN_EMAIL}`);

@@ -14,7 +14,10 @@ const {
 } = require('../controllers/auth.controller');
 
 // Import middleware
-const { protect } = require('../middlewares/auth');
+const { protect, authorize } = require('../middlewares/auth');
+const { authLimiter } = require('../middlewares/rateLimit');
+const { registerValidator, loginValidator } = require('../validators/auth.validator');
+const { validate } = require('../middlewares/validate');
 
 /**
  * ===== AUTHENTICATION ROUTES =====
@@ -28,14 +31,15 @@ const { protect } = require('../middlewares/auth');
  * @desc    Register new user with email verification
  * @access  Public
  */
-router.post('/register', register);
+// Apply Rate Limiting to Login/Register
+router.post('/register', authLimiter, registerValidator, validate, register);
 
 /**
  * @route   POST /api/v1/auth/login
  * @desc    Login user and return JWT token
  * @access  Public
  */
-router.post('/login', login);
+router.post('/login', authLimiter, loginValidator, validate, login);
 
 /**
  * @route   GET /api/v1/auth/verify-email/:token

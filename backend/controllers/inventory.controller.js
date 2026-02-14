@@ -38,6 +38,36 @@ exports.getInventoryAlerts = async (req, res) => {
     }
 };
 
+// 1.5. GET INVENTORY STATS
+exports.getInventoryStats = async (req, res) => {
+    try {
+        const totalProducts = await Product.countDocuments();
+        const lowStockItems = await Product.countDocuments({ Stock_Quantity: { $lt: 10 } });
+        const outOfStockItems = await Product.countDocuments({ Stock_Quantity: 0 });
+        
+        // Calculate Total Value of Inventory (Price * Quantity)
+        const valueResult = await Product.aggregate([
+            {
+                $group: {
+                    _id: null,
+                    totalValue: { $sum: { $multiply: ["$Price", "$Stock_Quantity"] } }
+                }
+            }
+        ]);
+        
+        const totalValue = valueResult.length > 0 ? valueResult[0].totalValue : 0;
+
+        res.json({
+            totalProducts,
+            lowStockItems,
+            outOfStockItems,
+            totalValue
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
 // 2. ADJUST STOCK (Manual Correction)
 exports.adjustStock = async (req, res) => {
     try {

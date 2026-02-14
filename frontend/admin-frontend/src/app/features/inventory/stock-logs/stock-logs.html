@@ -1,0 +1,119 @@
+<div class="stock-logs-container">
+    <div class="page-header">
+        <div class="header-content">
+            <a [routerLink]="['/inventory']" class="back-link">← Back to Dashboard</a>
+            <h1>Stock Logs</h1>
+            <p class="subtitle">History of all inventory changes</p>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-section">
+        <div class="search-box">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                class="search-icon">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" [(ngModel)]="searchQuery" placeholder="Search product name or SKU..."
+                class="search-input">
+        </div>
+
+        <div class="filter-group">
+            <select [(ngModel)]="selectedAction" (change)="onFilterChange()" class="filter-select">
+                <option value="">All Actions</option>
+                <option value="add">Added</option>
+                <option value="remove">Removed</option>
+                <option value="set">Set/Adjusted</option>
+                <option value="order">Order Fulfillment</option>
+            </select>
+
+            <input type="date" [(ngModel)]="startDate" (change)="onFilterChange()" class="date-input">
+            <span class="date-sep">to</span>
+            <input type="date" [(ngModel)]="endDate" (change)="onFilterChange()" class="date-input">
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="loading" class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading logs...</p>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="error && !loading" class="error-state">
+        <p>{{ error }}</p>
+        <button (click)="loadLogs()" class="retry-btn">Retry</button>
+    </div>
+
+    <!-- Data Table -->
+    <div class="table-container" *ngIf="!loading && !error && filteredLogs.length > 0">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Product</th>
+                    <th>Action</th>
+                    <th>Change</th>
+                    <th>Stock After</th>
+                    <th>User</th>
+                    <th>Reason</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let log of paginatedLogs">
+                    <td class="date-cell">{{ formatDate(log.createdAt) }}</td>
+                    <td>
+                        <div class="product-info">
+                            <span class="product-name">{{ log.product?.name || 'Unknown Product' }}</span>
+                            <span class="product-sku">{{ log.product?.sku }}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="action-badge" [class]="log.action">
+                            {{ log.action }}
+                        </span>
+                    </td>
+                    <td class="change-cell" [class.positive]="log.quantity > 0" [class.negative]="log.quantity < 0">
+                        {{ log.quantity > 0 ? '+' : '' }}{{ log.quantity }}
+                    </td>
+                    <td>{{ log.newStock }}</td>
+                    <td>{{ log.user?.name || 'System' }}</td>
+                    <td class="reason-cell" [title]="log.reason">{{ log.reason || '-' }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="!loading && !error && filteredLogs.length === 0">
+        <div class="empty-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="1">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+        </div>
+        <h3>No logs found</h3>
+        <p>Try adjusting your search or filters</p>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" *ngIf="!loading && !error && filteredLogs.length > 0">
+        <div class="pagination-info">
+            Showing {{ (currentPage - 1) * pageSize + 1 }} to {{ (currentPage * pageSize) > filteredLogs.length ?
+            filteredLogs.length : (currentPage * pageSize) }} of {{ filteredLogs.length }} logs
+        </div>
+        <div class="pagination-controls">
+            <button [disabled]="currentPage === 1" (click)="changePage(currentPage - 1)"
+                class="page-btn">Previous</button>
+            <span class="page-numbers">Page {{ currentPage }} of {{ totalPages }}</span>
+            <button [disabled]="currentPage === totalPages" (click)="changePage(currentPage + 1)"
+                class="page-btn">Next</button>
+        </div>
+    </div>
+</div>

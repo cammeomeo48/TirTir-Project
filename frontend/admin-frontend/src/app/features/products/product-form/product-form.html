@@ -1,0 +1,112 @@
+<div class="product-form-container">
+    <div class="form-header">
+        <h1>{{ isEditMode ? 'Edit Product' : 'Add New Product' }}</h1>
+        <button class="btn btn-outline" (click)="cancel()">Cancel</button>
+    </div>
+
+    <div *ngIf="loading && isEditMode" class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading product...</p>
+    </div>
+
+    <form *ngIf="!loading || !isEditMode" [formGroup]="productForm" (ngSubmit)="onSubmit()" class="product-form">
+        <!-- Error Message -->
+        <div *ngIf="error" class="error-message">
+            {{ error }}
+        </div>
+
+        <div class="form-grid">
+            <!-- Left Column -->
+            <div class="form-column">
+                <!-- Product Name -->
+                <div class="form-group">
+                    <label for="productName">Product Name *</label>
+                    <input id="productName" type="text" formControlName="Product_Name" class="form-input"
+                        placeholder="e.g., Mask Fit Red Cushion" />
+                    <span *ngIf="productForm.get('Product_Name')?.touched && productForm.get('Product_Name')?.invalid"
+                        class="error-text">
+                        {{ getFieldError('Product_Name') }}
+                    </span>
+                </div>
+
+                <!-- SKU -->
+                <div class="form-group">
+                    <label for="sku">SKU *</label>
+                    <input id="sku" type="text" formControlName="Product_ID" class="form-input"
+                        placeholder="e.g., PRD-MK-RED-001" />
+                    <span *ngIf="productForm.get('Product_ID')?.touched && productForm.get('Product_ID')?.invalid"
+                        class="error-text">
+                        {{ getFieldError('Product_ID') }}
+                    </span>
+                </div>
+
+                <!-- Category -->
+                <div class="form-group">
+                    <label for="category">Category *</label>
+                    <select id="category" formControlName="Category" class="form-select">
+                        <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+                    </select>
+                </div>
+
+                <!-- Price & Stock Row -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="price">Price ($) *</label>
+                        <input id="price" type="number" formControlName="Price" class="form-input" placeholder="0.00"
+                            step="0.01" />
+                        <span *ngIf="productForm.get('Price')?.touched && productForm.get('Price')?.invalid"
+                            class="error-text">
+                            {{ getFieldError('Price') }}
+                        </span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="stock">Stock Quantity *</label>
+                        <input id="stock" type="number" formControlName="stock" class="form-input" placeholder="0" />
+                        <span *ngIf="productForm.get('stock')?.touched && productForm.get('stock')?.invalid"
+                            class="error-text">
+                            {{ getFieldError('stock') }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" formControlName="Description" class="form-textarea" rows="5"
+                        placeholder="Product description..."></textarea>
+                </div>
+            </div>
+
+            <!-- Right Column - Image Upload -->
+            <div class="form-column">
+                <div class="form-group">
+                    <label>Product Image</label>
+                    <div class="image-upload-area">
+                        <div *ngIf="imagePreview" class="image-preview">
+                            <img [src]="imagePreview" alt="Product preview" />
+                            <button type="button" class="btn-remove-image" (click)="imagePreview = null">
+                                Remove
+                            </button>
+                        </div>
+                        <div *ngIf="!imagePreview" class="upload-placeholder">
+                            <span class="upload-icon">📷</span>
+                            <p>Click to upload product image</p>
+                            <input type="file" accept="image/*" (change)="onImageChange($event)" class="file-input" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+            <button type="button" class="btn btn-outline" (click)="cancel()">
+                Cancel
+            </button>
+            <button type="submit" class="btn btn-primary" [disabled]="loading">
+                {{ loading ? 'Saving...' : (isEditMode ? 'Update Product' : 'Create Product') }}
+            </button>
+        </div>
+    </form>
+</div>
