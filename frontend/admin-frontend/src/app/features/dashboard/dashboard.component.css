@@ -1,48 +1,45 @@
+/* ============================================
+   DASHBOARD - MINIMALIST
+   ============================================ */
+
 .dashboard-container {
-    padding: 32px;
-    max-width: 1600px;
-    margin: 0 auto;
+    max-width: var(--content-max-width);
 }
 
-/* Header */
+/* === HEADER === */
 .dashboard-header {
     display: flex;
+    align-items: flex-start;
     justify-content: space-between;
-    align-items: flex-end;
-    margin-bottom: 32px;
+    margin-bottom: var(--spacing-lg);
+    gap: var(--spacing-md);
 }
 
 .header-text h1 {
-    font-size: 24px;
-    color: var(--secondary);
-    /* Black */
-    margin-bottom: 8px;
+    margin-bottom: var(--spacing-xs);
 }
 
-.header-text .subtitle {
+.subtitle {
+    font-size: var(--font-size-sm);
     color: var(--text-secondary);
-    font-size: 14px;
     margin: 0;
 }
 
 .header-actions {
     display: flex;
-    gap: 12px;
+    gap: var(--spacing-sm);
 }
 
 .action-btn {
-    padding: 8px 16px;
+    padding: 10px 20px;
     border: 1px solid var(--border-color);
-    background: white;
     border-radius: var(--border-radius);
+    background: var(--bg-surface);
     color: var(--text-primary);
+    font-size: var(--font-size-sm);
     font-weight: 500;
-    font-size: 13px;
     cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    transition: all var(--transition-base);
 }
 
 .action-btn:hover {
@@ -52,205 +49,214 @@
 
 .action-btn.primary {
     background: var(--primary);
-    /* Red */
-    color: white;
-    border: 1px solid var(--primary);
+    border-color: var(--primary);
+    color: var(--text-white);
 }
 
 .action-btn.primary:hover {
     background: var(--primary-hover);
-    border-color: var(--primary-hover);
 }
 
-/* Stats Grid */
+/* === STATS GRID === */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 24px;
-    margin-bottom: 32px;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
 }
 
 .stat-card {
-    background: white;
-    padding: 24px;
+    background: var(--bg-surface);
     border: 1px solid var(--border-color);
-    /* Clean border */
     border-radius: var(--border-radius);
-    /* No Shadow */
+    padding: var(--spacing-md);
+    border-left: 4px solid var(--secondary);
+    transition: all var(--transition-base);
+}
+
+.stat-card:hover {
+    box-shadow: var(--shadow-sm);
 }
 
 .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
+    margin-bottom: var(--spacing-sm);
 }
 
 .stat-label {
-    color: var(--text-secondary);
-    font-size: 13px;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     text-transform: uppercase;
+    color: var(--text-secondary);
     letter-spacing: 0.5px;
 }
-
-.stat-icon-wrapper {
-    display: none !important;
-    /* Strict minimalist */
-}
-
-.stat-card {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-/* If user said strict "không sử dụng icon", I should remove them. I'll hide them. */
 
 .stat-value {
     font-size: 32px;
     font-weight: 700;
     color: var(--secondary);
-    /* Black */
-    margin: 0 0 8px 0;
-    letter-spacing: -1px;
+    line-height: 1.2;
+    margin-bottom: var(--spacing-xs);
 }
 
 .stat-trend {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 13px;
+    gap: var(--spacing-xs);
 }
 
 .trend-badge {
+    padding: 2px 8px;
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-xs);
     font-weight: 600;
 }
 
 .stat-trend.positive .trend-badge {
+    background: rgba(56, 142, 60, 0.1);
     color: var(--success);
-    /* Green for positive stats only */
 }
 
 .stat-trend.negative .trend-badge {
+    background: rgba(211, 47, 47, 0.1);
     color: var(--danger);
 }
 
-.trend-text {
-    color: var(--text-secondary);
-    font-size: 12px;
+.stat-trend.warning .trend-badge {
+    background: rgba(245, 124, 0, 0.1);
+    color: var(--warning);
 }
 
-/* Analytics Section */
+.trend-text {
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+}
+
+/* === ANALYTICS SECTION === */
 .analytics-section {
     display: grid;
     grid-template-columns: 2fr 1fr;
-    gap: 24px;
-    margin-bottom: 32px;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
 }
 
 .chart-container,
-.widget-container,
-.recent-orders-section {
-    background: white;
-    padding: 24px;
+.widget-container {
+    background: var(--bg-surface);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
+    padding: var(--spacing-md);
 }
 
 .section-header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
     border-bottom: 1px solid var(--border-color);
 }
 
 .section-header h3 {
-    font-size: 16px;
-    color: var(--secondary);
-    font-weight: 700;
     margin: 0;
+    font-size: var(--font-size-lg);
 }
 
-/* Chart Controls */
 .chart-actions {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: var(--spacing-sm);
 }
 
 .legend-item {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 12px;
+    font-size: var(--font-size-xs);
     color: var(--text-secondary);
 }
 
-.dot {
+.legend-item .dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
 }
 
 .legend-item.order .dot {
-    background: var(--secondary);
+    background: var(--primary);
 }
 
 .legend-item.income .dot {
-    background: var(--primary);
+    background: var(--success);
 }
 
 .chart-select {
     padding: 6px 12px;
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
+    font-size: var(--font-size-xs);
     color: var(--text-primary);
-    font-size: 12px;
-    background: white;
-    cursor: pointer;
+    background: var(--bg-surface);
 }
 
-.more-btn,
-.view-all-btn {
-    background: none;
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
-    font-weight: 500;
-    font-size: 12px;
+.more-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 20px;
     cursor: pointer;
-    padding: 6px 12px;
-    border-radius: var(--border-radius);
-    transition: all 0.2s;
+    padding: 4px 8px;
 }
 
-.view-all-btn:hover,
 .more-btn:hover {
+    color: var(--secondary);
+}
+
+/* === RECENT ORDERS === */
+.recent-orders-section {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-md);
+}
+
+.view-all-btn {
+    padding: 6px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: transparent;
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.view-all-btn:hover {
     border-color: var(--secondary);
     background: var(--bg-hover);
 }
 
-/* Responsive */
-@media (max-width: 1200px) {
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
+/* === RESPONSIVE === */
+@media (max-width: 1024px) {
     .analytics-section {
         grid-template-columns: 1fr;
     }
 }
 
 @media (max-width: 768px) {
-    .stats-grid {
-        grid-template-columns: 1fr;
-    }
-
     .dashboard-header {
         flex-direction: column;
-        align-items: flex-start;
-        gap: 16px;
+    }
+
+    .header-actions {
+        width: 100%;
+    }
+
+    .action-btn {
+        flex: 1;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
     }
 }

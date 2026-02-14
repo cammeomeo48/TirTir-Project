@@ -58,7 +58,7 @@ export class SidebarComponent implements OnInit {
 
     menuGroups: MenuGroup[] = [];
 
-    constructor(private authService: AuthService) {}
+    constructor(private authService: AuthService) { }
 
     ngOnInit() {
         this.filterMenu();

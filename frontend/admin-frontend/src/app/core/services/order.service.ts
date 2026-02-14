@@ -22,7 +22,9 @@ export interface Order {
         email: string;
     };
     items: any[];
+    Order_Items: OrderItem[];
     totalAmount: number;
+    Total_Price: number;
     status: string;
     paymentMethod: string;
     paymentStatus?: string;
@@ -32,6 +34,7 @@ export interface Order {
         address: string;
         city: string;
     };
+    status_history?: StatusHistory[];
     createdAt: string;
     updatedAt: string;
 }
@@ -76,7 +79,7 @@ export class OrderService {
         // Correct payload: { orderId, status }
         // Note: The backend route is /orders/update-status, NOT /admin/orders/...
         // We need to use the base apiUrl but point to /orders
-        const baseUrl = this.apiUrl.replace('/admin/orders', '/orders'); 
+        const baseUrl = this.apiUrl.replace('/admin/orders', '/orders');
         return this.http.put(`${baseUrl}/update-status`, { orderId, status, note });
     }
 

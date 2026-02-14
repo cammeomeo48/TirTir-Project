@@ -26,8 +26,8 @@
         </td>
         <td>{{ user.createdAt | date }}</td>
         <td>
-          <button class="btn-icon delete" (click)="deleteUser(user._id)" title="Delete User">
-            🗑️
+          <button class="btn btn-sm btn-danger" (click)="deleteUser(user._id)" title="Delete User">
+            Delete
           </button>
         </td>
       </tr>
