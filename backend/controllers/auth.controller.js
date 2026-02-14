@@ -293,8 +293,6 @@ exports.login = async (req, res) => {
         console.log(`[DEBUG] Stored Hash: ${user.password ? user.password.substring(0, 10) + '...' : 'MISSING'}`);
 
         // ===== CHECK EMAIL VERIFICATION =====
-        // TODO: TEMPORARY BYPASS - Re-enable after debugging why isEmailVerified=true not working
-        /*
         if (!user.isEmailVerified) {
             console.log('[DEBUG] User not verified');
             return res.status(401).json({
@@ -303,7 +301,6 @@ exports.login = async (req, res) => {
                 requiresVerification: true
             });
         }
-        */
 
         // ===== VERIFY PASSWORD =====
         const isPasswordMatch = await user.matchPassword(password);
