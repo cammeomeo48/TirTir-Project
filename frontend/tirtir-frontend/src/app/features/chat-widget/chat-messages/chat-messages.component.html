@@ -1,0 +1,21 @@
+<div class="messages-container">
+    <div class="header">
+        <h2>Messages</h2>
+    </div>
+
+    <div class="message-list">
+        <div class="message-item" *ngFor="let item of history">
+            <div class="avatar">
+                <span>T/R</span>
+            </div>
+            <div class="content">
+                <div class="sender-name">{{ item.sender }} <span class="time">Just now</span></div>
+                <div class="preview">{{ item.lastMessage }}</div>
+            </div>
+        </div>
+    </div>
+
+    <button class="new-chat-fab" (click)="onStartNewChat()">
+        Start a new chat <i class="fas fa-paper-plane"></i>
+    </button>
+</div>

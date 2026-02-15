@@ -1,0 +1,49 @@
+<div class="conversation-container">
+    <div class="header">
+        <button class="back-btn" (click)="goBack()">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <div class="title">
+            <div class="logo-circle">T/R</div>
+            <span>TIRTIR GLOBAL</span>
+        </div>
+        <div class="actions">
+            <button><i class="fas fa-ellipsis-h"></i></button>
+        </div>
+    </div>
+
+    <div class="chat-area" #scrollContainer>
+        <div class="date-divider"><span>Today</span></div>
+
+        <div class="message-group" *ngFor="let msg of messages" [class.user]="msg.sender === 'user'"
+            [class.bot]="msg.sender === 'bot'">
+            <div class="avatar" *ngIf="msg.sender === 'bot'">
+                <span>T/R</span>
+            </div>
+            <div class="bubble">
+                {{ msg.text }}
+            </div>
+            <div class="time">{{ msg.timestamp | date:'shortTime' }}</div>
+        </div>
+
+        <div class="typing-indicator" *ngIf="isTyping">
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+        </div>
+
+        <div class="quick-replies" *ngIf="quickReplies.length > 0">
+            <button class="chip" *ngFor="let reply of quickReplies" (click)="sendQuickReply(reply)">
+                {{ reply.icon }} {{ reply.label }}
+            </button>
+        </div>
+    </div>
+
+    <div class="input-area">
+        <button class="attach-btn"><i class="fas fa-plus"></i></button>
+        <input type="text" placeholder="Type a message..." [(ngModel)]="newMessage" (keyup.enter)="sendMessage()">
+        <button class="send-btn" [disabled]="!newMessage.trim()" (click)="sendMessage()">
+            <i class="fas fa-paper-plane"></i>
+        </button>
+    </div>
+</div>
