@@ -1,14 +1,16 @@
-import { Component, ElementRef, ViewChild, OnDestroy, OnInit, effect, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, ElementRef, ViewChild, OnDestroy, OnInit, signal } from '@angular/core';
+import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { AiAdvisorService, SkinAnalysis } from '../../core/services/ai-advisor.service';
 import { FaceTrackerService } from '../../core/services/face-tracker.service';
+import { CartService } from '../../core/services/cart.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-shade-finder',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DecimalPipe],
   templateUrl: './shade-finder.html',
   styleUrls: ['./shade-finder.css']
 })
@@ -32,7 +34,7 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
   // UI States
   showResultModal = signal(false);
   explanationText = '';
-  recommendationData: any = null; // Store full routine data
+  recommendationData: any = null;
 
   // Advanced Lighting & Validation State
   lightingStatus = signal<{ isValid: boolean, message: string, type: 'success' | 'warning' | 'error' }>({
@@ -42,12 +44,13 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
   });
 
   colorHistory: { r: number, g: number, b: number }[] = [];
-  readonly HISTORY_SIZE = 15; // Smooth over ~0.5s (assuming 30fps)
+  readonly HISTORY_SIZE = 15;
 
   constructor(
     public faceTracker: FaceTrackerService,
     private http: HttpClient,
-    private aiAdvisor: AiAdvisorService
+    private aiAdvisor: AiAdvisorService,
+    private cartService: CartService
   ) { }
 
   async ngOnInit() {
@@ -98,55 +101,51 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
       this.processRealtimeValidation();
     } else {
       this.lightingStatus.set({ isValid: false, message: 'Không tìm thấy khuôn mặt. Vui lòng nhìn thẳng vào camera.', type: 'warning' });
-      this.colorHistory = []; // Reset history when face is lost
+      this.colorHistory = [];
     }
 
     this.animationFrameId = requestAnimationFrame(() => this.detectLoop());
   }
 
+  // BUG 1 FIX: Re-enabled — uses faceTracker.facePoints() (was mockFaceTracker, now real service)
   processRealtimeValidation() {
-    // TODO: Re-enable when MediaPipe is installed
-    // This function requires FaceTrackerService to work properly
-    return;
-
-    /* DISABLED UNTIL MEDIAPIPE IS INSTALLED
-    const points = this.mockFaceTracker.facePoints();
+    const points = this.faceTracker.facePoints();
     if (!points) return;
 
-    // 1. Extract raw colors from 5 key points
+    // 1. Extract raw colors from 5 key landmark points
     const rawColors = [
-        this.extractColor(points.forehead.x, points.forehead.y),
-        this.extractColor(points.nose.x, points.nose.y),
-        this.extractColor(points.leftCheek.x, points.leftCheek.y),
-        this.extractColor(points.rightCheek.x, points.rightCheek.y),
-        this.extractColor(points.chin.x, points.chin.y)
-    ].filter(c => c !== null) as {r: number, g: number, b: number}[];
+      this.extractColor(points.forehead.x, points.forehead.y),
+      this.extractColor(points.nose.x, points.nose.y),
+      this.extractColor(points.leftCheek.x, points.leftCheek.y),
+      this.extractColor(points.rightCheek.x, points.rightCheek.y),
+      this.extractColor(points.chin.x, points.chin.y)
+    ].filter(c => c !== null) as { r: number, g: number, b: number }[];
 
     if (rawColors.length === 0) return;
 
-    // 2. Average current frame color
-    const currentFrameAvg = rawColors.reduce((acc: {r: number, g: number, b: number}, curr: {r: number, g: number, b: number}) => ({
-        r: acc.r + curr.r,
-        g: acc.g + curr.g,
-        b: acc.b + curr.b
-    }), {r: 0, g: 0, b: 0});
+    // 2. Average current frame color across all points
+    const currentFrameAvg = rawColors.reduce((acc, curr) => ({
+      r: acc.r + curr.r,
+      g: acc.g + curr.g,
+      b: acc.b + curr.b
+    }), { r: 0, g: 0, b: 0 });
 
     currentFrameAvg.r /= rawColors.length;
     currentFrameAvg.g /= rawColors.length;
     currentFrameAvg.b /= rawColors.length;
 
-    // 3. Add to History Queue (Moving Average)
+    // 3. Add to Moving Average History
     this.colorHistory.push(currentFrameAvg);
     if (this.colorHistory.length > this.HISTORY_SIZE) {
-        this.colorHistory.shift();
+      this.colorHistory.shift();
     }
 
     // 4. Calculate Smoothed Color
-    const smoothedColor = this.colorHistory.reduce((acc: {r: number, g: number, b: number}, curr: {r: number, g: number, b: number}) => ({
-        r: acc.r + curr.r,
-        g: acc.g + curr.g,
-        b: acc.b + curr.b
-    }), {r: 0, g: 0, b: 0});
+    const smoothedColor = this.colorHistory.reduce((acc, curr) => ({
+      r: acc.r + curr.r,
+      g: acc.g + curr.g,
+      b: acc.b + curr.b
+    }), { r: 0, g: 0, b: 0 });
 
     smoothedColor.r = Math.round(smoothedColor.r / this.colorHistory.length);
     smoothedColor.g = Math.round(smoothedColor.g / this.colorHistory.length);
@@ -154,20 +153,18 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
 
     // 5. Validate Smoothed Color
     const validation = this.validateSkinColor(smoothedColor.r, smoothedColor.g, smoothedColor.b);
-    
+
     // 6. Update UI State
     if (validation.isValid) {
-        this.lightingStatus.set({ isValid: true, message: 'Ánh sáng tốt. Sẵn sàng quét.', type: 'success' });
+      this.lightingStatus.set({ isValid: true, message: 'Ánh sáng tốt. Sẵn sàng quét.', type: 'success' });
     } else {
-        this.lightingStatus.set({ isValid: false, message: validation.reason || 'Ánh sáng không đạt chuẩn.', type: 'error' });
+      this.lightingStatus.set({ isValid: false, message: validation.reason || 'Ánh sáng không đạt chuẩn.', type: 'error' });
     }
-    */
   }
 
   scanShade() {
     if (!this.faceTracker.isFaceDetected()) return;
 
-    // Check if lighting is valid BEFORE proceeding (Double Check)
     if (!this.lightingStatus().isValid) {
       this.error = this.lightingStatus().message;
       return;
@@ -176,9 +173,8 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
     this.isProcessing = true;
     this.error = null;
 
-    // Use the SMOOTHED color from history for better accuracy
     if (this.colorHistory.length > 0) {
-      const smoothedColor = this.colorHistory.reduce((acc: { r: number, g: number, b: number }, curr: { r: number, g: number, b: number }) => ({
+      const smoothedColor = this.colorHistory.reduce((acc, curr) => ({
         r: acc.r + curr.r,
         g: acc.g + curr.g,
         b: acc.b + curr.b
@@ -191,43 +187,30 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
       this.findMatch(smoothedColor);
     } else {
       this.isProcessing = false;
-      this.error = "Chưa có dữ liệu màu da ổn định. Vui lòng giữ yên khuôn mặt.";
+      this.error = 'Chưa có dữ liệu màu da ổn định. Vui lòng giữ yên khuôn mặt.';
     }
   }
 
   validateSkinColor(r: number, g: number, b: number): { isValid: boolean, reason?: string } {
-    // 1. Basic Luminance Check (Legacy)
     const l_legacy = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    if (l_legacy <= 30) return { isValid: false, reason: "Ánh sáng quá yếu (Luminance < 30). Vui lòng bật thêm đèn." };
+    if (l_legacy <= 30) return { isValid: false, reason: 'Ánh sáng quá yếu (Luminance < 30). Vui lòng bật thêm đèn.' };
 
-    // 2. Advanced LAB Boundary Check
     const lab = this.rgbToLab(r, g, b);
+    const SKIN_BOUNDARIES = { min_L: 25, min_a: 5, max_a: 45, min_b: 5, max_b: 55 };
 
-    const SKIN_BOUNDARIES = {
-      min_L: 25,
-      min_a: 5, max_a: 45,
-      min_b: 5, max_b: 55
-    };
-
-    if (lab.L < SKIN_BOUNDARIES.min_L) return { isValid: false, reason: "Da quá tối so với ngưỡng cho phép. Vui lòng di chuyển ra nơi sáng hơn." };
-    if (lab.a < SKIN_BOUNDARIES.min_a || lab.a > SKIN_BOUNDARIES.max_a) return { isValid: false, reason: "Màu da bị ám xanh/đỏ bất thường. Kiểm tra lại ánh sáng (tránh đèn neon)." };
-    if (lab.b < SKIN_BOUNDARIES.min_b || lab.b > SKIN_BOUNDARIES.max_b) return { isValid: false, reason: "Màu da bị ám vàng/lam bất thường. Kiểm tra lại ánh sáng (tránh đèn sợi đốt)." };
+    if (lab.L < SKIN_BOUNDARIES.min_L) return { isValid: false, reason: 'Da quá tối. Vui lòng di chuyển ra nơi sáng hơn.' };
+    if (lab.a < SKIN_BOUNDARIES.min_a || lab.a > SKIN_BOUNDARIES.max_a) return { isValid: false, reason: 'Màu da bị ám xanh/đỏ. Kiểm tra lại ánh sáng.' };
+    if (lab.b < SKIN_BOUNDARIES.min_b || lab.b > SKIN_BOUNDARIES.max_b) return { isValid: false, reason: 'Màu da bị ám vàng/lam. Kiểm tra lại ánh sáng.' };
 
     return { isValid: true };
   }
 
-  // Helper: RGB to LAB conversion for Frontend Validation
   rgbToLab(r: number, g: number, b: number) {
     let r_ = r / 255, g_ = g / 255, b_ = b / 255;
 
-    if (r_ > 0.04045) r_ = Math.pow(((r_ + 0.055) / 1.055), 2.4);
-    else r_ = r_ / 12.92;
-
-    if (g_ > 0.04045) g_ = Math.pow(((g_ + 0.055) / 1.055), 2.4);
-    else g_ = g_ / 12.92;
-
-    if (b_ > 0.04045) b_ = Math.pow(((b_ + 0.055) / 1.055), 2.4);
-    else b_ = b_ / 12.92;
+    if (r_ > 0.04045) r_ = Math.pow(((r_ + 0.055) / 1.055), 2.4); else r_ = r_ / 12.92;
+    if (g_ > 0.04045) g_ = Math.pow(((g_ + 0.055) / 1.055), 2.4); else g_ = g_ / 12.92;
+    if (b_ > 0.04045) b_ = Math.pow(((b_ + 0.055) / 1.055), 2.4); else b_ = b_ / 12.92;
 
     r_ = r_ * 100; g_ = g_ * 100; b_ = b_ * 100;
 
@@ -238,41 +221,27 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
     X = X / 95.047; Y = Y / 100.000; Z = Z / 108.883;
 
     const func = (t: number) => (t > 0.008856) ? Math.pow(t, 1 / 3) : (7.787 * t) + (16 / 116);
-
     X = func(X); Y = func(Y); Z = func(Z);
 
-    const L = (116 * Y) - 16;
-    const a = 500 * (X - Y);
-    const b_val = 200 * (Y - Z);
-
-    return { L, a, b: b_val };
+    return { L: (116 * Y) - 16, a: 500 * (X - Y), b: 200 * (Y - Z) };
   }
 
   checkLighting(r: number, g: number, b: number): boolean {
-    // Calculate Luminance (standard formula)
-    const l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    return l > 30; // Threshold for low light
+    return (0.2126 * r + 0.7152 * g + 0.0722 * b) > 30;
   }
 
   extractColor(x: number, y: number): { r: number, g: number, b: number } | null {
     const video = this.videoElement.nativeElement;
     const canvas = this.canvasElement.nativeElement;
     const ctx = canvas.getContext('2d');
-
     if (!ctx) return null;
 
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Convert normalized coordinates to pixel coordinates
-    // Note: Video is mirrored in CSS (transform: scaleX(-1)), but data is raw.
-    // FaceTracker returns normalized x (0-1). 
-    // If MediaPipe processes the raw stream, x is correct for the raw stream.
     const pixelX = Math.floor(x * canvas.width);
     const pixelY = Math.floor(y * canvas.height);
-
-    // Get 10x10 area average
     const size = 10;
     const startX = Math.max(0, pixelX - size / 2);
     const startY = Math.max(0, pixelY - size / 2);
@@ -281,52 +250,47 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
       const frame = ctx.getImageData(startX, startY, size, size);
       let r = 0, g = 0, b = 0;
       const count = frame.data.length / 4;
-
       for (let i = 0; i < frame.data.length; i += 4) {
-        r += frame.data[i];
-        g += frame.data[i + 1];
-        b += frame.data[i + 2];
+        r += frame.data[i]; g += frame.data[i + 1]; b += frame.data[i + 2];
       }
-
-      return {
-        r: Math.round(r / count),
-        g: Math.round(g / count),
-        b: Math.round(b / count)
-      };
+      return { r: Math.round(r / count), g: Math.round(g / count), b: Math.round(b / count) };
     } catch (e) {
-      console.error("Error extracting color", e);
       return null;
     }
   }
 
+  // BUG 6 FIX: Uses environment.apiUrl instead of hardcoded localhost:5001
   findMatch(color: { r: number, g: number, b: number }) {
-    const payload = {
+    this.http.post<any[]>(`${environment.apiUrl}/shades/match`, {
       ...color,
       skinType: this.selectedSkinType
-    };
-
-    this.http.post<any[]>('http://localhost:5001/api/shades/match', payload).subscribe({
+    }).subscribe({
       next: (res) => {
         this.recommendedShades = res;
-        this.explanationText = `Recommended shades based on your skin analysis and ${this.selectedSkinType} skin type.`;
+        this.explanationText = `Đề xuất dựa trên tone da và loại da ${this.selectedSkinType} của bạn.`;
         this.showResultModal.set(true);
         this.isProcessing = false;
       },
       error: (err) => {
         console.error(err);
-        this.error = "Failed to fetch matches";
+        this.error = 'Không thể tìm shade phù hợp. Vui lòng thử lại.';
         this.isProcessing = false;
       }
     });
   }
 
   /**
-   * NEW: AI-Powered Skin Analysis
-   * Uses Gemini Vision to analyze skin and provide intelligent recommendations
+   * BUG 2 FIX + PHASE B: AI Scan with ROI optimization
+   * - Uses extractFaceROIPatches when face points available (~10KB payload)
+   * - Fallback to full frame when face not tracked
+   * - Fallback to center-sample when colorHistory empty
    */
   async scanWithAI() {
+    // TASK 5: Anti-spam guard — block duplicate clicks while processing
+    if (this.isProcessing) return;
+
     if (!this.videoElement?.nativeElement) {
-      this.error = 'Camera not initialized';
+      this.error = 'Camera chưa được khởi động';
       return;
     }
 
@@ -335,67 +299,89 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
     this.error = null;
 
     try {
-      // Capture current video frame as base64
-      const imageData = this.aiAdvisor.videoFrameToBase64(this.videoElement.nativeElement);
+      const video = this.videoElement.nativeElement;
+      const facePoints = this.faceTracker.facePoints();
 
-      // Send to AI for analysis
-      console.log('🤖 Sending image to Gemini AI...');
-      this.aiAdvisor.analyzeSkin(imageData, this.selectedSkinType).subscribe({
+      // PHASE B: Send optimized ROI patches if face is tracked (~10KB vs ~200KB)
+      let analysisObservable;
+      if (facePoints) {
+        console.log('📦 Phase B: Sending 5 ROI patches (~10KB)');
+        const roiPayload = this.aiAdvisor.extractFaceROIPatches(video, facePoints, this.selectedSkinType);
+
+        // Use avgRgb directly for colorHistory if history is empty
+        if (this.colorHistory.length === 0) {
+          this.colorHistory.push(roiPayload.avgRgb);
+        }
+
+        analysisObservable = this.aiAdvisor.analyzeSkinFromROI(roiPayload);
+      } else {
+        // Fallback: full frame (no face tracking data available)
+        console.log('🖼️ Fallback: Sending full frame');
+        const imageData = this.aiAdvisor.videoFrameToBase64(video);
+        analysisObservable = this.aiAdvisor.analyzeSkin(imageData, this.selectedSkinType);
+      }
+
+      analysisObservable.subscribe({
         next: (response) => {
           if (response.success && response.data) {
             this.aiAnalysis = response.data;
 
-            // Use AI analysis to enhance shade matching
-            // Extract the smoothed color from history
+            // Compute color for shade matching
+            let colorForMatch: { r: number; g: number; b: number };
+
             if (this.colorHistory.length > 0) {
-              const smoothedColor = this.colorHistory.reduce(
-                (acc, curr) => ({
-                  r: acc.r + curr.r,
-                  g: acc.g + curr.g,
-                  b: acc.b + curr.b
-                }),
-                { r: 0, g: 0, b: 0 }
-              );
-
-              smoothedColor.r = Math.round(smoothedColor.r / this.colorHistory.length);
-              smoothedColor.g = Math.round(smoothedColor.g / this.colorHistory.length);
-              smoothedColor.b = Math.round(smoothedColor.b / this.colorHistory.length);
-
-              // Find matches with AI-enhanced parameters
-              this.findMatchWithAI(smoothedColor, this.aiAnalysis);
+              const sum = this.colorHistory.reduce((acc, curr) => ({
+                r: acc.r + curr.r, g: acc.g + curr.g, b: acc.b + curr.b
+              }), { r: 0, g: 0, b: 0 });
+              colorForMatch = {
+                r: Math.round(sum.r / this.colorHistory.length),
+                g: Math.round(sum.g / this.colorHistory.length),
+                b: Math.round(sum.b / this.colorHistory.length)
+              };
             } else {
-              this.isProcessing = false;
-              this.isAiAnalyzing = false;
-              this.error = 'Chưa có dữ liệu màu da ổn định. Vui lòng giữ yên khuôn mặt.';
+              // BUG 2 FIX: Direct center-sample fallback instead of blocking user
+              const canvas = document.createElement('canvas');
+              canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+              const ctx = canvas.getContext('2d');
+              if (ctx) {
+                ctx.drawImage(video, 0, 0);
+                const cx = Math.floor(canvas.width / 2), cy = Math.floor(canvas.height / 2);
+                const size = 20;
+                const frame = ctx.getImageData(cx - size / 2, cy - size / 2, size, size);
+                let r = 0, g = 0, b = 0;
+                const count = frame.data.length / 4;
+                for (let i = 0; i < frame.data.length; i += 4) {
+                  r += frame.data[i]; g += frame.data[i + 1]; b += frame.data[i + 2];
+                }
+                colorForMatch = { r: Math.round(r / count), g: Math.round(g / count), b: Math.round(b / count) };
+              } else {
+                colorForMatch = { r: 180, g: 150, b: 130 }; // safe neutral fallback
+              }
             }
+
+            this.findMatchWithAI(colorForMatch, this.aiAnalysis!);
           } else {
             this.isProcessing = false;
             this.isAiAnalyzing = false;
-            this.error = response.message || 'AI analysis failed';
+            this.error = response.message || 'Phân tích AI thất bại.';
           }
         },
         error: (err) => {
           console.error('AI Analysis failed:', err);
           this.isProcessing = false;
           this.isAiAnalyzing = false;
-          this.error = 'Could not analyze skin. Using fallback method.';
+          this.error = 'Không thể phân tích da. Đang dùng phương pháp thay thế...';
 
-          // Fallback to traditional method
+          // Fallback to traditional color matching
           if (this.colorHistory.length > 0) {
-            const smoothedColor = this.colorHistory.reduce(
-              (acc, curr) => ({
-                r: acc.r + curr.r,
-                g: acc.g + curr.g,
-                b: acc.b + curr.b
-              }),
-              { r: 0, g: 0, b: 0 }
-            );
-
-            smoothedColor.r = Math.round(smoothedColor.r / this.colorHistory.length);
-            smoothedColor.g = Math.round(smoothedColor.g / this.colorHistory.length);
-            smoothedColor.b = Math.round(smoothedColor.b / this.colorHistory.length);
-
-            this.findMatch(smoothedColor);
+            const sum = this.colorHistory.reduce((acc, curr) => ({
+              r: acc.r + curr.r, g: acc.g + curr.g, b: acc.b + curr.b
+            }), { r: 0, g: 0, b: 0 });
+            this.findMatch({
+              r: Math.round(sum.r / this.colorHistory.length),
+              g: Math.round(sum.g / this.colorHistory.length),
+              b: Math.round(sum.b / this.colorHistory.length)
+            });
           }
         }
       });
@@ -404,41 +390,32 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
       console.error('AI Scan error:', error);
       this.isProcessing = false;
       this.isAiAnalyzing = false;
-      this.error = 'Failed to capture image for AI analysis';
+      this.error = 'Không thể chụp ảnh. Vui lòng thử lại.';
     }
   }
 
-  /**
-   * Find shade matches enhanced with AI analysis
-   */
+  // BUG 6 FIX: Uses environment.apiUrl (was hardcoded localhost:5001)
   findMatchWithAI(color: { r: number, g: number, b: number }, aiAnalysis: SkinAnalysis) {
     const payload = {
       ...color,
       skinType: this.selectedSkinType,
-      // Include AI insights
       undertone: aiAnalysis.undertone,
-      brightness: aiAnalysis.skinTone, // Use skinTone from Python
+      brightness: aiAnalysis.skinTone,
       toneShift: aiAnalysis.recommendedToneShift || 'exact'
     };
 
-    // Fix Port: Use 5001 for Backend (or use environment variable in real app)
-    this.http.post<any[]>('http://localhost:5001/api/shades/match', payload).subscribe({
+    this.http.post<any[]>(`${environment.apiUrl}/shades/match`, payload).subscribe({
       next: (res) => {
         this.recommendedShades = res;
-
-        // Use AI-generated explanation if available, otherwise generate locally
         this.explanationText = aiAnalysis.explanation || this.generateLocalExplanation(aiAnalysis);
-
-        // Fetch Full Routine Recommendations
         this.fetchRoutine(payload);
-
         this.showResultModal.set(true);
         this.isProcessing = false;
         this.isAiAnalyzing = false;
       },
       error: (err) => {
         console.error(err);
-        this.error = "Failed to fetch matches";
+        this.error = 'Không thể tìm shade phù hợp.';
         this.isProcessing = false;
         this.isAiAnalyzing = false;
       }
@@ -448,9 +425,9 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
   fetchRoutine(payload: any) {
     this.aiAdvisor.getRecommendations({
       skinType: payload.skinType,
-      skinTone: this.aiAnalysis?.skinTone || 'Medium', // Use actual detected skin tone
+      skinTone: this.aiAnalysis?.skinTone || 'Medium',
       undertone: payload.undertone,
-      concerns: this.aiAnalysis?.concerns || [] // Use 'concerns' field
+      concerns: this.aiAnalysis?.concerns || []
     }).subscribe(res => {
       if (res.success && res.data) {
         this.recommendationData = res.data;
@@ -459,7 +436,6 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
   }
 
   generateLocalExplanation(ai: SkinAnalysis): string {
-    // Fallback explanation generator
     let text = `AI xác định tone da bạn là ${ai.skinTone} với undertone ${ai.undertone}.`;
     if (ai.concerns && ai.concerns.length > 0 && !ai.concerns.includes('None')) {
       text += ` Phát hiện một số vấn đề: ${ai.concerns.join(', ')}.`;
@@ -467,9 +443,30 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
     return text;
   }
 
-
   closeModal() {
     this.showResultModal.set(false);
-    this.recommendationData = null; // Reset data
+    this.recommendationData = null;
+  }
+
+  // BUG 5 FIX: Add all routine products to cart
+  addAllToCart() {
+    if (!this.recommendationData?.routine) return;
+
+    let addedCount = 0;
+    const total = this.recommendationData.routine.filter((s: any) => s.product?._id).length;
+
+    for (const step of this.recommendationData.routine) {
+      if (step.product?._id) {
+        this.cartService.addToCart({ productId: step.product._id, quantity: 1 }).subscribe({
+          next: () => {
+            addedCount++;
+            if (addedCount === total) {
+              alert('✅ Đã thêm tất cả sản phẩm vào giỏ hàng!');
+            }
+          },
+          error: (err) => console.error('Add to cart error:', err)
+        });
+      }
+    }
   }
 }

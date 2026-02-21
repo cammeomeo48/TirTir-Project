@@ -145,7 +145,8 @@
                             <img [src]="recommendedShades[0].image" alt="Shade" class="shade-img">
                             <div class="shade-info">
                                 <span class="shade-name">{{ recommendedShades[0].name }}</span>
-                                <span class="match-percent">98% Match</span>
+                                <span class="match-percent">{{ (100 - (recommendedShades[0].matchScore || 0) * 2) |
+                                    number:'1.0-0' }}% Match</span>
                             </div>
                         </div>
                         <p class="match-reason">{{ explanationText }}</p>
@@ -175,7 +176,7 @@
             </div>
 
             <div class="report-footer">
-                <button class="action-btn primary">Thêm Tất Cả Vào Giỏ</button>
+                <button class="action-btn primary" (click)="addAllToCart()">Thêm Tất Cả Vào Giỏ</button>
                 <button class="action-btn secondary" (click)="closeModal()">Quét Lại</button>
             </div>
         </div>
