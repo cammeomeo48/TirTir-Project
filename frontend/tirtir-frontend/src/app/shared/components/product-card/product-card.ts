@@ -1,6 +1,7 @@
 import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-product-card',
@@ -12,7 +13,6 @@ import { RouterModule } from '@angular/router';
 })
 export class ProductCard {
   @Input() product: any;
-  // Individual inputs for use with products.data.ts
   @Input() id: string = '';
   @Input() name: string = '';
   @Input() subtitle: string = '';
@@ -24,12 +24,11 @@ export class ProductCard {
   @Input() swatches: { color: string }[] = [];
   @Input() shadeCount: number = 0;
 
+  private readonly backendUrl = environment.apiUrl.replace('/api/v1', '');
+
   get displayProduct() {
     if (this.product) {
-      return {
-        ...this.product,
-        image: this.getImageUrl(this.product)
-      };
+      return { ...this.product, image: this.getImageUrl(this.product) };
     }
     return {
       id: this.id,
@@ -46,62 +45,33 @@ export class ProductCard {
   }
 
   get productLink(): string {
-    if (this.product?.slug) {
-      return this.product.slug;
-    }
-    if (this.productSlug) {
-      return this.productSlug;
-    }
+    if (this.product?.slug) return this.product.slug;
+    if (this.productSlug) return this.productSlug;
     return this.product?.id || this.id;
   }
 
-  private getImageUrl(product: any): string {
-    // Check Thumbnail_Images first (it's a STRING, not an array!)
-    if (product.Thumbnail_Images && typeof product.Thumbnail_Images === 'string' && product.Thumbnail_Images.trim() !== '') {
-      const imagePath = product.Thumbnail_Images;
+  getImageUrl(product: any): string {
+    const resolve = (path: string): string => {
+      if (!path || typeof path !== 'string' || !path.trim()) return '';
+      if (path.startsWith('http')) return path;
+      return `${this.backendUrl}/${path.startsWith('/') ? path.slice(1) : path}`;
+    };
 
-      // If starts with 'assets/', prepend the backend server URL
-      if (imagePath.startsWith('assets/')) {
-        return `http://localhost:5001/${imagePath}`;
-      }
+    // 1. Thumbnail_Images (primary field)
+    const thumb = resolve(product?.Thumbnail_Images);
+    if (thumb) return thumb;
 
-      // If already a full URL, return as is
-      if (imagePath.startsWith('http')) {
-        return imagePath;
-      }
-
-      // Otherwise prepend backend URL with proper slashing
-      return `http://localhost:5001/${imagePath.startsWith('/') ? imagePath.slice(1) : imagePath}`;
+    // 2. images array fallback
+    if (Array.isArray(product?.images) && product.images.length > 0) {
+      const img = resolve(product.images[0]);
+      if (img) return img;
     }
 
-    // Fallback to images array if Thumbnail_Images doesn't work
-    if (product.images && Array.isArray(product.images) && product.images.length > 0) {
-      const imagePath = product.images[0];
+    // 3. image field (legacy)
+    const legacy = resolve(product?.image);
+    if (legacy) return legacy;
 
-      if (imagePath && typeof imagePath === 'string') {
-        if (imagePath.startsWith('assets/')) {
-          return `http://localhost:5001/${imagePath}`;
-        }
-        if (imagePath.startsWith('http')) {
-          return imagePath;
-        }
-        return `http://localhost:5001/${imagePath.startsWith('/') ? imagePath.slice(1) : imagePath}`;
-      }
-    }
-
-    // Fallback to image field if exists (for backward compatibility)
-    if (product.image && typeof product.image === 'string' && product.image.trim() !== '') {
-      const imagePath = product.image;
-      if (imagePath.startsWith('assets/')) {
-        return `http://localhost:5001/${imagePath}`;
-      }
-      if (imagePath.startsWith('http') || imagePath.startsWith('/assets')) {
-        return imagePath;
-      }
-      return `http://localhost:5001/${imagePath.startsWith('/') ? imagePath.slice(1) : imagePath}`;
-    }
-
-    // Final fallback to a placeholder
     return 'https://placehold.co/400x400/f5f5f5/999?text=No+Image';
   }
 }
+
