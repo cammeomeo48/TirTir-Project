@@ -1,15 +1,39 @@
 import { Component, ElementRef, ViewChild, OnDestroy, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { RouterModule } from '@angular/router';
 import { FaceTrackerService } from '../../core/services/face-tracker.service';
 import { CartService } from '../../core/services/cart.service';
 import { environment } from '../../../environments/environment';
 
+/** Response shape from POST /api/v1/shades/match */
+interface ShadeMatch {
+  _id: string;
+  Product_ID: string;
+  Product_Name: string;
+  Shade_Name: string;
+  Shade_Code: string;
+  Hex_Code: string;
+  Image_URL: string;        // relative (assets/shades/…) or absolute URL
+  Shade_Image: string;
+  matchScore: number;        // lower = better
+  deltaE: number;
+  predictedUndertone: string;
+  adjustmentNote: string;
+  Undertone: string;
+  Skin_Tone: string;
+  Coverage: number;
+  Hydration: number;
+  Coverage_Profile: string;
+  Finish_Type: string;
+  Oxidation_Risk_Level: string;
+}
+
 @Component({
   selector: 'app-shade-finder',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DecimalPipe, RouterModule],
   templateUrl: './shade-finder.html',
   styleUrls: ['./shade-finder.css']
 })
@@ -24,13 +48,21 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
   animationFrameId: number | null = null;
 
   selectedSkinType = 'Normal';
-  recommendedShades: any[] = [];
 
-  // UI States
+  // Result data from backend
+  matchResults: ShadeMatch[] = [];
+  bestMatch: ShadeMatch | null = null;
+  userUndertone = '';
+
+  // UI
   showResultModal = signal(false);
-  explanationText = '';
+  toastMessage = signal<string | null>(null);
+  private toastTimer: any = null;
 
-  // Lighting & Validation State
+  // Backend base URL (without /api/v1)
+  private readonly backendBase = environment.apiUrl.replace('/api/v1', '');
+
+  // Lighting & Validation
   lightingStatus = signal<{ isValid: boolean, message: string, type: 'success' | 'warning' | 'error' }>({
     isValid: false,
     message: 'Đang khởi động camera...',
@@ -40,10 +72,6 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
   colorHistory: { r: number, g: number, b: number }[] = [];
   readonly HISTORY_SIZE = 15;
 
-  // Toast notification
-  toastMessage = signal<string | null>(null);
-  private toastTimer: any = null;
-
   constructor(
     public faceTracker: FaceTrackerService,
     private http: HttpClient,
@@ -52,7 +80,6 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
 
   async ngOnInit() {
     await this.faceTracker.initialize();
-    // Auto-start camera — browser will prompt user for permission
     await this.startCamera();
   }
 
@@ -90,7 +117,6 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
 
   detectLoop() {
     if (!this.isCameraActive || !this.videoElement?.nativeElement) return;
-
     this.faceTracker.detectFace(this.videoElement.nativeElement);
 
     if (this.faceTracker.isFaceDetected()) {
@@ -103,7 +129,6 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
       });
       this.colorHistory = [];
     }
-
     this.animationFrameId = requestAnimationFrame(() => this.detectLoop());
   }
 
@@ -118,74 +143,110 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
       this.extractColor(points.rightCheek.x, points.rightCheek.y),
       this.extractColor(points.chin.x, points.chin.y)
     ].filter(c => c !== null) as { r: number, g: number, b: number }[];
-
     if (rawColors.length === 0) return;
 
-    const currentFrameAvg = rawColors.reduce(
-      (acc, curr) => ({ r: acc.r + curr.r, g: acc.g + curr.g, b: acc.b + curr.b }),
-      { r: 0, g: 0, b: 0 }
-    );
-    currentFrameAvg.r /= rawColors.length;
-    currentFrameAvg.g /= rawColors.length;
-    currentFrameAvg.b /= rawColors.length;
+    const avg = rawColors.reduce((a, c) => ({ r: a.r + c.r, g: a.g + c.g, b: a.b + c.b }), { r: 0, g: 0, b: 0 });
+    avg.r /= rawColors.length; avg.g /= rawColors.length; avg.b /= rawColors.length;
 
-    this.colorHistory.push(currentFrameAvg);
+    this.colorHistory.push(avg);
     if (this.colorHistory.length > this.HISTORY_SIZE) this.colorHistory.shift();
 
-    const smoothed = this.colorHistory.reduce(
-      (acc, curr) => ({ r: acc.r + curr.r, g: acc.g + curr.g, b: acc.b + curr.b }),
-      { r: 0, g: 0, b: 0 }
-    );
-    smoothed.r = Math.round(smoothed.r / this.colorHistory.length);
-    smoothed.g = Math.round(smoothed.g / this.colorHistory.length);
-    smoothed.b = Math.round(smoothed.b / this.colorHistory.length);
+    const sm = this.colorHistory.reduce((a, c) => ({ r: a.r + c.r, g: a.g + c.g, b: a.b + c.b }), { r: 0, g: 0, b: 0 });
+    sm.r = Math.round(sm.r / this.colorHistory.length);
+    sm.g = Math.round(sm.g / this.colorHistory.length);
+    sm.b = Math.round(sm.b / this.colorHistory.length);
 
-    const validation = this.validateSkinColor(smoothed.r, smoothed.g, smoothed.b);
-    if (validation.isValid) {
-      this.lightingStatus.set({ isValid: true, message: 'Ánh sáng tốt — Sẵn sàng quét!', type: 'success' });
-    } else {
-      this.lightingStatus.set({ isValid: false, message: validation.reason || 'Ánh sáng không đạt.', type: 'error' });
-    }
+    const v = this.validateSkinColor(sm.r, sm.g, sm.b);
+    this.lightingStatus.set(v.isValid
+      ? { isValid: true, message: 'Ánh sáng tốt — Sẵn sàng quét!', type: 'success' }
+      : { isValid: false, message: v.reason || 'Ánh sáng không đạt.', type: 'error' }
+    );
   }
 
   scanShade() {
     if (this.isProcessing) return;
-    if (!this.faceTracker.isFaceDetected()) return;
-    if (!this.lightingStatus().isValid) {
+    if (!this.faceTracker.isFaceDetected() || !this.lightingStatus().isValid) {
       this.error = this.lightingStatus().message;
+      return;
+    }
+    if (this.colorHistory.length < 5) {
+      this.error = 'Chưa đủ dữ liệu. Giữ yên khuôn mặt thêm 2 giây.';
       return;
     }
 
     this.isProcessing = true;
     this.error = null;
 
-    if (this.colorHistory.length > 0) {
-      const sum = this.colorHistory.reduce(
-        (acc, curr) => ({ r: acc.r + curr.r, g: acc.g + curr.g, b: acc.b + curr.b }),
-        { r: 0, g: 0, b: 0 }
-      );
-      this.findMatch({
-        r: Math.round(sum.r / this.colorHistory.length),
-        g: Math.round(sum.g / this.colorHistory.length),
-        b: Math.round(sum.b / this.colorHistory.length)
-      });
-    } else {
-      this.isProcessing = false;
-      this.error = 'Chưa có dữ liệu màu da ổn định. Vui lòng giữ yên khuôn mặt.';
-    }
+    const sum = this.colorHistory.reduce((a, c) => ({ r: a.r + c.r, g: a.g + c.g, b: a.b + c.b }), { r: 0, g: 0, b: 0 });
+    const color = {
+      r: Math.round(sum.r / this.colorHistory.length),
+      g: Math.round(sum.g / this.colorHistory.length),
+      b: Math.round(sum.b / this.colorHistory.length)
+    };
+
+    this.http.post<ShadeMatch[]>(`${environment.apiUrl}/shades/match`, {
+      ...color,
+      skinType: this.selectedSkinType
+    }).subscribe({
+      next: (results) => {
+        this.matchResults = results;
+        this.bestMatch = results.length > 0 ? results[0] : null;
+        this.userUndertone = this.bestMatch?.predictedUndertone || '';
+        this.showResultModal.set(true);
+        this.isProcessing = false;
+      },
+      error: () => {
+        this.error = 'Không thể kết nối server. Vui lòng thử lại.';
+        this.isProcessing = false;
+      }
+    });
   }
 
+  /** Resolve image path: relative → full URL, absolute → as-is */
+  resolveImage(path: string | undefined): string {
+    if (!path) return 'https://placehold.co/300x300/f5f5f5/999?text=No+Image';
+    if (path.startsWith('http')) return path;
+    return `${this.backendBase}/${path.startsWith('/') ? path.slice(1) : path}`;
+  }
+
+  /** Compute match percentage from matchScore (lower score = higher %) */
+  matchPercent(score: number): number {
+    // DeltaE < 5 = excellent, 5-10 = good, 10-20 = fair, >20 = poor
+    // Cap at 100, floor at 0
+    return Math.max(0, Math.min(100, Math.round(100 - score * 3)));
+  }
+
+  addToCart(match: ShadeMatch) {
+    if (!match.Product_ID) return;
+    this.cartService.addToCart({
+      productId: match.Product_ID,
+      quantity: 1,
+      shade: match.Shade_Name
+    }).subscribe({
+      next: () => this.showToast(`✅ Đã thêm ${match.Product_Name} - ${match.Shade_Name} vào giỏ!`),
+      error: () => this.showToast('❌ Không thể thêm. Vui lòng thử lại.')
+    });
+  }
+
+  closeModal() {
+    this.showResultModal.set(false);
+  }
+
+  showToast(message: string) {
+    this.toastMessage.set(message);
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => this.toastMessage.set(null), 3000);
+  }
+
+  // ──── Color Science Utils ────
+
   validateSkinColor(r: number, g: number, b: number): { isValid: boolean, reason?: string } {
-    const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    if (luminance <= 30) return { isValid: false, reason: 'Ánh sáng quá yếu. Vui lòng bật thêm đèn.' };
-
+    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    if (lum <= 30) return { isValid: false, reason: 'Ánh sáng quá yếu. Vui lòng bật thêm đèn.' };
     const lab = this.rgbToLab(r, g, b);
-    const BOUNDS = { min_L: 25, min_a: 5, max_a: 45, min_b: 5, max_b: 55 };
-
-    if (lab.L < BOUNDS.min_L) return { isValid: false, reason: 'Da quá tối. Di chuyển ra nơi sáng hơn.' };
-    if (lab.a < BOUNDS.min_a || lab.a > BOUNDS.max_a) return { isValid: false, reason: 'Màu da bị ám. Kiểm tra lại ánh sáng.' };
-    if (lab.b < BOUNDS.min_b || lab.b > BOUNDS.max_b) return { isValid: false, reason: 'Màu da bị ám vàng. Kiểm tra ánh sáng.' };
-
+    if (lab.L < 25) return { isValid: false, reason: 'Da quá tối. Di chuyển ra nơi sáng hơn.' };
+    if (lab.a < 5 || lab.a > 45) return { isValid: false, reason: 'Màu da bị ám. Kiểm tra lại ánh sáng.' };
+    if (lab.b < 5 || lab.b > 55) return { isValid: false, reason: 'Ánh sáng bị ám vàng/xanh. Kiểm tra lại.' };
     return { isValid: true };
   }
 
@@ -208,62 +269,20 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
     const canvas = this.canvasElement.nativeElement;
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
-
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
     const px = Math.floor(x * canvas.width);
     const py = Math.floor(y * canvas.height);
-    const size = 10;
-    const sx = Math.max(0, px - size / 2);
-    const sy = Math.max(0, py - size / 2);
-
+    const sz = 10;
     try {
-      const frame = ctx.getImageData(sx, sy, size, size);
+      const frame = ctx.getImageData(Math.max(0, px - sz / 2), Math.max(0, py - sz / 2), sz, sz);
       let r = 0, g = 0, b = 0;
-      const count = frame.data.length / 4;
+      const n = frame.data.length / 4;
       for (let i = 0; i < frame.data.length; i += 4) {
         r += frame.data[i]; g += frame.data[i + 1]; b += frame.data[i + 2];
       }
-      return { r: Math.round(r / count), g: Math.round(g / count), b: Math.round(b / count) };
+      return { r: Math.round(r / n), g: Math.round(g / n), b: Math.round(b / n) };
     } catch { return null; }
-  }
-
-  findMatch(color: { r: number, g: number, b: number }) {
-    this.http.post<any[]>(`${environment.apiUrl}/shades/match`, {
-      ...color,
-      skinType: this.selectedSkinType
-    }).subscribe({
-      next: (res) => {
-        this.recommendedShades = res;
-        this.explanationText = `Gợi ý dựa trên tone da và loại da ${this.selectedSkinType} của bạn.`;
-        this.showResultModal.set(true);
-        this.isProcessing = false;
-      },
-      error: () => {
-        this.error = 'Không thể tìm shade phù hợp. Vui lòng thử lại.';
-        this.isProcessing = false;
-      }
-    });
-  }
-
-  closeModal() {
-    this.showResultModal.set(false);
-    this.recommendedShades = [];
-  }
-
-  addToCart(shade: any) {
-    if (!shade?.productId) return;
-    this.cartService.addToCart({ productId: shade.productId, quantity: 1, shade: shade.name }).subscribe({
-      next: () => this.showToast('✅ Đã thêm vào giỏ hàng!'),
-      error: () => this.showToast('❌ Không thể thêm. Vui lòng thử lại.')
-    });
-  }
-
-  showToast(message: string) {
-    this.toastMessage.set(message);
-    if (this.toastTimer) clearTimeout(this.toastTimer);
-    this.toastTimer = setTimeout(() => this.toastMessage.set(null), 3000);
   }
 }

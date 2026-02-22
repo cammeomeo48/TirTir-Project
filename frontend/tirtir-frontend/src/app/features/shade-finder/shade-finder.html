@@ -1,19 +1,18 @@
 <div class="shade-finder-container">
     <div class="sf-header">
         <h2>Virtual Shade Finder</h2>
-        <p class="sf-subtitle">Để camera nhận diện tone da và gợi ý shade cushion phù hợp nhất</p>
+        <p class="sf-subtitle">Quét tông da và nhận gợi ý cushion TirTir phù hợp nhất với bạn</p>
     </div>
 
-    <!-- Camera Area -->
+    <!-- Camera -->
     <div class="camera-wrap">
         <div class="camera-container">
             <video #videoElement autoplay playsinline></video>
             <canvas #canvasElement class="hidden"></canvas>
 
-            <!-- Beautiful SVG face guide overlay -->
+            <!-- SVG face guide -->
             <div class="face-guide-overlay" *ngIf="isCameraActive">
                 <svg class="face-guide-svg" viewBox="0 0 640 480" preserveAspectRatio="none">
-                    <!-- Dimming mask with oval cutout -->
                     <defs>
                         <mask id="ovalMask">
                             <rect width="640" height="480" fill="white" />
@@ -21,124 +20,156 @@
                         </mask>
                     </defs>
                     <rect width="640" height="480" fill="rgba(0,0,0,0.38)" mask="url(#ovalMask)" />
-
-                    <!-- Animated oval frame -->
                     <ellipse cx="320" cy="230" rx="155" ry="190" fill="none"
                         [attr.stroke]="lightingStatus().type === 'success' ? '#4ade80' : lightingStatus().type === 'error' ? '#f87171' : '#facc15'"
                         stroke-width="2.5" class="oval-frame" [class.pulse-green]="lightingStatus().type === 'success'"
                         [class.pulse-yellow]="lightingStatus().type === 'warning'" />
-
-                    <!-- Corner tick marks for premium feel -->
                     <g [attr.stroke]="lightingStatus().type === 'success' ? '#4ade80' : '#facc15'" stroke-width="3"
                         stroke-linecap="round">
-                        <!-- Top -->
                         <line x1="300" y1="40" x2="340" y2="40" />
-                        <!-- Bottom -->
                         <line x1="300" y1="420" x2="340" y2="420" />
-                        <!-- Left -->
                         <line x1="160" y1="210" x2="160" y2="250" />
-                        <!-- Right -->
                         <line x1="480" y1="210" x2="480" y2="250" />
                     </g>
-
-                    <!-- Scan points when face detected -->
                     <ng-container *ngIf="faceTracker.isFaceDetected() && faceTracker.facePoints(); let pts">
-                        <!-- Forehead dot -->
                         <circle [attr.cx]="(1 - pts.forehead.x) * 640" [attr.cy]="pts.forehead.y * 480" r="5"
                             fill="rgba(74,222,128,0.85)" class="scan-dot" />
-                        <!-- Nose dot -->
                         <circle [attr.cx]="(1 - pts.nose.x) * 640" [attr.cy]="pts.nose.y * 480" r="4"
                             fill="rgba(74,222,128,0.85)" class="scan-dot" />
-                        <!-- Left cheek -->
                         <circle [attr.cx]="(1 - pts.leftCheek.x) * 640" [attr.cy]="pts.leftCheek.y * 480" r="6"
                             fill="rgba(74,222,128,0.85)" class="scan-dot" />
-                        <!-- Right cheek -->
                         <circle [attr.cx]="(1 - pts.rightCheek.x) * 640" [attr.cy]="pts.rightCheek.y * 480" r="6"
                             fill="rgba(74,222,128,0.85)" class="scan-dot" />
-                        <!-- Chin dot -->
                         <circle [attr.cx]="(1 - pts.chin.x) * 640" [attr.cy]="pts.chin.y * 480" r="4"
                             fill="rgba(74,222,128,0.85)" class="scan-dot" />
                     </ng-container>
                 </svg>
             </div>
 
-            <!-- Camera Off / Loading Placeholder -->
+            <!-- Loading state -->
             <div class="camera-off-placeholder" *ngIf="!isCameraActive">
                 <div class="cam-spinner"></div>
                 <p>Đang khởi động camera...</p>
                 <p class="cam-hint">Vui lòng cho phép truy cập camera khi được hỏi</p>
             </div>
-        </div>
 
-        <!-- Lighting Status -->
-        <div class="lighting-chip" *ngIf="isCameraActive" [ngClass]="lightingStatus().type">
-            <span class="chip-dot"></span>
-            <span>{{ lightingStatus().message }}</span>
-        </div>
+            <!-- Lighting chip -->
+            <div class="lighting-chip" *ngIf="isCameraActive" [ngClass]="lightingStatus().type">
+                <span class="chip-dot"></span>
+                <span>{{ lightingStatus().message }}</span>
+            </div>
 
-        <!-- Processing Overlay -->
-        <div class="scanning-overlay" *ngIf="isProcessing">
-            <div class="scan-line"></div>
-            <p>Đang phân tích tông da...</p>
-        </div>
-    </div>
-
-    <!-- Controls -->
-    <div class="controls-panel">
-        <div class="skin-type-row">
-            <label>Loại da</label>
-            <div class="skin-tabs">
-                <button class="skin-tab" [class.active]="selectedSkinType === 'Normal'"
-                    (click)="selectedSkinType = 'Normal'">Thường</button>
-                <button class="skin-tab" [class.active]="selectedSkinType === 'Oily'"
-                    (click)="selectedSkinType = 'Oily'">Dầu</button>
-                <button class="skin-tab" [class.active]="selectedSkinType === 'Dry'"
-                    (click)="selectedSkinType = 'Dry'">Khô</button>
+            <!-- Scanning overlay -->
+            <div class="scanning-overlay" *ngIf="isProcessing">
+                <div class="scan-line"></div>
+                <p>Đang phân tích tông da...</p>
             </div>
         </div>
 
-        <div class="action-row">
-            <button class="btn-scan" [disabled]="!isCameraActive || !lightingStatus().isValid || isProcessing"
-                (click)="scanShade()">
-                <span>✨</span> {{ isProcessing ? 'Đang quét...' : 'Quét Shade' }}
-            </button>
-        </div>
-
-        <p class="error-msg" *ngIf="error">{{ error }}</p>
-
-        <div class="tip-box" *ngIf="isCameraActive && !lightingStatus().isValid">
-            <span>💡</span>
-            <span>Nhìn thẳng vào camera, đảm bảo ánh sáng tự nhiên chiếu đều lên mặt</span>
-        </div>
-    </div>
-</div>
-
-<!-- RESULTS MODAL -->
-<div class="modal-backdrop" *ngIf="showResultModal()" (click)="closeModal()">
-    <div class="result-modal" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-            <h3>✨ Shade Gợi Ý Cho Bạn</h3>
-            <button class="close-btn" (click)="closeModal()">✕</button>
-        </div>
-
-        <div class="shades-grid">
-            <div class="shade-card" *ngFor="let shade of recommendedShades; let i = index" [class.top-pick]="i === 0">
-                <div class="shade-badge" *ngIf="i === 0">Best Match</div>
-                <img [src]="shade.image || 'https://placehold.co/200x200/f5f5f5/999?text=Shade'" [alt]="shade.name"
-                    class="shade-img"
-                    (error)="$any($event.target).src='https://placehold.co/200x200/f5f5f5/999?text=Shade'" />
-                <div class="shade-info">
-                    <span class="shade-name">{{ shade.name }}</span>
-                    <span class="shade-code" *ngIf="shade.code">{{ shade.code }}</span>
+        <!-- Controls -->
+        <div class="controls-panel">
+            <div class="skin-type-row">
+                <label>Loại da</label>
+                <div class="skin-tabs">
+                    <button class="skin-tab" [class.active]="selectedSkinType === 'Normal'"
+                        (click)="selectedSkinType = 'Normal'">Thường</button>
+                    <button class="skin-tab" [class.active]="selectedSkinType === 'Oily'"
+                        (click)="selectedSkinType = 'Oily'">Dầu</button>
+                    <button class="skin-tab" [class.active]="selectedSkinType === 'Dry'"
+                        (click)="selectedSkinType = 'Dry'">Khô</button>
                 </div>
-                <button class="btn-add-cart" (click)="addToCart(shade)">Thêm vào giỏ</button>
+            </div>
+            <div class="action-row">
+                <button class="btn-scan" [disabled]="!isCameraActive || !lightingStatus().isValid || isProcessing"
+                    (click)="scanShade()">
+                    <span>✨</span> {{ isProcessing ? 'Đang quét...' : 'Quét Shade' }}
+                </button>
+            </div>
+            <p class="error-msg" *ngIf="error">{{ error }}</p>
+            <div class="tip-box" *ngIf="isCameraActive && !lightingStatus().isValid">
+                <span>💡</span>
+                <span>Nhìn thẳng vào camera, đảm bảo ánh sáng tự nhiên chiếu đều lên mặt</span>
             </div>
         </div>
-
-        <p class="explanation">{{ explanationText }}</p>
     </div>
-</div>
 
-<!-- Toast -->
-<div class="toast" *ngIf="toastMessage()">{{ toastMessage() }}</div>
+    <!-- =============================================
+       RESULT MODAL — PRODUCT RECOMMENDATION
+       ============================================= -->
+    <div class="modal-backdrop" *ngIf="showResultModal()" (click)="closeModal()">
+        <div class="result-modal" (click)="$event.stopPropagation()">
+
+            <!-- Header -->
+            <div class="modal-top">
+                <h3>✨ Shade phù hợp nhất cho bạn</h3>
+                <button class="close-x" (click)="closeModal()">✕</button>
+            </div>
+
+            <!-- BEST MATCH — Hero section -->
+            <div class="best-match-hero" *ngIf="bestMatch">
+                <div class="hero-left">
+                    <img [src]="resolveImage(bestMatch.Image_URL || bestMatch.Shade_Image)"
+                        [alt]="bestMatch.Product_Name" class="hero-img"
+                        (error)="$any($event.target).src='https://placehold.co/300x300/f5f5f5/999?text=TirTir'" />
+                </div>
+                <div class="hero-right">
+                    <span class="best-badge">🏆 Best Match</span>
+                    <h4 class="product-title">{{ bestMatch.Product_Name }}</h4>
+                    <div class="shade-row">
+                        <span class="shade-swatch" [style.background]="bestMatch.Hex_Code"></span>
+                        <span class="shade-label">{{ bestMatch.Shade_Name }}</span>
+                        <span class="shade-code-tag">{{ bestMatch.Shade_Code }}</span>
+                    </div>
+                    <div class="match-bar-wrap">
+                        <div class="match-bar" [style.width.%]="matchPercent(bestMatch.matchScore)"></div>
+                    </div>
+                    <span class="match-text">{{ matchPercent(bestMatch.matchScore) }}% phù hợp</span>
+                    <div class="meta-chips">
+                        <span class="chip" *ngIf="bestMatch.predictedUndertone">
+                            Undertone: <strong>{{ bestMatch.predictedUndertone }}</strong>
+                        </span>
+                        <span class="chip" *ngIf="bestMatch.Coverage_Profile">
+                            {{ bestMatch.Coverage_Profile }}
+                        </span>
+                        <span class="chip" *ngIf="bestMatch.Finish_Type">
+                            {{ bestMatch.Finish_Type }}
+                        </span>
+                    </div>
+                    <p class="adjust-note" *ngIf="bestMatch.adjustmentNote">{{ bestMatch.adjustmentNote }}</p>
+                    <button class="btn-buy" (click)="addToCart(bestMatch)">🛒 Thêm vào giỏ hàng</button>
+                </div>
+            </div>
+
+            <!-- OTHER MATCHES -->
+            <div class="other-section" *ngIf="matchResults.length > 1">
+                <h4>Các shade khác có thể phù hợp</h4>
+                <div class="other-list">
+                    <div class="other-card" *ngFor="let shade of matchResults.slice(1)">
+                        <img [src]="resolveImage(shade.Image_URL || shade.Shade_Image)" [alt]="shade.Product_Name"
+                            class="other-img"
+                            (error)="$any($event.target).src='https://placehold.co/100x100/f5f5f5/999?text=TirTir'" />
+                        <div class="other-info">
+                            <span class="other-product-name">{{ shade.Product_Name }}</span>
+                            <div class="other-shade-row">
+                                <span class="shade-swatch small" [style.background]="shade.Hex_Code"></span>
+                                <span>{{ shade.Shade_Name }}</span>
+                                <span class="shade-code-tag small">{{ shade.Shade_Code }}</span>
+                            </div>
+                        </div>
+                        <div class="other-right">
+                            <span class="match-pct">{{ matchPercent(shade.matchScore) }}%</span>
+                            <button class="btn-add-sm" (click)="addToCart(shade)">Thêm</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-bottom">
+                <button class="btn-retry" (click)="closeModal()">🔄 Quét lại</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" *ngIf="toastMessage()">{{ toastMessage() }}</div>
 </div>
