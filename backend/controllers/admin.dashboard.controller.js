@@ -227,6 +227,8 @@ exports.getAllOrders = async (req, res) => {
 
         const statusFilter = req.query.status;
         const search = req.query.search;
+        const startDate = req.query.startDate; // ISO date string: 2024-01-01
+        const endDate = req.query.endDate;     // ISO date string: 2024-12-31
 
         let query = {};
 
@@ -238,6 +240,18 @@ exports.getAllOrders = async (req, res) => {
             const isValidObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
             if (isValidObjectId(search)) {
                 query._id = search;
+            }
+        }
+
+        // Date range filter
+        if (startDate || endDate) {
+            query.createdAt = {};
+            if (startDate) query.createdAt.$gte = new Date(startDate);
+            if (endDate) {
+                // Include the full endDate day (set to 23:59:59)
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999);
+                query.createdAt.$lte = end;
             }
         }
 

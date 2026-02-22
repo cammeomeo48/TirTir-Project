@@ -1,14 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const { protect, authorize } = require('../middlewares/auth');
-const { 
-    getStats, 
-    getRevenueChart, 
-    getTopProducts, 
-    getCustomerStats, 
+const {
+    getStats,
+    getRevenueChart,
+    getTopProducts,
+    getCustomerStats,
     getAllOrders,
     getOrderStats
 } = require('../controllers/admin.dashboard.controller');
+const { getAllReviewsAdmin, deleteReview } = require('../controllers/review.controller');
 
 // All routes are protected and require admin role
 router.use(protect);
@@ -29,7 +30,14 @@ router.get('/dashboard/customers', getCustomerStats);
 // GET /api/admin/orders/stats
 router.get('/orders/stats', getOrderStats);
 
-// GET /api/admin/orders
+// GET /api/admin/orders  (supports ?status=&search=&startDate=&endDate=)
 router.get('/orders', getAllOrders);
 
+// ─── Review Moderation ───────────────────────────────────
+// GET  /api/v1/admin/reviews        List all reviews (paginated, ?rating=)
+router.get('/reviews', getAllReviewsAdmin);
+// DELETE /api/v1/admin/reviews/:id  Remove any review
+router.delete('/reviews/:id', deleteReview);
+
 module.exports = router;
+

@@ -1,15 +1,24 @@
 const User = require('../models/user.model');
 
 // GET /api/v1/admin/users
-// List all users with pagination & search
+// List all users with pagination, search & role filter
 exports.getAllUsers = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
         const search = req.query.search; // Name or Email
+        const roleFilter = req.query.role; // Filter by role: user | admin | customer_service | inventory_staff
 
-        let query = { role: 'user' }; // Only list regular users, not admins (optional choice)
+        let query = {};
+
+        // Apply role filter if provided, otherwise default to non-admin users
+        if (roleFilter) {
+            query.role = roleFilter;
+        } else {
+            // Default: show all non-admin users (customers)
+            query.role = 'user';
+        }
 
         if (search) {
             query.$or = [
@@ -29,7 +38,8 @@ exports.getAllUsers = async (req, res) => {
             users,
             page,
             pages: Math.ceil(total / limit),
-            total
+            total,
+            roleFilter: roleFilter || 'user'
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -68,10 +78,10 @@ exports.updateUserStatus = async (req, res) => {
         user.isBlocked = isBlocked;
         await user.save();
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             message: `User ${isBlocked ? 'blocked' : 'unblocked'} successfully`,
-            user 
+            user
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -151,7 +161,7 @@ exports.createAdminUser = async (req, res) => {
 exports.updateUserRole = async (req, res) => {
     try {
         const { role } = req.body;
-        
+
         // Validate role
         if (!['user', 'admin', 'inventory_staff', 'customer_service'].includes(role)) {
             return res.status(400).json({ message: 'Invalid role' });
@@ -165,7 +175,7 @@ exports.updateUserRole = async (req, res) => {
 
         // Prevent modifying the main admin (optional safety check)
         if (user.email === 'admin@tirtir.com' && req.user.email !== 'admin@tirtir.com') {
-             return res.status(403).json({ message: 'Cannot modify the main admin' });
+            return res.status(403).json({ message: 'Cannot modify the main admin' });
         }
 
         user.role = role;
