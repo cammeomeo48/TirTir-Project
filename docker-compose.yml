@@ -3,19 +3,30 @@ version: '3.8'
 services:
   # ─── Redis Cache ────────────────────────────────────
   redis:
-    image: redis:alpine
+    image: redis:7-alpine
     ports:
       - "6379:6379"
     restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
-  # ─── FastAPI AI Microservice (Python 3.11) ──────────
+  # ─── FastAPI AI Microservice ─────────────────────────
   ai-service:
     build: ./ai-service
     ports:
       - "8000:8000"
     volumes:
-      - ./ai-service:/app # Hot-reload Python files
+      - ./ai-service:/app # Hot-reload Python files in development
     restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s # Give model time to load on first startup
 
   # ─── Node.js Backend ────────────────────────────────
   backend:
@@ -25,21 +36,25 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      # Override service URLs to use Docker internal network
+      # Override service URLs to use Docker internal network names
       - AI_SERVICE_URL=http://ai-service:8000
       - REDIS_URL=redis://redis:6379
     volumes:
       - ./backend:/app
       - /app/node_modules # Prevent host node_modules from overwriting container's
     depends_on:
-      - ai-service
-      - redis
+      ai-service:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
-  # ─── Frontend: Chạy NGOÀI Docker (ng serve) ────────
-  # Angular dev server chạy native cho performance tốt hơn.
-  # Nếu cần build prod, dùng Nginx Alpine:
+  # ─── Frontend (Production Build — Optional) ─────────
+  # For development: run `ng serve` natively (faster HMR).
+  # Uncomment for a prod-like Docker build using Nginx:
   #
   # frontend:
   #   build: ./frontend/tirtir-frontend
   #   ports:
   #     - "4200:80"
+  #   depends_on:
+  #     - backend
