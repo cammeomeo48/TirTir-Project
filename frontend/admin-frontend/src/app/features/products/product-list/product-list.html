@@ -6,7 +6,6 @@
             <p class="subtitle">Manage your product catalog</p>
         </div>
         <button class="btn btn-primary" routerLink="/products/add">
-            <span class="icon">+</span>
             Add Product
         </button>
     </div>
@@ -80,11 +79,12 @@
                         </span>
                     </td>
                     <td class="actions">
-                        <button class="btn-icon btn-edit" [routerLink]="['/products/edit', product._id]" title="Edit">
-                            ✏️
+                        <button class="btn btn-sm btn-outline" [routerLink]="['/products/edit', product._id]"
+                            title="Edit">
+                            Edit
                         </button>
-                        <button class="btn-icon btn-delete" (click)="deleteProduct(product)" title="Delete">
-                            🗑️
+                        <button class="btn btn-sm btn-danger" (click)="deleteProduct(product)" title="Delete">
+                            Delete
                         </button>
                     </td>
                 </tr>

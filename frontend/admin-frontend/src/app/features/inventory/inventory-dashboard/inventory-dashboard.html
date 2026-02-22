@@ -5,75 +5,33 @@
             <p class="subtitle">Monitor stock levels and track adjustments</p>
         </div>
         <div class="actions">
-            <button (click)="exportData()" class="btn-export" *ngIf="alerts.length > 0">
+            <button (click)="exportData()" class="btn btn-outline" *ngIf="alerts.length > 0">
                 Export Alerts
             </button>
-            <a [routerLink]="['/inventory/logs']" class="log-btn">View Full Logs</a>
+            <a [routerLink]="['/inventory/logs']" class="btn btn-primary">View Full Logs</a>
         </div>
     </div>
 
     <!-- Stats Grid -->
     <div class="stats-grid" *ngIf="!statsLoading && stats">
         <div class="stat-card">
-            <div class="stat-icon products-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path
-                        d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
-                    </path>
-                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                </svg>
-            </div>
-            <div class="stat-info">
-                <span class="stat-value">{{ stats.totalProducts }}</span>
-                <span class="stat-label">Total Products</span>
-            </div>
+            <div class="stat-label">Total Products</div>
+            <div class="stat-value">{{ stats.totalProducts }}</div>
         </div>
 
-        <div class="stat-card">
-            <div class="stat-icon low-stock-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
-                    </path>
-                    <line x1="12" y1="9" x2="12" y2="13"></line>
-                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                </svg>
-            </div>
-            <div class="stat-info">
-                <span class="stat-value">{{ stats.lowStockItems }}</span>
-                <span class="stat-label">Low Stock Items</span>
-            </div>
+        <div class="stat-card warning">
+            <div class="stat-label">Low Stock Items</div>
+            <div class="stat-value">{{ stats.lowStockItems }}</div>
         </div>
 
-        <div class="stat-card">
-            <div class="stat-icon out-stock-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="15" y1="9" x2="9" y2="15"></line>
-                    <line x1="9" y1="9" x2="15" y2="15"></line>
-                </svg>
-            </div>
-            <div class="stat-info">
-                <span class="stat-value">{{ stats.outOfStockItems }}</span>
-                <span class="stat-label">Out of Stock</span>
-            </div>
+        <div class="stat-card danger">
+            <div class="stat-label">Out of Stock</div>
+            <div class="stat-value">{{ stats.outOfStockItems }}</div>
         </div>
 
-        <div class="stat-card">
-            <div class="stat-icon value-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="12" y1="1" x2="12" y2="23"></line>
-                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                </svg>
-            </div>
-            <div class="stat-info">
-                <span class="stat-value">{{ formatCurrency(stats.totalValue) }}</span>
-                <span class="stat-label">Total Inventory Value</span>
-            </div>
+        <div class="stat-card success">
+            <div class="stat-label">Total Inventory Value</div>
+            <div class="stat-value">{{ formatCurrency(stats.totalValue) }}</div>
         </div>
     </div>
 
@@ -81,7 +39,7 @@
     <div class="alerts-section">
         <div class="section-header">
             <h2>Low Stock Alerts</h2>
-            <span class="badge" *ngIf="alerts.length > 0">{{ alerts.length }} Critical Items</span>
+            <span class="badge badge-danger" *ngIf="alerts.length > 0">{{ alerts.length }} Critical</span>
         </div>
 
         <div class="table-container" *ngIf="!loading && alerts.length > 0">
@@ -90,30 +48,28 @@
                     <tr>
                         <th>Product</th>
                         <th>SKU</th>
-                        <th>Current Stock</th>
+                        <th class="text-center">Current Stock</th>
                         <th>Status</th>
-                        <th>Action</th>
+                        <th class="text-right">Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr *ngFor="let item of alerts">
                         <td class="product-cell">
-                            <div class="product-info">
-                                <span class="product-name">{{ item.name }}</span>
-                            </div>
+                            <span class="product-name">{{ item.name }}</span>
                         </td>
                         <td>{{ item.sku }}</td>
-                        <td class="stock-cell">
+                        <td class="text-center">
                             <span class="stock-value" [class.critical]="item.stock === 0">{{ item.stock }}</span>
                         </td>
                         <td>
-                            <span class="status-badge" [class.out-of-stock]="item.stock === 0"
-                                [class.low-stock]="item.stock > 0">
+                            <span class="status-badge" [class.danger]="item.stock === 0"
+                                [class.warning]="item.stock > 0">
                                 {{ item.stock === 0 ? 'Out of Stock' : 'Low Stock' }}
                             </span>
                         </td>
-                        <td>
-                            <a [routerLink]="['/inventory/adjust', item._id]" class="adjust-btn">Restock</a>
+                        <td class="text-right">
+                            <a [routerLink]="['/inventory/adjust', item._id]" class="btn btn-sm btn-primary">Restock</a>
                         </td>
                     </tr>
                 </tbody>
@@ -121,15 +77,13 @@
         </div>
 
         <div class="empty-state" *ngIf="!loading && alerts.length === 0">
-            <div class="empty-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="1">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                </svg>
-            </div>
             <h3>All Good!</h3>
             <p>No low stock items detected.</p>
+        </div>
+
+        <div class="loading-state" *ngIf="loading">
+            <div class="spinner"></div>
+            <p>Loading inventory data...</p>
         </div>
     </div>
 </div>

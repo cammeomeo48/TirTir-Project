@@ -1,3 +1,7 @@
+/* ============================================
+   MAIN LAYOUT - CONTAINER STRUCTURE
+   ============================================ */
+
 .layout-container {
     display: flex;
     height: 100vh;
@@ -8,18 +12,25 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    margin-left: var(--sidebar-width, 260px);
-    transition: margin-left 0.3s ease;
-    background-color: var(--bg-body, #ffffff);
-    /* Use global white */
+    margin-left: var(--sidebar-width);
+    transition: margin-left var(--transition-slow);
+    background-color: var(--bg-body);
 }
 
 .main-content.sidebar-collapsed {
-    margin-left: 80px;
+    margin-left: var(--sidebar-collapsed);
 }
 
 .content-area {
     flex: 1;
     overflow-y: auto;
-    padding: 24px;
+    overflow-x: hidden;
+    padding: var(--spacing-lg);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .content-area {
+        padding: var(--spacing-md);
+    }
 }

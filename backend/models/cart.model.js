@@ -35,7 +35,7 @@ const CartSchema = new mongoose.Schema({
         required: true,
         default: 0
     },
-    recoveryNotificationSent: {
+    abandonedEmailSent: {
         type: Boolean,
         default: false
     }

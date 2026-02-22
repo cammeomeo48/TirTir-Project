@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  # ─── Redis Cache ────────────────────────────────────
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  # ─── FastAPI AI Microservice (Python 3.11) ──────────
+  ai-service:
+    build: ./ai-service
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ai-service:/app # Hot-reload Python files
+    restart: unless-stopped
+
+  # ─── Node.js Backend ────────────────────────────────
+  backend:
+    build: ./backend
+    ports:
+      - "5001:5001"
+    env_file:
+      - ./backend/.env
+    environment:
+      # Override service URLs to use Docker internal network
+      - AI_SERVICE_URL=http://ai-service:8000
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - ./backend:/app
+      - /app/node_modules # Prevent host node_modules from overwriting container's
+    depends_on:
+      - ai-service
+      - redis
+    restart: unless-stopped
+  # ─── Frontend: Chạy NGOÀI Docker (ng serve) ────────
+  # Angular dev server chạy native cho performance tốt hơn.
+  # Nếu cần build prod, dùng Nginx Alpine:
+  #
+  # frontend:
+  #   build: ./frontend/tirtir-frontend
+  #   ports:
+  #     - "4200:80"

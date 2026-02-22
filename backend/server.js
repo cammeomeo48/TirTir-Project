@@ -14,6 +14,7 @@ const { nodeProfilingIntegration } = require("@sentry/profiling-node"); // Keep 
 
 const errorHandler = require('./middlewares/error');
 const logger = require('./utils/logger');
+require('./cron/abandonedCart.cron'); // Initialize Cron Jobs
 
 const { apiLimiter } = require('./middlewares/rateLimit');
 
