@@ -52,6 +52,8 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
 
   async ngOnInit() {
     await this.faceTracker.initialize();
+    // Auto-start camera — browser will prompt user for permission
+    await this.startCamera();
   }
 
   ngOnDestroy() {
