@@ -4,24 +4,12 @@
 
 <div class="content-card">
   <div *ngIf="loading" class="loading-spinner">Loading settings...</div>
-  
+
   <div *ngIf="message" class="alert" [ngClass]="message.type">
     {{ message.text }}
   </div>
 
   <form [formGroup]="settingsForm" (ngSubmit)="onSubmit()" *ngIf="!loading">
-    <!-- Banner Section -->
-    <div class="section">
-      <h3>Homepage Banner</h3>
-      <div class="form-group">
-        <div class="banner-preview" *ngIf="bannerPreview">
-          <img [src]="bannerPreview" alt="Banner Preview">
-        </div>
-        <input type="file" (change)="onBannerSelected($event)" accept="image/*" class="file-input">
-        <input type="hidden" formControlName="bannerUrl">
-      </div>
-    </div>
-
     <!-- Shipping Section -->
     <div class="section">
       <h3>Shipping Configuration</h3>

@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
@@ -25,14 +25,11 @@ interface MenuGroup {
     styleUrls: ['./sidebar.component.css']
 })
 export class SidebarComponent implements OnInit {
-    @Input() collapsed = false;
-    @Output() collapsedChange = new EventEmitter<boolean>();
-
     allMenuGroups: MenuGroup[] = [
         {
             title: 'GENERAL',
             items: [
-                { label: 'Dashboard', icon: '📊', route: '/dashboard' }, // All
+                { label: 'Dashboard', icon: '📊', route: '/dashboard' },
                 { label: 'Products', icon: '🛍️', route: '/products', roles: ['admin'] },
                 { label: 'Inventory', icon: '📦', route: '/inventory', roles: ['admin', 'inventory_staff'] },
                 { label: 'Orders', icon: '📄', route: '/orders', roles: ['admin', 'customer_service'] },
@@ -44,14 +41,8 @@ export class SidebarComponent implements OnInit {
         {
             title: 'SYSTEM',
             items: [
-                { label: 'Staff Users', icon: '🛡️', route: '/users', roles: ['admin'] } // New
-            ]
-        },
-        {
-            title: 'ACCOUNT',
-            items: [
+                { label: 'Staff Users', icon: '🛡️', route: '/users', roles: ['admin'] },
                 { label: 'Settings', icon: '⚙️', route: '/settings', roles: ['admin'] },
-                { label: 'Help', icon: '❓', route: '/help' } // All
             ]
         }
     ];
@@ -88,8 +79,4 @@ export class SidebarComponent implements OnInit {
         }).filter(group => group.items.length > 0); // Remove empty groups
     }
 
-    toggleCollapse() {
-        this.collapsed = !this.collapsed;
-        this.collapsedChange.emit(this.collapsed);
-    }
 }

@@ -1,8 +1,8 @@
 <div class="layout-container">
-    <app-sidebar [collapsed]="sidebarCollapsed"></app-sidebar>
+    <app-sidebar></app-sidebar>
 
-    <div class="main-content" [class.sidebar-collapsed]="sidebarCollapsed">
-        <app-header (toggleSidebar)="toggleSidebar()"></app-header>
+    <div class="main-content">
+        <app-header></app-header>
 
         <div class="content-area">
             <router-outlet></router-outlet>

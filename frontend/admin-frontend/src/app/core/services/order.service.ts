@@ -50,7 +50,7 @@ export interface StatusHistory {
     providedIn: 'root'
 })
 export class OrderService {
-    private apiUrl = `${environment.apiUrl}/admin/orders`;
+    private apiUrl = `${environment.apiUrl}/orders`;
 
     constructor(private http: HttpClient) { }
 

@@ -23,7 +23,7 @@ export interface Coupon {
     providedIn: 'root'
 })
 export class CouponService {
-    private apiUrl = `${environment.apiUrl}/admin/coupons`;
+    private apiUrl = `${environment.apiUrl}/coupons`;
 
     constructor(private http: HttpClient) { }
 
