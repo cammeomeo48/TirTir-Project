@@ -55,11 +55,11 @@
 <section class="category-banners" *ngIf="!isMakeupCollection && !isSkincareCollection">
     <div class="banners-grid">
         <a routerLink="/shop" [queryParams]="{category: 'makeup'}" class="banner-card">
-            <img src="/assets/images/additional/landingpage/MakeupMain.jpg" alt="Makeup">
+            <img src="/assets/images/additional/landingpage/MakeupMain.jpg" alt="Makeup" loading="lazy">
             <span class="banner-label">MAKEUP</span>
         </a>
         <a routerLink="/shop" [queryParams]="{category: 'skincare'}" class="banner-card">
-            <img src="/assets/images/additional/landingpage/SkincareMain.jpg" alt="Skincare">
+            <img src="/assets/images/additional/landingpage/SkincareMain.jpg" alt="Skincare" loading="lazy">
             <span class="banner-label">SKINCARE</span>
         </a>
         <a routerLink="/products/tirtir-gift-card" class="banner-card">

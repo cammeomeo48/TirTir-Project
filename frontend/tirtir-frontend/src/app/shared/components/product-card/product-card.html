@@ -2,7 +2,8 @@
     <!-- Image Container -->
     <a [routerLink]="['/products', productLink]" class="card-image">
         <!-- TODO: Replace with real TIRTIR product image -->
-        <img [src]="displayProduct.image" [alt]="displayProduct.name" class="product-img">
+        <img [src]="displayProduct.image" [alt]="displayProduct.name" class="product-img" loading="lazy"
+            decoding="async">
 
         <!-- Badges -->
         <div class="badges">

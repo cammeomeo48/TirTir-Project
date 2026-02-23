@@ -19,7 +19,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./ai-service:/app # Hot-reload Python files in development
+      - ./ai-service:/app # Hot-reload Python files
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" ]
@@ -40,17 +40,15 @@ services:
       - AI_SERVICE_URL=http://ai-service:8000
       - REDIS_URL=redis://redis:6379
     volumes:
-      - ./backend:/app
+      - ./backend:/app # Hot-reload Node files
       - /app/node_modules # Prevent host node_modules from overwriting container's
     depends_on:
-      ai-service:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - ai-service
+      - redis
     restart: unless-stopped
-  # ─── Frontend (Production Build — Optional) ─────────
-  # For development: run `ng serve` natively (faster HMR).
-  # Uncomment for a prod-like Docker build using Nginx:
+  # ─── Frontend: Chạy NGOÀI Docker (ng serve) ────────
+  # Angular dev server chạy native cho performance tốt hơn.
+  # Nếu cần build prod, dùng Nginx Alpine:
   #
   # frontend:
   #   build: ./frontend/tirtir-frontend

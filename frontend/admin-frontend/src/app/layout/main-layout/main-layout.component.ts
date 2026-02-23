@@ -11,10 +11,4 @@ import { HeaderComponent } from '../header/header.component';
     templateUrl: './main-layout.component.html',
     styleUrls: ['./main-layout.component.css']
 })
-export class MainLayoutComponent {
-    sidebarCollapsed = false;
-
-    toggleSidebar() {
-        this.sidebarCollapsed = !this.sidebarCollapsed;
-    }
-}
+export class MainLayoutComponent { }

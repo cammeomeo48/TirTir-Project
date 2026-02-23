@@ -41,7 +41,7 @@
 .logo-icon {
     width: 32px;
     height: 32px;
-    background-color: var(--secondary);
+    background-color: var(--primary);
     color: var(--text-white);
     border-radius: var(--border-radius);
     display: flex;

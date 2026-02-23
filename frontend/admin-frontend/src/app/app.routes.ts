@@ -117,6 +117,13 @@ export const routes: Routes = [
                 ],
             },
             {
+                path: 'reviews',
+                loadComponent: () =>
+                    import('./features/reviews/reviews.component').then(
+                        (m) => m.ReviewsComponent
+                    ),
+            },
+            {
                 path: 'inventory',
                 data: { roles: ['admin', 'inventory_staff'] },
                 children: [
