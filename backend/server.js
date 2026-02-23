@@ -80,15 +80,84 @@ app.use('/uploads', (req, res, next) => {
 }));
 
 
-// Security Headers - Configure helmet to allow images
+// Security Headers - Helmet with environment-aware CSP
+const isDev = process.env.NODE_ENV !== 'production';
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow cross-origin images
-  contentSecurityPolicy: false // Disable CSP for development (re-enable in production)
+  contentSecurityPolicy: {
+    // useDefaults: true bao gồm các directive an toàn mặc định của helmet
+    useDefaults: true,
+    // Chế độ dev: reportOnly=true (không block, chỉ log vi phạm vào console)
+    // Chế độ prod: enforce thật
+    reportOnly: isDev,
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: [
+        "'self'",
+        // Angular cần 'unsafe-inline' cho inline event handlers khi chưa có nonce
+        // Ở production nên migrate sang nonce-based CSP nếu có thể
+        isDev ? "'unsafe-inline'" : null,
+        isDev ? "'unsafe-eval'" : null, // Angular dev mode dùng eval
+        "https://browser.sentry-cdn.com",
+        "https://js.sentry-cdn.com",
+      ].filter(Boolean),
+      styleSrc: [
+        "'self'",
+        "'unsafe-inline'", // Angular component styles cần inline
+        "https://fonts.googleapis.com",
+      ],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+      imgSrc: [
+        "'self'",
+        "data:",
+        "blob:",
+        "https:", // Cho phép ảnh sản phẩm từ mọi HTTPS source
+      ],
+      connectSrc: [
+        "'self'",
+        // Sentry endpoints
+        "https://*.sentry.io",
+        "https://*.ingest.sentry.io",
+        // Dev server Angular
+        isDev ? "http://localhost:4200" : null,
+        isDev ? "http://localhost:4201" : null,
+        isDev ? "ws://localhost:4200" : null, // WebSocket HMR
+        isDev ? "ws://localhost:4201" : null,
+      ].filter(Boolean),
+      mediaSrc: ["'self'", "blob:"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"], // Chống Clickjacking
+      upgradeInsecureRequests: isDev ? null : [], // Chỉ enforce HTTPS ở production
+    },
+  },
 }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-// app.use(mongoSanitize()); // FIXME: Causes TypeError with Express 5 (req.query getter)
+
+// Workaround: Express 5 làm req.query thành immutable getter,
+// express-mongo-sanitize cần ghi vào req.query để sanitize.
+// Middleware này redefine req.query thành writable trước khi sanitize chạy.
+app.use((req, _res, next) => {
+  const originalQuery = req.query; // Express 5 getter trả về parsed object
+  try {
+    Object.defineProperty(req, 'query', {
+      value: { ...originalQuery }, // Snapshot thành plain object writable
+      writable: true,
+      configurable: true,
+      enumerable: true,
+    });
+  } catch (_e) {
+    // Nếu đã writable rồi (Express 4) thì bỏ qua
+  }
+  next();
+});
+app.use(mongoSanitize({
+  replaceWith: '_', // Thay ký tự $ và . bằng _ thay vì xóa (tránh mất data structure)
+  onSanitize: ({ req, key }) => {
+    logger.warn(`[SECURITY] MongoSanitize: blocked injection attempt on key '${key}' - IP: ${req.ip}`);
+  },
+}));
 
 // HTTPS Enforcement (Production only)
 if (process.env.NODE_ENV === 'production') {
