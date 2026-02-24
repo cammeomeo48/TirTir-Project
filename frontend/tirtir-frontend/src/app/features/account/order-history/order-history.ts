@@ -1,6 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { forkJoin, timer } from 'rxjs';
 import { OrderService } from '../../../core/services/order.service';
 import { Order } from '../../../core/models';
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner/loading-spinner';
@@ -30,22 +31,23 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
     </div>
   `,
   styles: [`
-    .page-container{padding:2rem;max-width:1000px;margin:0 auto}
-    h1{font-size:2rem;font-weight:600;margin-bottom:2rem;color:#1a1a1a}
-    .empty-state{text-align:center;padding:3rem;background:#fff;border-radius:8px}
-    .shop-btn{display:inline-block;padding:0.875rem 2rem;background:#1a1a1a;color:#fff;text-decoration:none;border-radius:6px;margin-top:1rem}
-    .orders-list{display:grid;gap:1rem}
-    .order-card{background:#fff;padding:1.5rem;border-radius:8px;cursor:pointer;transition:all 0.2s}
-    .order-card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.1)}
-    .order-header{display:flex;justify-content:space-between;margin-bottom:0.5rem}
-    .order-id{font-weight:600;color:#1a1a1a}
-    .order-status{padding:0.25rem 0.75rem;border-radius:4px;font-size:0.813rem;font-weight:500}
-    .status-pending{background:#fef3c7;color:#92400e}
-    .status-processing{background:#dbeafe;color:#1e40af}
-    .status-shipped{background:#fce7f3;color:#9f1239}
-    .status-delivered{background:#d1fae5;color:#065f46}
-    .order-date{color:#666;font-size:0.875rem;margin:0.25rem 0}
-    .order-total{font-size:1.125rem;font-weight:600;color:#1a1a1a;margin:0}
+    .page-container{padding:0;max-width:100%}
+    h1{font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:2px;margin-bottom:30px;color:#111}
+    .empty-state{text-align:center;padding:50px;background:#fff;border:1px solid #111}
+    .shop-btn{display:inline-block;padding:16px 32px;background:#111;color:#fff;text-decoration:none;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;transition:background 0.2s}
+    .shop-btn:hover{background:#333}
+    .orders-list{display:grid;gap:20px}
+    .order-card{background:#fff;padding:30px;border:1px solid #e0e0e0;cursor:pointer;transition:all 0.3s}
+    .order-card:hover{border-color:#111;box-shadow:0 10px 30px rgba(0,0,0,0.05)}
+    .order-header{display:flex;justify-content:space-between;margin-bottom:15px}
+    .order-id{font-size:14px;font-weight:800;color:#111;text-transform:uppercase}
+    .order-status{padding:4px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px}
+    .status-pending{border:1px solid #fef3c7;color:#92400e}
+    .status-processing{border:1px solid #dbeafe;color:#1e40af}
+    .status-shipped{border:1px solid #fce7f3;color:#9f1239}
+    .status-delivered{border:1px solid #d1fae5;color:#065f46}
+    .order-date{color:#888;font-size:12px;margin:0 0 10px;text-transform:uppercase;letter-spacing:0.5px}
+    .order-total{font-size:16px;font-weight:800;color:#111;margin:0}
   `],
 })
 export class OrderHistoryComponent implements OnInit {
@@ -55,18 +57,20 @@ export class OrderHistoryComponent implements OnInit {
   loading = true;
 
   ngOnInit(): void {
-    this.orderService.getMyOrders().subscribe({
-      next: (orders) => {
+    this.loading = true;
+
+    // Ensure the loading spinner is visible for at least 800ms
+    // to provide a stable and premium user experience.
+    forkJoin([
+      this.orderService.getMyOrders(),
+      timer(800)
+    ]).subscribe({
+      next: ([orders]) => {
         this.orders = orders;
-        // Fix NG0100: Defer loading state update
-        setTimeout(() => {
-          this.loading = false;
-        }, 0);
+        this.loading = false;
       },
       error: () => {
-        setTimeout(() => {
-          this.loading = false;
-        }, 0);
+        this.loading = false;
       },
     });
   }

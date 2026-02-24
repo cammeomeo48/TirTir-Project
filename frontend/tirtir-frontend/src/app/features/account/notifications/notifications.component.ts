@@ -6,10 +6,10 @@ import { TimeAgoPipe } from '../../../shared/pipes/time-ago.pipe';
 import { INotification } from '../../../core/models/notification.model';
 
 @Component({
-    selector: 'app-notifications',
-    standalone: true,
-    imports: [CommonModule, TimeAgoPipe],
-    template: `
+  selector: 'app-notifications',
+  standalone: true,
+  imports: [CommonModule, TimeAgoPipe],
+  template: `
     <div class="notifications-page">
       <div class="page-header">
         <h1>Your Notifications</h1>
@@ -50,89 +50,89 @@ import { INotification } from '../../../core/models/notification.model';
       </div>
     </div>
   `,
-    styles: [`
+  styles: [`
     .notifications-page {
-      padding: 24px;
-      max-width: 800px;
+      padding: 0;
+      max-width: 100%;
     }
 
     .page-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 24px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid #eee;
+      margin-bottom: 40px;
     }
 
     h1 {
-      font-size: 24px;
+      font-size: 14px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 2px;
       margin: 0;
-      color: #333;
+      color: #111;
     }
 
     .mark-all-btn {
       background: none;
-      border: 1px solid #FF6B9D;
-      color: #FF6B9D;
-      padding: 6px 12px;
-      border-radius: 4px;
+      border: 1px solid #111;
+      color: #111;
+      padding: 8px 16px;
       cursor: pointer;
-      font-size: 13px;
-      font-weight: 500;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
       transition: all 0.2s;
     }
 
     .mark-all-btn:hover {
-      background: #FF6B9D;
+      background: #111;
       color: white;
     }
 
     .notification-list {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 20px;
     }
 
     .notification-card {
       display: flex;
       align-items: flex-start;
-      padding: 16px;
+      padding: 30px;
       background: white;
-      border: 1px solid #eee;
-      border-radius: 8px;
+      border: 1px solid #e0e0e0;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.3s;
       position: relative;
     }
 
     .notification-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-      border-color: #ddd;
+      border-color: #111;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.05);
     }
 
     .notification-card.unread {
-      background: #f0f9ff;
-      border-color: #bae6fd;
+      background: #fafafa;
+      border-color: #111;
     }
 
     .icon-wrapper {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
+      width: 48px;
+      height: 48px;
       background: #f5f5f5;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 20px;
-      margin-right: 16px;
+      margin-right: 24px;
       flex-shrink: 0;
+      border: 1px solid #eee;
     }
 
-    .icon-wrapper.order { background: #e3f2fd; color: #2196f3; }
-    .icon-wrapper.promotion { background: #ffebee; color: #f44336; }
-    .icon-wrapper.system { background: #f5f5f5; color: #757575; }
+    .icon-wrapper.order { border-color: #dbeafe; }
+    .icon-wrapper.promotion { border-color: #ffebee; }
+    .icon-wrapper.system { border-color: #f5f5f5; }
 
     .content-wrapper {
       flex: 1;
@@ -141,76 +141,91 @@ import { INotification } from '../../../core/models/notification.model';
     .header-row {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 4px;
+      margin-bottom: 8px;
     }
 
     .title {
-      font-weight: 600;
-      color: #333;
+      font-weight: 800;
+      color: #111;
       font-size: 15px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .time {
-      font-size: 12px;
+      font-size: 11px;
       color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .message {
       margin: 0;
       color: #666;
       font-size: 14px;
-      line-height: 1.4;
+      line-height: 1.6;
     }
 
     .status-indicator {
       width: 8px;
       height: 8px;
-      background: #2196f3;
-      border-radius: 50%;
+      background: #111;
       position: absolute;
-      top: 20px;
-      right: 16px;
+      top: 30px;
+      right: 30px;
     }
 
     /* Empty State */
     .empty-state {
       text-align: center;
-      padding: 60px 20px;
+      padding: 80px 40px;
       color: #999;
+      border: 1px dashed #ddd;
     }
 
     .empty-icon {
       font-size: 48px;
-      margin-bottom: 16px;
+      margin-bottom: 24px;
+      opacity: 0.3;
     }
 
     .empty-state h3 {
-      color: #333;
-      margin: 0 0 8px;
+      font-size: 14px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #111;
+      margin: 0 0 10px;
+    }
+
+    .empty-state p {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
     }
   `]
 })
 export class NotificationsComponent implements OnInit {
-    private notificationService = inject(NotificationService);
-    private router = inject(Router);
+  private notificationService = inject(NotificationService);
+  private router = inject(Router);
 
-    notifications$ = this.notificationService.notifications$;
-    unreadCount$ = this.notificationService.unreadCount$;
+  notifications$ = this.notificationService.notifications$;
+  unreadCount$ = this.notificationService.unreadCount$;
 
-    ngOnInit() {
-        this.notificationService.fetchNotifications().subscribe();
+  ngOnInit() {
+    this.notificationService.fetchNotifications().subscribe();
+  }
+
+  onNotificationClick(item: INotification) {
+    if (!item.isRead) {
+      this.notificationService.markAsRead(item._id).subscribe();
     }
-
-    onNotificationClick(item: INotification) {
-        if (!item.isRead) {
-            this.notificationService.markAsRead(item._id).subscribe();
-        }
-        if (item.link) {
-            this.router.navigateByUrl(item.link);
-        }
+    if (item.link) {
+      this.router.navigateByUrl(item.link);
     }
+  }
 
-    markAllRead() {
-        this.notificationService.markAllAsRead().subscribe();
-    }
+  markAllRead() {
+    this.notificationService.markAllAsRead().subscribe();
+  }
 }

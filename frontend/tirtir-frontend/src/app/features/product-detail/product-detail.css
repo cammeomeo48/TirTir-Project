@@ -557,3 +557,11 @@
     color: #111;
     font-size: 17px;
 }
+
+/* Loading State */
+.loading-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 400px;
+}

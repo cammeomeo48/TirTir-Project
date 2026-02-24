@@ -1,8 +1,10 @@
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute } from '@angular/router';
+import { forkJoin, timer } from 'rxjs';
 import { BrandGalleryComponent } from '../../shared/components/brand-gallery/brand-gallery';
 import { CustomerReviewsComponent } from '../../shared/components/customer-reviews/customer-reviews';
+import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner';
 import { getProductBySlug, ProductData, PRODUCTS } from '../../core/constants/products.data';
 import { ProductService } from '../../core/services/product.service';
 import { CartService } from '../../core/services/cart.service';
@@ -10,7 +12,7 @@ import { CartService } from '../../core/services/cart.service';
 @Component({
   selector: 'app-product-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, CustomerReviewsComponent],
+  imports: [CommonModule, RouterModule, CustomerReviewsComponent, LoadingSpinnerComponent],
   templateUrl: './product-detail.html',
   styleUrl: './product-detail.css',
 })
@@ -28,29 +30,35 @@ export class ProductDetailComponent implements OnInit {
   quantity = 1;
   activeAccordion: string | null = 'description';
   addingToCart = false;
+  loading = true;
 
   constructor() { }
 
   ngOnInit() {
     this.route.params.subscribe(params => {
       const slug = params['slug'];
+      this.loading = true;
 
-      this.productService.getProductDetail(slug).subscribe({
-        next: (data) => {
-          setTimeout(() => {
-            this.product = data;
-            this.selectedImage = this.product.images[0];
-            if (this.product.shades && this.product.shades.length > 0) {
-              // Select a middle shade by default
-              const midIndex = Math.floor(this.product.shades.length / 2);
-              this.selectedShade = this.product.shades[midIndex].name;
-            }
-            this.fetchSuggestions();
-            this.cdr.detectChanges(); // NUCLEAR FIX: Force check inside timeout
-          }, 0);
+      // Ensure the loading spinner is visible for at least 800ms
+      // for a smoother transition even on fast connections.
+      forkJoin([
+        this.productService.getProductDetail(slug),
+        timer(800)
+      ]).subscribe({
+        next: ([data]) => {
+          this.product = data;
+          this.selectedImage = this.product.images[0];
+          if (this.product.shades && this.product.shades.length > 0) {
+            const midIndex = Math.floor(this.product.shades.length / 2);
+            this.selectedShade = this.product.shades[midIndex].name;
+          }
+          this.fetchSuggestions();
+          this.loading = false;
+          this.cdr.detectChanges();
         },
         error: (err: any) => {
           console.error('Product not found', err);
+          this.loading = false;
         }
       });
     });

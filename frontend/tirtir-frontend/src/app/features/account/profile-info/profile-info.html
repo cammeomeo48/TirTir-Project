@@ -15,21 +15,17 @@
             </div>
             }
             <div class="avatar-overlay">
-                <span class="camera-icon">📷</span>
+                <span class="edit-text">EDIT</span>
             </div>
         </div>
         <div class="avatar-info">
-            <h3>{{ user?.name || 'User' }}</h3>
+            <h3>{{ (user?.name === 'User' ? 'Cam Meo Meo' : user?.name) || 'Cam Meo Meo' }}</h3>
             <p class="email">{{ user?.email }}</p>
             <p class="hint">Click avatar to upload new photo</p>
         </div>
     </div>
 
-    <!-- TEMPORARY TEST BUTTON - Remove after testing -->
-    <button type="button" (click)="openAvatarUpload()"
-        style="margin-bottom: 20px; padding: 10px 20px; background: red; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
-        🧪 TEST BUTTON: Click to open modal (if this works, the avatar click handler also works)
-    </button>
+
 
     <!-- Hidden file input -->
     <input type="file" #fileInput style="display: none" accept="image/jpeg,image/jpg,image/png,image/webp"
@@ -41,16 +37,25 @@
         <div class="upload-modal" (click)="$event.stopPropagation()">
             <h2>Change Avatar</h2>
 
-            @if (!selectedFile) {
+            @if (!selectedFile && !showCameraPreview) {
             <div class="upload-options">
-                <button type="button" class="upload-option-btn" (click)="triggerFileInput()">
-                    <span class="icon">📁</span>
+                <button type="button" class="upload-option-btn primary-upload" (click)="triggerFileInput()">
                     <span>Upload from Device</span>
                 </button>
-                <button type="button" class="upload-option-btn" (click)="openCamera()">
-                    <span class="icon">📷</span>
+                <button type="button" class="upload-option-btn secondary-upload" (click)="openCamera()">
                     <span>Capture from Camera</span>
                 </button>
+            </div>
+            } @else if (showCameraPreview) {
+            <div class="camera-section">
+                <div class="video-wrapper">
+                    <video #videoElement autoplay playsinline class="camera-video"></video>
+                    <canvas #canvasElement style="display: none;"></canvas>
+                </div>
+                <div class="camera-actions">
+                    <button type="button" class="btn btn-primary" (click)="capturePhoto()">Capture Photo</button>
+                    <button type="button" class="btn btn-secondary" (click)="stopCamera()">Cancel</button>
+                </div>
             </div>
             } @else {
             <div class="preview-section">

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, HostListener, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { UserService } from '../../../core/services/user.service';
@@ -15,6 +15,8 @@ import { Subject, takeUntil } from 'rxjs';
     styleUrl: './profile-info.css'
 })
 export class ProfileInfoComponent implements OnInit, OnDestroy, CanComponentDeactivate {
+    @ViewChild('videoElement') videoElement!: ElementRef<HTMLVideoElement>;
+    @ViewChild('canvasElement') canvasElement!: ElementRef<HTMLCanvasElement>;
     private userService = inject(UserService);
     private authService = inject(AuthService);
     private fb = inject(FormBuilder);
@@ -35,6 +37,11 @@ export class ProfileInfoComponent implements OnInit, OnDestroy, CanComponentDeac
     // Unsaved changes tracking
     hasUnsavedChanges = false;
     private destroy$ = new Subject<void>();
+
+    // Camera state
+    isCameraActive = false;
+    stream: MediaStream | null = null;
+    showCameraPreview = false;
 
 
     ngOnInit(): void {
@@ -58,8 +65,9 @@ export class ProfileInfoComponent implements OnInit, OnDestroy, CanComponentDeac
         this.userService.getProfile().subscribe({
             next: (user) => {
                 this.user = user;
+                const displayName = (user.name === 'User' ? 'Cam Meo Meo' : user.name) || 'Cam Meo Meo';
                 this.profileForm.patchValue({
-                    name: user.name,
+                    name: displayName,
                     phone: user.phone || '',
                     gender: user.gender || '',
                     birthDate: user.birthDate ? this.formatDateForInput(user.birthDate) : ''
@@ -109,7 +117,7 @@ export class ProfileInfoComponent implements OnInit, OnDestroy, CanComponentDeac
      * Get user initials for avatar display
      */
     getUserInitials(): string {
-        if (!this.user?.name) return 'U';
+        if (!this.user?.name || this.user.name === 'User') return 'CM';
         const nameParts = this.user.name.trim().split(' ');
         if (nameParts.length === 1) {
             return nameParts[0].charAt(0).toUpperCase();
@@ -148,6 +156,7 @@ export class ProfileInfoComponent implements OnInit, OnDestroy, CanComponentDeac
      */
     closeUploadModal(): void {
         if (!this.uploading) {
+            this.stopCamera(); // Ensure camera stops when closing
             this.showUploadModal = false;
             this.cancelUpload();
         }
@@ -245,11 +254,85 @@ export class ProfileInfoComponent implements OnInit, OnDestroy, CanComponentDeac
     }
 
     /**
-     * Open camera for capture (TODO: Implement camera capture)
+     * Open camera for capture
      */
-    openCamera(): void {
-        // TODO: Implement camera capture functionality
-        this.errorMessage = 'Camera capture feature coming soon!';
+    async openCamera(): Promise<void> {
+        this.showCameraPreview = true;
+        this.errorMessage = '';
+
+        try {
+            this.stream = await navigator.mediaDevices.getUserMedia({
+                video: { width: 640, height: 480, facingMode: 'user' }
+            });
+
+            // Need to wait for view to update so videoElement is available
+            setTimeout(() => {
+                if (this.videoElement) {
+                    this.videoElement.nativeElement.srcObject = this.stream;
+                    this.isCameraActive = true;
+                }
+            }, 100);
+        } catch (err) {
+            console.error('Error accessing camera:', err);
+            this.errorMessage = 'Could not access camera. Please check permissions.';
+            this.showCameraPreview = false;
+        }
+    }
+
+    /**
+     * Stop camera stream
+     */
+    stopCamera(): void {
+        if (this.stream) {
+            this.stream.getTracks().forEach(track => track.stop());
+            this.stream = null;
+        }
+        this.isCameraActive = false;
+        this.showCameraPreview = false;
+    }
+
+    /**
+     * Capture photo from video stream
+     */
+    capturePhoto(): void {
+        if (!this.videoElement || !this.canvasElement) return;
+
+        const video = this.videoElement.nativeElement;
+        const canvas = this.canvasElement.nativeElement;
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) return;
+
+        // Set canvas size to video size
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        // Draw current video frame to canvas
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Convert to blob/file
+        canvas.toBlob((blob) => {
+            if (blob) {
+                const file = new File([blob], 'avatar-capture.jpg', { type: 'image/jpeg' });
+                this.handleProcessedFile(file);
+                this.stopCamera();
+            }
+        }, 'image/jpeg', 0.9);
+    }
+
+    /**
+     * Internal helper to set selected file and preview
+     */
+    private handleProcessedFile(file: File): void {
+        this.selectedFile = file;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            this.previewUrl = e.target?.result as string;
+        };
+        reader.readAsDataURL(file);
+
+        this.errorMessage = '';
     }
 
     /**

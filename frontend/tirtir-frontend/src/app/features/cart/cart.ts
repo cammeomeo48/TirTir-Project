@@ -2,6 +2,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { forkJoin, timer } from 'rxjs';
 import { CartService } from '../../core/services/cart.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Cart, CartItem } from '../../core/models';
@@ -30,8 +31,14 @@ export class CartComponent implements OnInit {
 
     loadCart(): void {
         this.loading = true;
-        this.cartService.getCart().subscribe({
-            next: (cart) => {
+
+        // Use forkJoin to ensure the spinner stays for at least 800ms
+        // even if the API response is faster, providing a premium feel.
+        forkJoin([
+            this.cartService.getCart(),
+            timer(800)
+        ]).subscribe({
+            next: ([cart]) => {
                 this.cart = cart;
                 this.loading = false;
             },
