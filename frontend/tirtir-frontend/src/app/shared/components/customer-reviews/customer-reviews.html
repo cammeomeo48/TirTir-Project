@@ -1,9 +1,4 @@
-<!-- =====================================================
-     CUSTOMER REVIEWS SECTION - TIRTIR Clone
-     Star ratings, review breakdown, and customer feedback
-     ===================================================== -->
-
-<section class="customer-reviews">
+<section class="customer-reviews" id="reviews-section">
     <div class="container">
         <!-- Section Header -->
         <div class="reviews-header">
@@ -19,64 +14,91 @@
             </div>
         </div>
 
-        <!-- Rating Breakdown -->
-        <div class="rating-breakdown">
-            <div *ngFor="let rating of ratingBreakdown" class="breakdown-row">
-                <span class="star-label">{{ rating.stars }} ★</span>
-                <div class="progress-bar">
-                    <div class="progress-fill" [style.width.%]="rating.percentage"></div>
+        <!-- Rating Breakdown & Write Review -->
+        <div class="reviews-actions-grid">
+            <div class="rating-breakdown">
+                <div *ngFor="let rating of ratingBreakdown" class="breakdown-row">
+                    <span class="star-label">{{ rating.stars }} ★</span>
+                    <div class="progress-bar">
+                        <div class="progress-fill" [style.width.%]="rating.percentage"></div>
+                    </div>
+                    <span class="percentage">{{ rating.percentage }}%</span>
                 </div>
-                <span class="percentage">{{ rating.percentage }}%</span>
+            </div>
+
+            <div class="write-review-block">
+                <h3>Share your thoughts</h3>
+                <p>Help others make better choices by sharing your experience.</p>
+                <button class="write-review-btn" (click)="isWritingReview = !isWritingReview">
+                    {{ isWritingReview ? 'Cancel Review' : 'Write a Review' }}
+                </button>
             </div>
         </div>
 
-        <!-- Write Review CTA -->
-        <div class="write-review-cta">
-            <button class="write-review-btn">Write a Review</button>
+        <!-- Write Review Form -->
+        <div class="review-form-container" *ngIf="isWritingReview">
+            <div class="form-card">
+                <h3>Post a review for {{ productName }}</h3>
+                <div class="rating-input">
+                    <label>Your Rating:</label>
+                    <div class="stars-selector">
+                        <span *ngFor="let i of [1,2,3,4,5]" (click)="newReview.rating = i"
+                            [class.active]="newReview.rating >= i">★</span>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <input type="text" [(ngModel)]="newReview.title"
+                        placeholder="Review Title (e.g. Best cushion ever!)">
+                </div>
+                <div class="input-group">
+                    <textarea [(ngModel)]="newReview.content"
+                        placeholder="Share your experience with this product..."></textarea>
+                </div>
+                <button class="submit-review-btn" (click)="postReview()">POST REVIEW</button>
+            </div>
         </div>
 
         <!-- Reviews List -->
         <div class="reviews-list">
             <div *ngFor="let review of reviews" class="review-card">
-                <div class="review-header">
-                    <div class="reviewer-info">
+                <div class="review-card-header">
+                    <div class="reviewer-meta">
                         <span class="reviewer-name">{{ review.author }}</span>
-                        <span class="verified-badge" *ngIf="review.verified">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="#22c55e">
-                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-                            </svg>
-                            Verified Purchase
-                        </span>
+                        <span class="verified-tag" *ngIf="review.verified">Verified Purchase</span>
                     </div>
-                    <span class="review-date">{{ review.date }}</span>
+                    <button class="delete-review-btn" *ngIf="review.author.includes('You')"
+                        (click)="deleteReview(review.id)">
+                        Remove
+                    </button>
                 </div>
 
-                <div class="review-rating">
+                <div class="review-score">
                     <span *ngFor="let star of getStars(review.rating)" [class]="getStarClass(star)">★</span>
+                    <span class="review-date-mini">{{ review.date }}</span>
                 </div>
 
-                <h4 class="review-title">{{ review.title }}</h4>
+                <h4 class="review-display-title">{{ review.title }}</h4>
+                <p class="review-display-shade" *ngIf="review.shade">Shade: {{ review.shade }}</p>
+                <p class="review-display-content">{{ review.content }}</p>
 
-                <p class="review-shade" *ngIf="review.shade">Shade: {{ review.shade }}</p>
-
-                <p class="review-content">{{ review.content }}</p>
-
-                <div class="review-footer">
-                    <button class="helpful-btn">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                <div class="review-card-footer">
+                    <button class="like-action-btn" [class.liked]="review.likedByUser" (click)="toggleLike(review)">
+                        <svg width="18" height="18" viewBox="0 0 24 24"
+                            [attr.fill]="review.likedByUser ? 'currentColor' : 'none'" stroke="currentColor"
                             stroke-width="2">
                             <path
-                                d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+                                d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z">
+                            </path>
                         </svg>
-                        Helpful ({{ review.helpful }})
+                        <span>Helpful ({{ review.helpful }})</span>
                     </button>
                 </div>
             </div>
         </div>
 
         <!-- Load More -->
-        <div class="load-more">
-            <button class="load-more-btn">Load More Reviews</button>
+        <div class="load-more-section">
+            <button class="load-more-btn">SEE MORE REVIEWS</button>
         </div>
     </div>
 </section>

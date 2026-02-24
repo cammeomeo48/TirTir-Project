@@ -29,7 +29,8 @@
                             <span *ngFor="let s of getStars(product.rating)" class="star filled">★</span>
                         </div>
                         <span class="rating-value">{{ product.rating }}</span>
-                        <span class="review-count">({{ product.reviewCount | number }} Reviews)</span>
+                        <span class="review-count linked" (click)="scrollToReviews()">({{ product.reviewCount | number
+                            }} Reviews)</span>
                     </div>
                     <div class="price-row">
                         <span class="original-price" *ngIf="product.originalPrice">${{ product.originalPrice.toFixed(2)
@@ -114,20 +115,38 @@
     </div>
 </div>
 
-<!-- Visual Story / Description Images Section -->
+<!-- Suggested Section -->
+<section class="suggestions-section" *ngIf="suggestedProducts.length">
+    <div class="container">
+        <h2 class="section-title">SUGGESTED FOR YOU</h2>
+        <div class="suggestions-grid">
+            <div *ngFor="let item of suggestedProducts" class="suggestion-card"
+                [routerLink]="item.isDeal ? '/deals' : ['/products', item.slug]">
+                <div class="card-badge" *ngIf="item.isDeal">COMBO DEAL</div>
+                <div class="suggestion-img">
+                    <img [src]="item.images[0]" [alt]="item.name">
+                </div>
+                <div class="suggestion-meta">
+                    <h4>{{ item.name }}</h4>
+                    <div class="suggestion-prices">
+                        <span class="old" *ngIf="item.originalPrice">${{ item.originalPrice }}</span>
+                        <span class="new">${{ item.price }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Visual Story -->
 <section class="product-visual-story" *ngIf="product && product.descriptionImages.length">
     <div class="container">
-        <!-- Optional Title if needed, or just clean images like user reference -->
         <div class="visual-stack">
             <img *ngFor="let img of product.descriptionImages" [src]="img" alt="Product Detail Visual"
                 class="w-full h-auto block" loading="lazy">
         </div>
     </div>
 </section>
-
-<!-- Brand Gallery Section (Only show if NO description images, or move below) -->
-<!-- User replaced this concept with description images for this view -->
-<!-- <app-brand-gallery></app-brand-gallery> -->
 
 <!-- Customer Reviews Section -->
 <app-customer-reviews *ngIf="product" [productName]="product.name"></app-customer-reviews>

@@ -1,5 +1,6 @@
-import { Component, Input } from '@angular/core';
+import { Component, OnInit, Input, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 
 export interface Review {
     id: number;
@@ -11,12 +12,13 @@ export interface Review {
     verified: boolean;
     helpful: number;
     shade?: string;
+    likedByUser?: boolean;
 }
 
 @Component({
     selector: 'app-customer-reviews',
     standalone: true,
-    imports: [CommonModule],
+    imports: [CommonModule, FormsModule],
     templateUrl: './customer-reviews.html',
     styleUrl: './customer-reviews.css',
 })
@@ -25,6 +27,13 @@ export class CustomerReviewsComponent {
 
     averageRating = 4.8;
     totalReviews = 2847;
+    isWritingReview = false;
+
+    newReview = {
+        rating: 5,
+        title: '',
+        content: ''
+    };
 
     ratingBreakdown = [
         { stars: 5, percentage: 85 },
@@ -45,6 +54,7 @@ export class CustomerReviewsComponent {
             verified: true,
             helpful: 128,
             shade: '21N Ivory',
+            likedByUser: false
         },
         {
             id: 2,
@@ -56,6 +66,7 @@ export class CustomerReviewsComponent {
             verified: true,
             helpful: 89,
             shade: '17C Porcelain',
+            likedByUser: false
         },
         {
             id: 3,
@@ -67,17 +78,8 @@ export class CustomerReviewsComponent {
             verified: true,
             helpful: 56,
             shade: '23N Sand',
-        },
-        {
-            id: 4,
-            author: 'Michelle T.',
-            date: 'January 8, 2026',
-            rating: 5,
-            title: 'Worth every penny!',
-            content: 'This is a game changer! My makeup has never looked so good. The finish is beautiful and it photographs amazingly. All my friends have asked what I\'m wearing.',
-            verified: true,
-            helpful: 43,
-        },
+            likedByUser: true
+        }
     ];
 
     getStars(rating: number): number[] {
@@ -86,5 +88,36 @@ export class CustomerReviewsComponent {
 
     getStarClass(filled: number): string {
         return filled ? 'star filled' : 'star empty';
+    }
+
+    toggleLike(review: Review) {
+        review.likedByUser = !review.likedByUser;
+        review.helpful += review.likedByUser ? 1 : -1;
+    }
+
+    postReview() {
+        if (!this.newReview.title || !this.newReview.content) return;
+
+        const review: Review = {
+            id: Date.now(),
+            author: 'You (Demo User)',
+            date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+            rating: this.newReview.rating,
+            title: this.newReview.title,
+            content: this.newReview.content,
+            verified: true,
+            helpful: 0,
+            likedByUser: false
+        };
+
+        this.reviews.unshift(review);
+        this.isWritingReview = false;
+        this.newReview = { rating: 5, title: '', content: '' };
+        this.totalReviews++;
+    }
+
+    deleteReview(reviewId: number) {
+        this.reviews = this.reviews.filter(r => r.id !== reviewId);
+        this.totalReviews--;
     }
 }

@@ -1,32 +1,58 @@
 <section class="deals-page">
     <div class="deals-header">
-        <h1>MONTHLY DEALS</h1>
-        <p>Exclusive limited-time offers on our best-selling sets.</p>
+        <h1 class="premium-title">EXCLUSIVE DEALS</h1>
+        <p class="subtitle">Curated sets for your ultimate beauty routine.</p>
     </div>
 
     <div class="container" *ngIf="!isLoading">
         <div class="deals-grid">
             <div class="deal-card" *ngFor="let deal of deals">
-                <div class="deal-header">
-                    <span class="discount-badge">{{ deal.discount }}% OFF</span>
-                    <h2>{{ deal.title }}</h2>
-                    <p>{{ deal.description }}</p>
+                <div class="deal-badge-row">
+                    <span class="category-tag">{{ deal.category }}</span>
+                    <span class="discount-pill">{{ deal.discount }}% OFF</span>
                 </div>
 
-                <div class="deal-products-preview">
-                    <div class="product-preview" *ngFor="let product of deal.products">
-                        <img [src]="product.images[0]" [alt]="product.name">
-                        <div class="product-info-mini">
-                            <span class="p-name">{{ product.name }}</span>
+                <div class="deal-card-body">
+                    <h2 class="deal-title">{{ deal.title }}</h2>
+                    <p class="deal-desc">{{ deal.description }}</p>
+
+                    <div class="deal-products">
+                        <div class="deal-product" *ngFor="let product of deal.products"
+                            (click)="showPrice(product, $event)">
+                            <div class="product-img-box">
+                                <img [src]="product.images[0]" [alt]="product.name">
+                                <div class="click-hint">Check Price</div>
+                            </div>
+                            <span class="product-name-short">{{ product.name }}</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="deal-footer">
-                    <div class="price-box">
-                        <span class="original-price">${{ deal.originalPrice }}</span>
-                        <span class="sale-price">${{ deal.price }}</span>
+                    <div class="deal-price-info">
+                        <span class="old-price">${{ deal.originalPrice }}</span>
+                        <span class="new-price">${{ deal.price }}</span>
                     </div>
+                    <button class="buy-combo-btn" (click)="buyCombo(deal)">BUY COMBO</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Price Modal Overlay -->
+    <div class="price-modal-overlay" *ngIf="selectedProduct" (click)="closePrice()">
+        <div class="price-modal-card" (click)="$event.stopPropagation()">
+            <button class="modal-close" (click)="closePrice()">✕</button>
+            <div class="modal-content">
+                <div class="modal-img">
+                    <img [src]="selectedProduct.images[0]" [alt]="selectedProduct.name">
+                </div>
+                <div class="modal-info">
+                    <h3>{{ selectedProduct.name }}</h3>
+                    <p class="individual-price">Individual Price: <span>${{ selectedProduct.price }}</span></p>
+                    <p class="modal-desc">Part of the premium bundle set. Save more when buying the combo!</p>
+                    <a [routerLink]="['/products', selectedProduct.slug]" class="view-detail-link"
+                        (click)="closePrice()">View Detail Page</a>
                 </div>
             </div>
         </div>

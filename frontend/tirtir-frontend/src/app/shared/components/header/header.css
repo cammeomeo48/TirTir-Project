@@ -359,123 +359,114 @@
     }
 }
 
-/* Search Overlay */
-.search-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 0;
+/* Search Dropdown */
+.search-wrapper {
+    position: relative;
+}
+
+.search-dropdown {
+    position: absolute;
+    top: calc(100% + 15px);
+    right: 0;
+    width: 380px;
     background: #fff;
+    border: 1px solid #efefef;
+    border-radius: 4px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
     z-index: 2000;
-    overflow: hidden;
-    transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 20px;
 }
 
-.search-overlay.active {
-    height: auto;
-    max-height: 80vh;
-    padding-bottom: 40px;
+.search-dropdown::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    right: 15px;
+    width: 12px;
+    height: 12px;
+    background: #fff;
+    border-left: 1px solid #efefef;
+    border-top: 1px solid #efefef;
+    transform: rotate(45deg);
 }
 
-.search-content {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 0 24px;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
+.search-dropdown.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
 }
 
-.search-input-wrapper {
-    width: 100%;
+.search-input-wrapper-mini {
     display: flex;
     align-items: center;
-    position: relative;
-    border-bottom: 2px solid #000;
-    padding: 32px 0 16px;
+    border: 1.5px solid #111;
+    border-radius: 2px;
+    padding: 4px 12px;
     margin-bottom: 20px;
 }
 
-.search-icon {
-    color: #000;
-    margin-right: 16px;
-}
-
-.search-input-wrapper input {
+.search-input-wrapper-mini input {
     flex: 1;
     border: none;
     outline: none;
-    font-size: 24px;
-    font-weight: 500;
+    font-size: 14px;
+    padding: 8px 0;
     background: transparent;
-    color: #000;
 }
 
-.search-input-wrapper input::placeholder {
-    color: #999;
-}
-
-.close-btn {
+.search-submit {
     background: none;
     border: none;
-    padding: 8px;
+    padding: 4px;
     cursor: pointer;
-    color: #000;
-    margin-left: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: opacity 0.2s;
+    color: #111;
 }
 
-.close-btn:hover {
-    opacity: 0.6;
-}
-
-.search-overlay.active~.overlay-bg {
-    pointer-events: auto;
-    opacity: 1;
-}
-
-/* Search Suggestions */
+/* Suggestions */
 .search-suggestions {
-    width: 100%;
     animation: fadeIn 0.3s ease-out;
 }
 
 .suggestions-header {
-    font-size: 12px;
-    font-weight: 700;
+    font-size: 11px;
+    font-weight: 800;
     color: #999;
-    letter-spacing: 1px;
+    letter-spacing: 1.5px;
     margin-bottom: 16px;
+    text-transform: uppercase;
 }
 
 .suggestions-list {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
 }
 
 .suggestion-item {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
     cursor: pointer;
-    transition: transform 0.2s;
+    padding: 8px;
+    border-radius: 4px;
+    transition: background 0.2s;
 }
 
 .suggestion-item:hover {
-    transform: translateX(8px);
+    background: #f9f9f9;
 }
 
 .suggestion-image {
-    width: 60px;
-    height: 60px;
+    width: 50px;
+    height: 50px;
     background: #f5f5f5;
-    border-radius: 4px;
+    border-radius: 2px;
     overflow: hidden;
+    flex-shrink: 0;
 }
 
 .suggestion-image img {
@@ -486,33 +477,37 @@
 
 .suggestion-info {
     flex: 1;
+    min-width: 0;
 }
 
 .suggestion-name {
-    font-size: 16px;
+    font-size: 13px;
     font-weight: 600;
-    margin-bottom: 4px;
-    color: #000;
+    margin: 0 0 2px;
+    color: #111;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .suggestion-price {
-    font-size: 14px;
-    color: #666;
+    font-size: 12px;
+    color: #888;
 }
 
 .suggestions-footer {
-    margin-top: 32px;
-    border-top: 1px solid #eee;
-    padding-top: 24px;
-    text-align: center;
+    margin-top: 20px;
+    border-top: 1px solid #f2f2f2;
+    padding-top: 16px;
 }
 
 .view-all-results {
-    background: #000;
+    width: 100%;
+    background: #111;
     color: #fff;
     border: none;
-    padding: 12px 32px;
-    font-size: 14px;
+    padding: 10px;
+    font-size: 12px;
     font-weight: 700;
     letter-spacing: 1px;
     cursor: pointer;
@@ -524,10 +519,17 @@
     background: #333;
 }
 
+.search-empty {
+    font-size: 13px;
+    color: #888;
+    text-align: center;
+    padding: 10px 0;
+}
+
 @keyframes fadeIn {
     from {
         opacity: 0;
-        transform: translateY(-10px);
+        transform: translateY(-5px);
     }
 
     to {

@@ -22,6 +22,7 @@ export class ProductDetailComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef); // Re-inject for robust fix
 
   product!: ProductData;
+  suggestedProducts: any[] = [];
   selectedImage: string = '';
   selectedShade: string = '';
   quantity = 1;
@@ -44,15 +45,37 @@ export class ProductDetailComponent implements OnInit {
               const midIndex = Math.floor(this.product.shades.length / 2);
               this.selectedShade = this.product.shades[midIndex].name;
             }
+            this.fetchSuggestions();
             this.cdr.detectChanges(); // NUCLEAR FIX: Force check inside timeout
           }, 0);
         },
         error: (err: any) => {
           console.error('Product not found', err);
-          // Handle Not Found - maybe redirect or show error
         }
       });
     });
+  }
+
+  fetchSuggestions() {
+    this.productService.getProducts({ limit: 4 }).subscribe(res => {
+      this.suggestedProducts = res.data.filter((p: any) => p.slug !== this.product.slug);
+      // Dummy "Deal" suggestion
+      this.suggestedProducts.push({
+        name: 'Ultimate Beauty Combo',
+        price: 89,
+        originalPrice: 120,
+        images: ['https://tirtir.global/cdn/shop/files/7085731777013_1_800x.jpg'],
+        isDeal: true,
+        slug: 'deals'
+      });
+    });
+  }
+
+  scrollToReviews() {
+    const el = document.getElementById('reviews-section');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
   }
 
   selectImage(img: string) {
@@ -80,7 +103,6 @@ export class ProductDetailComponent implements OnInit {
   addToCart() {
     if (!this.product) return;
 
-    // 1. Validate Shade Selection if product has shades
     if (this.product.shades && this.product.shades.length > 0 && !this.selectedShade) {
       alert('Please select a shade');
       return;
@@ -88,18 +110,16 @@ export class ProductDetailComponent implements OnInit {
 
     this.addingToCart = true;
 
-    // 2. Call Service
     this.cartService.addToCart({
-      productId: this.product.id,
+      productId: (this.product as any)._id || this.product.id,
       quantity: this.quantity,
       shade: this.selectedShade || undefined
     }).subscribe({
       next: (cart) => {
         setTimeout(() => {
           this.addingToCart = false;
-          // Use a better toast later, for now consistent alert
           alert(`Added ${this.quantity} item(s) to cart!`);
-          this.cdr.detectChanges(); // Ensure view updates
+          this.cdr.detectChanges();
         }, 0);
       },
       error: (err: any) => {
@@ -107,7 +127,7 @@ export class ProductDetailComponent implements OnInit {
           this.addingToCart = false;
           console.error('Add to cart failed', err);
           alert(err.message || 'Failed to add to cart');
-          this.cdr.detectChanges(); // Ensure view updates
+          this.cdr.detectChanges();
         }, 0);
       }
     });

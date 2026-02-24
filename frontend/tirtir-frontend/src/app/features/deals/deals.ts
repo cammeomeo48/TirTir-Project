@@ -4,8 +4,11 @@ import { RouterModule } from '@angular/router';
 import { ProductService } from '../../core/services/product.service';
 import { ProductData } from '../../core/constants/products.data';
 
+import { CartService } from '../../core/services/cart.service';
+
 interface Deal {
     title: string;
+    category: string;
     description: string;
     products: ProductData[];
     price: number;
@@ -22,10 +25,12 @@ interface Deal {
 })
 export class DealsComponent implements OnInit {
     private productService = inject(ProductService);
+    private cartService = inject(CartService);
     private cdr = inject(ChangeDetectorRef);
 
     deals: Deal[] = [];
     isLoading = true;
+    selectedProduct: ProductData | null = null;
 
     ngOnInit() {
         this.loadDeals();
@@ -36,12 +41,8 @@ export class DealsComponent implements OnInit {
         this.productService.getProducts({ limit: 100 }).subscribe({
             next: (response) => {
                 const products = response.data;
-                if (products.length >= 5) {
-                    try {
-                        this.createRandomDeals(products);
-                    } catch (e) {
-                        console.error('DealsComponent: Error creating deals', e);
-                    }
+                if (products.length >= 4) {
+                    this.createCategoryDeals(products);
                 }
                 this.isLoading = false;
                 this.cdr.detectChanges();
@@ -54,39 +55,55 @@ export class DealsComponent implements OnInit {
         });
     }
 
-    createRandomDeals(products: ProductData[]) {
-        // Shuffle array
-        const shuffled = [...products].sort(() => 0.5 - Math.random());
-        const selected = shuffled.slice(0, 5);
+    createCategoryDeals(products: ProductData[]) {
+        const makeup = products.filter(p => (p as any).Category?.toLowerCase() === 'makeup' || (p as any).category?.toLowerCase() === 'makeup').slice(0, 3);
+        const skincare = products.filter(p => (p as any).Category?.toLowerCase() === 'skincare' || (p as any).category?.toLowerCase() === 'skincare').slice(0, 3);
 
-        // Create Combo 1: "Duo Set" (2 products)
-        const combo1Products = selected.slice(0, 2);
-        const combo1Price = combo1Products.reduce((sum, p) => sum + p.price, 0) * 0.8; // 20% off
-        const combo1Original = combo1Products.reduce((sum, p) => sum + p.price, 0);
+        // Use all products if specific categories are empty
+        const sourceMakeup = makeup.length >= 2 ? makeup : products.slice(0, 2);
+        const sourceSkincare = skincare.length >= 2 ? skincare : products.slice(2, 5);
 
-        const deal1: Deal = {
-            title: 'PERFECT DUO SET',
-            description: 'Get these 2 essentials for a complete look.',
-            products: combo1Products,
-            price: Math.round(combo1Price),
-            originalPrice: Math.round(combo1Original),
-            discount: 20
+        const makeupDeal: Deal = {
+            title: 'MAKEUP ESSENTIALS COMBO',
+            category: 'MAKEUP',
+            description: 'Everything you need for a flawless daily look.',
+            products: sourceMakeup,
+            originalPrice: Math.round(sourceMakeup.reduce((sum, p) => sum + p.price, 0)),
+            price: Math.round(sourceMakeup.reduce((sum, p) => sum + p.price, 0) * 0.85),
+            discount: 15
         };
 
-        // Create Combo 2: "Trio Glow Bundle" (3 products)
-        const combo2Products = selected.slice(2, 5);
-        const combo2Price = combo2Products.reduce((sum, p) => sum + p.price, 0) * 0.7; // 30% off
-        const combo2Original = combo2Products.reduce((sum, p) => sum + p.price, 0);
-
-        const deal2: Deal = {
-            title: 'ULTIMATE GLOW TRIO',
-            description: 'The ultimate 3-step routine for radiant skin.',
-            products: combo2Products,
-            price: Math.round(combo2Price),
-            originalPrice: Math.round(combo2Original),
-            discount: 30
+        const skincareDeal: Deal = {
+            title: 'GLOW SKINCARE ROUTINE',
+            category: 'SKINCARE',
+            description: 'The ultimate 3-step routine for glass skin.',
+            products: sourceSkincare,
+            originalPrice: Math.round(sourceSkincare.reduce((sum, p) => sum + p.price, 0)),
+            price: Math.round(sourceSkincare.reduce((sum, p) => sum + p.price, 0) * 0.75),
+            discount: 25
         };
 
-        this.deals = [deal1, deal2];
+        this.deals = [makeupDeal, skincareDeal];
+    }
+
+    showPrice(product: ProductData, event: Event) {
+        event.stopPropagation();
+        this.selectedProduct = product;
+    }
+
+    closePrice() {
+        this.selectedProduct = null;
+    }
+
+    buyCombo(deal: Deal) {
+        // Logic to add all products in combo to cart
+        deal.products.forEach(product => {
+            this.cartService.addToCart({
+                productId: (product as any)._id || product.id,
+                quantity: 1,
+                shade: (product as any).Shades?.[0] || 'Default'
+            }).subscribe();
+        });
+        alert(`Successfully added "${deal.title}" to cart!`);
     }
 }

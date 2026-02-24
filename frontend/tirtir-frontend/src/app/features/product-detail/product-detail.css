@@ -445,3 +445,115 @@
         height: 60px;
     }
 }
+
+/* =====================================================
+   LINKED REVIEW COUNT
+   ===================================================== */
+.review-count.linked {
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.review-count.linked:hover {
+    color: #000;
+}
+
+/* =====================================================
+   SUGGESTIONS SECTION
+   ===================================================== */
+.suggestions-section {
+    padding: 100px 0;
+    background: #fff;
+    border-top: 1px solid #efefef;
+    border-bottom: 1px solid #efefef;
+}
+
+.section-title {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: 3px;
+    margin-bottom: 50px;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.suggestions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 32px;
+}
+
+.suggestion-card {
+    background: #fff;
+    border: 1px solid #f5f5f5;
+    padding: 30px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+}
+
+.suggestion-card:hover {
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.06);
+    transform: translateY(-8px);
+    border-color: #ddd;
+}
+
+.card-badge {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: #111;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
+    padding: 4px 10px;
+    letter-spacing: 1px;
+    z-index: 10;
+}
+
+.suggestion-img {
+    height: 220px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fafafa;
+}
+
+.suggestion-img img {
+    max-width: 85%;
+    max-height: 85%;
+    object-fit: contain;
+}
+
+.suggestion-meta h4 {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0 0 10px;
+    color: #111;
+    letter-spacing: 0.5px;
+}
+
+.suggestion-prices {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    align-items: center;
+}
+
+.suggestion-prices .old {
+    text-decoration: line-through;
+    color: #bbb;
+    font-size: 14px;
+}
+
+.suggestion-prices .new {
+    font-weight: 700;
+    color: #111;
+    font-size: 17px;
+}
