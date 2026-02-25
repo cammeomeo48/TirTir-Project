@@ -97,12 +97,13 @@ export class ProductService {
 
   private mapToProductData(bp: BackendProduct): ProductData {
     // Helper to ensure full URL for images
+    const backendBase = environment.apiUrl.replace('/api/v1', '');
     const fixUrl = (url: string) => {
       if (!url) return '';
       if (url.startsWith('http')) return url;
       // Prepend backend URL. Remove leading slash if present to avoid double slashes.
       const cleanUrl = url.startsWith('/') ? url.substring(1) : url;
-      return `http://localhost:5001/${cleanUrl}`;
+      return `${backendBase}/${cleanUrl}`;
     };
 
     return {

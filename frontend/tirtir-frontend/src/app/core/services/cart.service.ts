@@ -72,25 +72,32 @@ export class CartService {
     }
 
     /**
-     * Update cart item quantity
-     * Backend handles this through the same add endpoint
+     * Update cart item quantity (set to exact new target quantity)
+     * Calls PUT /cart/update with the new target quantity
      */
     updateCartItem(productId: string, quantity: number, shade?: string): Observable<Cart> {
-        return this.addToCart({ productId, quantity, shade });
-    }
-
-    /**
-     * Remove item from cart (set quantity to 0)
-     */
-    removeCartItem(productId: string, shade?: string): Observable<Cart> {
-        // Backend doesn't have explicit remove endpoint
-        // We'll need to handle this by fetching cart, filtering item, and updating
-        // For now, we'll reload cart after manual removal
-        return this.getCart().pipe(
+        return this.http.put<Cart>(`${this.apiUrl}/update`, { productId, quantity, shade: shade || 'null' }).pipe(
             tap((cart) => {
                 this.cartSubject.next(cart);
                 this.updateCartCount(cart);
-            })
+            }),
+            catchError(this.handleError)
+        );
+    }
+
+    /**
+     * Remove item from cart
+     * Calls DELETE /cart/remove/:productId/:shade
+     */
+    removeCartItem(productId: string, shade?: string): Observable<Cart> {
+        // Encode shade to handle empty/undefined — backend expects 'null' string for no shade
+        const encodedShade = encodeURIComponent(shade || 'null');
+        return this.http.delete<Cart>(`${this.apiUrl}/remove/${productId}/${encodedShade}`).pipe(
+            tap((cart) => {
+                this.cartSubject.next(cart);
+                this.updateCartCount(cart);
+            }),
+            catchError(this.handleError)
         );
     }
 

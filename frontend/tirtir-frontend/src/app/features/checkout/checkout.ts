@@ -7,6 +7,7 @@ import { OrderService } from '../../core/services/order.service';
 import { Cart } from '../../core/models';
 import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 @Component({
     selector: 'app-checkout',
@@ -97,7 +98,7 @@ export class CheckoutComponent implements OnInit {
             paymentMethod: method === 'CARD' ? 'CARD' : 'VNPAY',
             bankCode: ''
         };
-        this.http.post<{ paymentUrl: string }>('http://localhost:5001/api/v1/payments/create-url', body)
+        this.http.post<{ paymentUrl: string }>(`${environment.apiUrl}/payments/create-url`, body)
             .subscribe({
                 next: (res) => window.location.href = res.paymentUrl,
                 error: (err) => {
@@ -109,7 +110,8 @@ export class CheckoutComponent implements OnInit {
     getImageUrl(url: string): string {
         if (!url) return '';
         if (url.startsWith('http')) return url;
-        return `http://localhost:5001/${url.startsWith('/') ? url.substring(1) : url}`;
+        const backendBase = environment.apiUrl.replace('/api/v1', '');
+        return `${backendBase}/${url.startsWith('/') ? url.substring(1) : url}`;
     }
 
     getTotal(): number {

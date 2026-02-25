@@ -1,4 +1,5 @@
-import { Component, EventEmitter, Output, OnInit, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
+import { Component, EventEmitter, Output, OnInit, ViewChild, ElementRef, AfterViewChecked, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ChatService, ChatMessage, QuickReply } from '../../../core/services/chat.service';
@@ -19,10 +20,13 @@ export class ChatConversationComponent implements OnInit, AfterViewChecked {
     quickReplies: QuickReply[] = [];
     isTyping = false;
 
+    private destroyRef = inject(DestroyRef);
+
     constructor(private chatService: ChatService) { }
 
     ngOnInit() {
-        this.chatService.messages$.subscribe(msgs => {
+        // FE-03: takeUntilDestroyed() prevents the memory leak when the component is destroyed
+        this.chatService.messages$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(msgs => {
             this.messages = msgs;
             this.scrollToBottom();
         });
@@ -65,6 +69,9 @@ export class ChatConversationComponent implements OnInit, AfterViewChecked {
         const msg = this.newMessage;
         this.newMessage = '';
 
+        // FE-04: Set isTyping BEFORE subscribe so the indicator shows while waiting for the response
+        this.isTyping = true;
+
         this.chatService.sendMessage(msg).subscribe({
             next: (response: any) => {
                 // Backend returns JSON from Python script.
@@ -90,9 +97,6 @@ export class ChatConversationComponent implements OnInit, AfterViewChecked {
                 });
             }
         });
-
-        // Simulate bot thinking/typing
-        this.isTyping = true;
     }
 
     sendQuickReply(reply: QuickReply) {
