@@ -29,7 +29,7 @@
             </option>
         </select>
 
-        <button class="btn btn-outline" routerLink="/products/low-stock">
+        <button class="btn btn-outline" [routerLink]="['/inventory']" [queryParams]="{filter: 'low-stock'}">
             Low Stock Alerts
         </button>
     </div>
@@ -62,31 +62,72 @@
                 </tr>
             </thead>
             <tbody>
-                <tr *ngFor="let product of getPaginatedProducts()">
+                <tr *ngFor="let product of getPaginatedProducts()" [class.editing]="editingId === product._id">
+
+                    <!-- Thumbnail (luôn hiển thị) -->
                     <td>
                         <img [src]="getMainImage(product)" [alt]="product.Product_Name" class="product-image" />
                     </td>
-                    <td class="product-name">{{ product.Product_Name }}</td>
-                    <td class="sku">{{ product.Product_ID }}</td>
-                    <td>
-                        <span class="category-badge">{{ product.Category }}</span>
-                    </td>
-                    <td class="price">${{ product.Price.toFixed(2) }}</td>
-                    <td class="stock">{{ product.stock }}</td>
-                    <td>
-                        <span [class]="'status-badge ' + getStockStatus(product.stock)">
-                            {{ getStockLabel(product.stock) }}
-                        </span>
-                    </td>
-                    <td class="actions">
-                        <button class="btn btn-sm btn-outline" [routerLink]="['/products/edit', product._id]"
-                            title="Edit">
-                            Edit
-                        </button>
-                        <button class="btn btn-sm btn-danger" (click)="deleteProduct(product)" title="Delete">
-                            Delete
-                        </button>
-                    </td>
+
+                    <!-- VIEW mode -->
+                    <ng-container *ngIf="editingId !== product._id">
+                        <td class="product-name">{{ product.Product_Name }}</td>
+                        <td class="sku">{{ product.Product_ID }}</td>
+                        <td><span class="category-badge">{{ product.Category }}</span></td>
+                        <td class="price">${{ product.Price.toFixed(2) }}</td>
+                        <td class="stock">{{ product.stock }}</td>
+                        <td>
+                            <span [class]="'status-badge ' + getStockStatus(product.stock)">
+                                {{ getStockLabel(product.stock) }}
+                            </span>
+                        </td>
+                        <td class="actions">
+                            <button class="btn btn-sm btn-outline" (click)="openEdit(product)" title="Quick Edit">
+                                Quick Edit
+                            </button>
+                            <button class="btn btn-sm btn-outline" [routerLink]="['/products/edit', product._id]"
+                                title="Full Edit">
+                                Full Edit
+                            </button>
+                            <button class="btn btn-sm btn-danger" (click)="deleteProduct(product)" title="Delete">
+                                Delete
+                            </button>
+                        </td>
+                    </ng-container>
+
+                    <!-- EDIT mode -->
+                    <ng-container *ngIf="editingId === product._id">
+                        <td>
+                            <input type="text" [(ngModel)]="editDraft.Product_Name" class="qe-input qe-name"
+                                placeholder="Product name" [disabled]="saving" />
+                        </td>
+                        <td class="sku">{{ product.Product_ID }}</td>
+                        <td><span class="category-badge">{{ product.Category }}</span></td>
+                        <td>
+                            <input type="number" [(ngModel)]="editDraft.Price" class="qe-input qe-price" min="0"
+                                step="0.01" [disabled]="saving" />
+                        </td>
+                        <td>
+                            <input type="number" [(ngModel)]="editDraft.stock" class="qe-input qe-stock" min="0"
+                                [disabled]="saving" />
+                        </td>
+                        <td>
+                            <select [(ngModel)]="editDraft.status" class="qe-select" [disabled]="saving">
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                                <option value="draft">Draft</option>
+                            </select>
+                        </td>
+                        <td class="actions">
+                            <button class="btn btn-sm btn-primary" (click)="saveEdit(product)"
+                                [disabled]="saving || !editDraft.Product_Name?.trim()">
+                                {{ saving ? '...' : 'Save' }}
+                            </button>
+                            <button class="btn btn-sm btn-outline" (click)="cancelEdit()" [disabled]="saving">
+                                Cancel
+                            </button>
+                        </td>
+                    </ng-container>
                 </tr>
             </tbody>
         </table>

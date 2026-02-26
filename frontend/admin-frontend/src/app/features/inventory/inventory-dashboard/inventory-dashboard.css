@@ -152,3 +152,29 @@
         grid-template-columns: 1fr;
     }
 }
+/* === FILTER BANNER === */
+.filter-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(230, 81, 0, 0.08);
+    border: 1px solid rgba(230, 81, 0, 0.3);
+    border-radius: var(--border-radius);
+    padding: 10px 16px;
+    font-size: var(--font-size-sm);
+    color: var(--warning);
+    margin-bottom: var(--spacing-md);
+}
+.btn-clear { background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: var(--font-size-xs); text-decoration: underline; }
+
+/* === QUICK RESTOCK === */
+.restock-cell { min-width: 200px; }
+.restock-form { display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
+.restock-input { width: 64px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: var(--border-radius); font-size: var(--font-size-xs); text-align: center; }
+.restock-reason { width: 110px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: var(--border-radius); font-size: var(--font-size-xs); }
+.btn-success { background-color: var(--success); color: white; border: none; }
+.btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border-color); }
+
+/* === ERROR / LOADING === */
+.error-state { text-align: center; padding: var(--spacing-lg); background: rgba(211, 47, 47, 0.05); border: 1px solid rgba(211, 47, 47, 0.2); border-radius: var(--border-radius); margin-bottom: var(--spacing-md); color: var(--danger); }
+.stats-loading-state { display: flex; justify-content: center; padding: var(--spacing-md); margin-bottom: var(--spacing-lg); }

@@ -15,6 +15,14 @@ interface Product {
     status?: string;
 }
 
+// Shape for quick edit — only editable fields
+interface QuickEditDraft {
+    Product_Name: string;
+    Price: number;
+    stock: number;
+    status: string;
+}
+
 @Component({
     selector: 'app-product-list',
     standalone: true,
@@ -46,6 +54,11 @@ export class ProductListComponent implements OnInit {
         { value: 'out-of-stock', label: 'Out of Stock (0)' }
     ];
 
+    // ─── Quick Edit ─────────────────────────────────────────────
+    editingId: string | null = null;
+    editDraft: QuickEditDraft = { Product_Name: '', Price: 0, stock: 0, status: 'active' };
+    saving = false;
+
     constructor(private productService: ProductService) { }
 
     ngOnInit(): void {
@@ -58,7 +71,6 @@ export class ProductListComponent implements OnInit {
 
         this.productService.getAllProducts().subscribe({
             next: (data: any) => {
-                // Handle both array response and wrapped object response
                 this.products = Array.isArray(data) ? data : (data.products || data.data || []);
                 this.applyFilters();
                 this.loading = false;
@@ -74,7 +86,6 @@ export class ProductListComponent implements OnInit {
     applyFilters(): void {
         let filtered = [...this.products];
 
-        // Search filter
         if (this.searchQuery.trim()) {
             const query = this.searchQuery.toLowerCase();
             filtered = filtered.filter(p =>
@@ -83,61 +94,88 @@ export class ProductListComponent implements OnInit {
             );
         }
 
-        // Category filter
         if (this.selectedCategory && this.selectedCategory !== 'All') {
             filtered = filtered.filter(p => p.Category === this.selectedCategory);
         }
 
-        // Stock status filter
         if (this.selectedStockStatus) {
             switch (this.selectedStockStatus) {
-                case 'in-stock':
-                    filtered = filtered.filter(p => p.stock > 20);
-                    break;
-                case 'low-stock':
-                    filtered = filtered.filter(p => p.stock > 0 && p.stock <= 20);
-                    break;
-                case 'out-of-stock':
-                    filtered = filtered.filter(p => p.stock === 0);
-                    break;
+                case 'in-stock': filtered = filtered.filter(p => p.stock > 20); break;
+                case 'low-stock': filtered = filtered.filter(p => p.stock > 0 && p.stock <= 20); break;
+                case 'out-of-stock': filtered = filtered.filter(p => p.stock === 0); break;
             }
         }
 
         this.filteredProducts = filtered;
         this.totalPages = Math.ceil(filtered.length / this.pageSize);
-        this.currentPage = 1; // Reset to first page when filters change
+        this.currentPage = 1;
     }
 
     getPaginatedProducts(): Product[] {
         const start = (this.currentPage - 1) * this.pageSize;
-        const end = start + this.pageSize;
-        return this.filteredProducts.slice(start, end);
+        return this.filteredProducts.slice(start, start + this.pageSize);
     }
 
-    onSearchChange(): void {
-        this.applyFilters();
-    }
-
-    onCategoryChange(): void {
-        this.applyFilters();
-    }
-
-    onStockStatusChange(): void {
-        this.applyFilters();
-    }
+    onSearchChange(): void { this.applyFilters(); }
+    onCategoryChange(): void { this.applyFilters(); }
+    onStockStatusChange(): void { this.applyFilters(); }
 
     goToPage(page: number): void {
-        if (page >= 1 && page <= this.totalPages) {
-            this.currentPage = page;
-        }
+        if (page >= 1 && page <= this.totalPages) this.currentPage = page;
     }
 
+    // ─── Quick Edit ─────────────────────────────────────────────
+
+    openEdit(product: Product): void {
+        this.editingId = product._id;
+        this.editDraft = {
+            Product_Name: product.Product_Name,
+            Price: product.Price,
+            stock: product.stock,
+            status: product.status || 'active'
+        };
+    }
+
+    cancelEdit(): void {
+        this.editingId = null;
+    }
+
+    saveEdit(product: Product): void {
+        if (!this.editDraft.Product_Name?.trim() || this.editDraft.Price < 0) return;
+        this.saving = true;
+
+        // Dùng PUT /admin/products/:id — cập nhật toàn bộ fields cần thiết
+        const payload = {
+            Product_Name: this.editDraft.Product_Name.trim(),
+            Price: Number(this.editDraft.Price),
+            stock: Number(this.editDraft.stock),
+            status: this.editDraft.status
+        };
+
+        this.productService.updateProduct(product._id, payload).subscribe({
+            next: (updated: any) => {
+                // Cập nhật local state ngay lập tức — không cần reload toàn bộ
+                const idx = this.products.findIndex(p => p._id === product._id);
+                if (idx !== -1) {
+                    this.products[idx] = { ...this.products[idx], ...payload };
+                    this.applyFilters();
+                }
+                this.saving = false;
+                this.editingId = null;
+            },
+            error: (err: any) => {
+                console.error('Quick edit error:', err);
+                alert('Failed to update product. Please try again.');
+                this.saving = false;
+            }
+        });
+    }
+
+    // ─── Delete ──────────────────────────────────────────────────
     deleteProduct(product: Product): void {
-        if (confirm(`Are you sure you want to delete "${product.Product_Name}"?`)) {
+        if (confirm(`Delete "${product.Product_Name}"? This cannot be undone.`)) {
             this.productService.deleteProduct(product._id).subscribe({
-                next: () => {
-                    this.loadProducts(); // Reload list
-                },
+                next: () => this.loadProducts(),
                 error: (err: any) => {
                     alert('Failed to delete product');
                     console.error('Delete error:', err);
@@ -146,6 +184,7 @@ export class ProductListComponent implements OnInit {
         }
     }
 
+    // ─── Helpers ─────────────────────────────────────────────────
     getStockStatus(stock: number): string {
         if (stock === 0) return 'out-of-stock';
         if (stock <= 20) return 'low-stock';
@@ -159,7 +198,7 @@ export class ProductListComponent implements OnInit {
     }
 
     getMainImage(product: Product): string {
-        return product.Thumbnail_Images && product.Thumbnail_Images.length > 0
+        return product.Thumbnail_Images?.length > 0
             ? product.Thumbnail_Images[0]
             : 'assets/placeholder-product.png';
     }

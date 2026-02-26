@@ -155,7 +155,7 @@ export class ReviewsComponent implements OnInit {
     loadReviews() {
         this.loading = true;
         this.error = null;
-        this.http.get<any>(`${environment.apiUrl}/reviews`).subscribe({
+        this.http.get<any>(`${environment.apiUrl}/admin/reviews`).subscribe({
             next: (data) => {
                 this.reviews = Array.isArray(data) ? data : (data.reviews || data.data || []);
                 this.applyFilters();
@@ -185,7 +185,7 @@ export class ReviewsComponent implements OnInit {
 
     deleteReview(id: string) {
         if (!confirm('Delete this review?')) return;
-        this.http.delete(`${environment.apiUrl}/reviews/${id}`).subscribe({
+        this.http.delete(`${environment.apiUrl}/admin/reviews/${id}`).subscribe({
             next: () => this.loadReviews(),
             error: () => alert('Failed to delete review')
         });

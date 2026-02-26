@@ -1,13 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, ActivatedRoute } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { InventoryService, InventoryStats } from '../../../core/services/inventory.service';
 import { ExportService } from '../../../core/services/export.service';
 
 @Component({
     selector: 'app-inventory-dashboard',
     standalone: true,
-    imports: [CommonModule, RouterModule],
+    imports: [CommonModule, RouterModule, FormsModule],
     templateUrl: './inventory-dashboard.html',
     styleUrls: ['./inventory-dashboard.css']
 })
@@ -18,12 +19,26 @@ export class InventoryDashboardComponent implements OnInit {
     error: string | null = null;
     statsLoading = true;
 
+    // Quick Restock
+    restockingId: string | null = null;
+    restockQty: number = 0;
+    restockReason = 'Manual restock';
+    restocking = false;
+
+    // Filter from query param (e.g. ?filter=low-stock from Products page)
+    activeFilter: string | null = null;
+
     constructor(
         private inventoryService: InventoryService,
-        private exportService: ExportService
+        private exportService: ExportService,
+        private route: ActivatedRoute
     ) { }
 
     ngOnInit(): void {
+        // Read query param from Products "Low Stock Alerts" button
+        this.route.queryParams.subscribe(params => {
+            this.activeFilter = params['filter'] || null;
+        });
         this.loadDashboardData();
     }
 
@@ -31,22 +46,15 @@ export class InventoryDashboardComponent implements OnInit {
         this.loading = true;
         this.error = null;
 
-        // Load stats and alerts in parallel (mock-style)
         this.inventoryService.getInventoryStats().subscribe({
             next: (data) => {
                 this.stats = data;
                 this.statsLoading = false;
             },
-            error: (err) => {
+            error: (err: any) => {
                 console.error('Stats load error:', err);
                 this.statsLoading = false;
-                // Mock stats for now if backend fails
-                this.stats = {
-                    totalProducts: 45,
-                    lowStockItems: 3,
-                    outOfStockItems: 1,
-                    totalValue: 25000
-                };
+                this.error = 'Failed to load inventory stats';
             }
         });
 
@@ -55,7 +63,7 @@ export class InventoryDashboardComponent implements OnInit {
                 this.alerts = Array.isArray(data) ? data : [];
                 this.loading = false;
             },
-            error: (err) => {
+            error: (err: any) => {
                 console.error('Alerts load error:', err);
                 this.loading = false;
                 this.error = 'Failed to load inventory alerts';
@@ -63,9 +71,45 @@ export class InventoryDashboardComponent implements OnInit {
         });
     }
 
+    // ─── Quick Restock ───────────────────────────────────────────
+    openRestock(item: any): void {
+        this.restockingId = item._id;
+        this.restockQty = 0;
+        this.restockReason = 'Manual restock';
+    }
+
+    cancelRestock(): void {
+        this.restockingId = null;
+    }
+
+    confirmRestock(item: any): void {
+        if (!this.restockQty || this.restockQty <= 0) return;
+        this.restocking = true;
+
+        this.inventoryService.adjustStock({
+            productId: item._id,
+            action: 'add',
+            quantity: this.restockQty,
+            reason: this.restockReason || 'Manual restock'
+        }).subscribe({
+            next: () => {
+                this.restocking = false;
+                this.restockingId = null;
+                // Reactive: reload both stats and alerts without page reload
+                this.loadDashboardData();
+            },
+            error: (err: any) => {
+                console.error('Restock error:', err);
+                this.restocking = false;
+                this.error = 'Failed to restock. Please try again.';
+            }
+        });
+    }
+
+    // ─── Export ──────────────────────────────────────────────────
     exportData(): void {
         if (!this.alerts || this.alerts.length === 0) return;
-        
+
         const dataToExport = this.alerts.map(item => ({
             'Product Name': item.name,
             'SKU': item.sku || 'N/A',

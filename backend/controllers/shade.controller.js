@@ -172,3 +172,39 @@ exports.getShadeById = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+
+// ─── Admin Write Operations ───────────────────────────────────
+
+exports.createShade = async (req, res) => {
+    try {
+        const shade = new Shade(req.body);
+        await shade.save();
+        res.status(201).json(shade);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+};
+
+exports.updateShade = async (req, res) => {
+    try {
+        const updated = await Shade.findOneAndUpdate(
+            { Shade_ID: req.params.shadeId },
+            req.body,
+            { new: true, runValidators: true }
+        );
+        if (!updated) return res.status(404).json({ message: 'Shade not found' });
+        res.json(updated);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+};
+
+exports.deleteShade = async (req, res) => {
+    try {
+        const deleted = await Shade.findOneAndDelete({ Shade_ID: req.params.shadeId });
+        if (!deleted) return res.status(404).json({ message: 'Shade not found' });
+        res.json({ message: 'Shade deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};

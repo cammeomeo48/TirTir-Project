@@ -17,6 +17,10 @@ export class CouponListComponent implements OnInit {
     loading = true;
     error: string | null = null;
 
+    // Coupon Stats
+    stats: any = null;
+    statsLoading = true;
+
     // Pagination
     currentPage = 1;
     pageSize = 10;
@@ -30,6 +34,14 @@ export class CouponListComponent implements OnInit {
 
     ngOnInit(): void {
         this.loadCoupons();
+        this.loadStats();
+    }
+
+    loadStats(): void {
+        this.couponService.getCouponStats().subscribe({
+            next: (data) => { this.stats = data; this.statsLoading = false; },
+            error: () => { this.statsLoading = false; }
+        });
     }
 
     loadCoupons(): void {

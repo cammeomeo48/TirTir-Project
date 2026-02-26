@@ -50,4 +50,19 @@ export class DashboardService {
     getAllOrders(): Observable<any[]> {
         return this.http.get<any[]>(`${this.apiUrl}/orders`);
     }
+
+    /** GET /api/v1/admin/stats/conversion — conversion funnel data */
+    getConversionStats(): Observable<any> {
+        return this.http.get<any>(`${environment.apiUrl}/admin/stats/conversion`);
+    }
+
+    /** GET /api/v1/inventory/alerts — low stock items for dashboard widget */
+    getLowStockAlerts(): Observable<any[]> {
+        return this.http.get<any[]>(`${environment.apiUrl}/inventory/alerts`);
+    }
+
+    /** GET /api/v1/admin/stats/ai-insights — AI-powered insights */
+    getAiInsights(): Observable<any> {
+        return this.http.get<any>(`${environment.apiUrl}/admin/stats/ai-insights`);
+    }
 }

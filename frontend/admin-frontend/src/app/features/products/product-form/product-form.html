@@ -109,4 +109,120 @@
             </button>
         </div>
     </form>
+
+    <!-- ─── SHADE / VARIANT MANAGER (Edit Mode only) ─────────── -->
+    <div class="shade-manager" *ngIf="isEditMode">
+        <div class="shade-manager-header">
+            <h2>Color Shades / Variants</h2>
+            <button type="button" class="btn btn-sm btn-outline" (click)="openAddShade()" *ngIf="!showAddShade">
+                + Add Shade
+            </button>
+        </div>
+
+        <!-- Loading -->
+        <div *ngIf="shadesLoading" class="shade-loading">Loading shades...</div>
+
+        <!-- Add Shade Form -->
+        <div class="shade-add-form" *ngIf="showAddShade">
+            <h4>New Shade</h4>
+            <div class="shade-add-grid">
+                <div class="shade-field">
+                    <label>Shade Name *</label>
+                    <input type="text" [(ngModel)]="newShade.Shade_Name" class="qe-input"
+                        placeholder="e.g., 13N Natural Beige" [disabled]="savingShade" />
+                </div>
+                <div class="shade-field">
+                    <label>Shade Code</label>
+                    <input type="text" [(ngModel)]="newShade.Shade_Code" class="qe-input" placeholder="e.g., 13N"
+                        [disabled]="savingShade" />
+                </div>
+                <div class="shade-field">
+                    <label>Category</label>
+                    <input type="text" [(ngModel)]="newShade.Shade_Category_Name" class="qe-input"
+                        placeholder="e.g., Cushion" [disabled]="savingShade" />
+                </div>
+                <div class="shade-field shade-color-field">
+                    <label>Hex Color *</label>
+                    <div class="color-input-row">
+                        <input type="color" [(ngModel)]="newShade.Hex_Code" class="color-picker"
+                            [disabled]="savingShade" />
+                        <input type="text" [(ngModel)]="newShade.Hex_Code" class="qe-input" placeholder="#d4a574"
+                            [disabled]="savingShade" />
+                    </div>
+                </div>
+                <div class="shade-field">
+                    <label>Undertone</label>
+                    <select [(ngModel)]="newShade.Undertone" class="qe-select" [disabled]="savingShade">
+                        <option value="">Select</option>
+                        <option value="Warm">Warm</option>
+                        <option value="Cool">Cool</option>
+                        <option value="Neutral">Neutral</option>
+                    </select>
+                </div>
+                <div class="shade-field">
+                    <label>Finish Type</label>
+                    <input type="text" [(ngModel)]="newShade.Finish_Type" class="qe-input"
+                        placeholder="e.g., Matte, Dewy" [disabled]="savingShade" />
+                </div>
+            </div>
+            <div class="shade-add-actions">
+                <button type="button" class="btn btn-sm btn-primary" (click)="saveShade()"
+                    [disabled]="savingShade || !newShade.Shade_Name">
+                    {{ savingShade ? 'Saving...' : 'Save Shade' }}
+                </button>
+                <button type="button" class="btn btn-sm btn-outline" (click)="cancelAddShade()"
+                    [disabled]="savingShade">
+                    Cancel
+                </button>
+            </div>
+        </div>
+
+        <!-- Shades Grid -->
+        <div class="shades-grid" *ngIf="!shadesLoading && shades.length > 0">
+            <div class="shade-card" *ngFor="let shade of shades" [class.editing]="editingShadeId === shade.Shade_ID">
+
+                <!-- VIEW mode -->
+                <ng-container *ngIf="editingShadeId !== shade.Shade_ID">
+                    <div class="shade-swatch" [style.background]="shade.Hex_Code" [title]="shade.Hex_Code"></div>
+                    <div class="shade-info">
+                        <div class="shade-name">{{ shade.Shade_Name }}</div>
+                        <div class="shade-code">{{ shade.Shade_Code }}</div>
+                        <div class="shade-meta" *ngIf="shade.Undertone">{{ shade.Undertone }}</div>
+                    </div>
+                    <div class="shade-actions">
+                        <button class="btn btn-sm btn-outline" (click)="openEditShade(shade)">Edit</button>
+                        <button class="btn btn-sm btn-danger" (click)="deleteShade(shade)">Del</button>
+                    </div>
+                </ng-container>
+
+                <!-- EDIT mode -->
+                <ng-container *ngIf="editingShadeId === shade.Shade_ID">
+                    <div class="shade-swatch" [style.background]="editShadeDraft.Hex_Code"></div>
+                    <div class="shade-edit-fields">
+                        <input type="text" [(ngModel)]="editShadeDraft.Shade_Name" class="qe-input" placeholder="Name"
+                            [disabled]="savingShade" />
+                        <div class="color-input-row">
+                            <input type="color" [(ngModel)]="editShadeDraft.Hex_Code" class="color-picker" />
+                            <input type="text" [(ngModel)]="editShadeDraft.Hex_Code" class="qe-input hex-input" />
+                        </div>
+                        <input type="text" [(ngModel)]="editShadeDraft.Undertone" class="qe-input"
+                            placeholder="Undertone" [disabled]="savingShade" />
+                    </div>
+                    <div class="shade-actions">
+                        <button class="btn btn-sm btn-primary" (click)="saveEditShade()" [disabled]="savingShade">
+                            {{ savingShade ? '...' : 'Save' }}
+                        </button>
+                        <button class="btn btn-sm btn-outline" (click)="cancelEditShade()">×</button>
+                    </div>
+                </ng-container>
+            </div>
+        </div>
+
+        <!-- Empty state -->
+        <div class="shade-empty" *ngIf="!shadesLoading && shades.length === 0 && !showAddShade">
+            <p>No shades defined for this product.</p>
+            <button class="btn btn-sm btn-outline" (click)="openAddShade()">Add First Shade</button>
+        </div>
+    </div>
+
 </div>

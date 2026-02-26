@@ -9,6 +9,26 @@
         </a>
     </div>
 
+    <!-- Stats Widget (từ GET /coupons/stats) -->
+    <div class="coupon-stats" *ngIf="!statsLoading && stats">
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.totalCoupons ?? coupons.length }}</div>
+            <div class="stat-label">Total Coupons</div>
+        </div>
+        <div class="stat-card active">
+            <div class="stat-value">{{ stats.activeCoupons ?? 0 }}</div>
+            <div class="stat-label">Active</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.totalUsage ?? 0 }}</div>
+            <div class="stat-label">Total Uses</div>
+        </div>
+        <div class="stat-card warning">
+            <div class="stat-value">{{ stats.expiringSoon ?? 0 }}</div>
+            <div class="stat-label">Expiring Soon</div>
+        </div>
+    </div>
+
     <!-- Filters -->
     <div class="filters-section">
         <div class="search-box">

@@ -62,7 +62,7 @@
             </div>
         </div>
 
-        <!-- Conversion (Mock/Low Stock) -->
+        <!-- Low Stock -->
         <div class="stat-card">
             <div class="card-header">
                 <span class="stat-label">Low Stock Items</span>
@@ -108,9 +108,26 @@
     <div class="recent-orders-section">
         <div class="section-header">
             <h3>Recent Orders</h3>
-            <button class="view-all-btn">View All</button>
+            <a routerLink="/orders" class="view-all-btn">View All</a>
         </div>
         <app-recent-orders></app-recent-orders>
     </div>
+
+    <!-- Low Stock Alert Widget (data từ /inventory/alerts) -->
+    <div class="low-stock-widget" *ngIf="!lowStockLoading && lowStockAlerts.length > 0">
+        <div class="section-header">
+            <h3>⚠️ Low Stock Alerts</h3>
+            <a [routerLink]="['/inventory']" [queryParams]="{filter: 'low-stock'}" class="view-all-btn">Manage →</a>
+        </div>
+        <div class="low-stock-list">
+            <div class="low-stock-item" *ngFor="let item of lowStockAlerts">
+                <span class="item-name">{{ item.name }}</span>
+                <span class="item-stock" [class.out]="item.stock === 0" [class.low]="item.stock > 0">
+                    {{ item.stock === 0 ? 'OUT OF STOCK' : item.stock + ' left' }}
+                </span>
+            </div>
+        </div>
+    </div>
     }
+
 </div>

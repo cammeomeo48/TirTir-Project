@@ -12,6 +12,18 @@
         </div>
     </div>
 
+    <!-- Filter Banner: shown when navigated from Products → Low Stock Alerts -->
+    <div class="filter-banner" *ngIf="activeFilter === 'low-stock'">
+        <span>🔍 Filtered: Showing low stock items only (navigated from Products)</span>
+        <button class="btn-clear" (click)="activeFilter = null">Clear filter</button>
+    </div>
+
+    <!-- Error State -->
+    <div class="error-state" *ngIf="error && !loading && !statsLoading">
+        <p>{{ error }}</p>
+        <button class="btn btn-primary" (click)="loadDashboardData()">Retry</button>
+    </div>
+
     <!-- Stats Grid -->
     <div class="stats-grid" *ngIf="!statsLoading && stats">
         <div class="stat-card">
@@ -35,11 +47,15 @@
         </div>
     </div>
 
+    <div class="stats-loading-state" *ngIf="statsLoading">
+        <div class="spinner"></div>
+    </div>
+
     <!-- Low Stock Alerts -->
     <div class="alerts-section">
         <div class="section-header">
             <h2>Low Stock Alerts</h2>
-            <span class="badge badge-danger" *ngIf="alerts.length > 0">{{ alerts.length }} Critical</span>
+            <span class="badge badge-danger" *ngIf="alerts.length > 0">{{ alerts.length }} Need Attention</span>
         </div>
 
         <div class="table-container" *ngIf="!loading && alerts.length > 0">
@@ -50,7 +66,7 @@
                         <th>SKU</th>
                         <th class="text-center">Current Stock</th>
                         <th>Status</th>
-                        <th class="text-right">Action</th>
+                        <th class="text-right">Quick Restock</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -58,7 +74,7 @@
                         <td class="product-cell">
                             <span class="product-name">{{ item.name }}</span>
                         </td>
-                        <td>{{ item.sku }}</td>
+                        <td>{{ item.sku || '—' }}</td>
                         <td class="text-center">
                             <span class="stock-value" [class.critical]="item.stock === 0">{{ item.stock }}</span>
                         </td>
@@ -68,15 +84,38 @@
                                 {{ item.stock === 0 ? 'Out of Stock' : 'Low Stock' }}
                             </span>
                         </td>
-                        <td class="text-right">
-                            <a [routerLink]="['/inventory/adjust', item._id]" class="btn btn-sm btn-primary">Restock</a>
+                        <td class="text-right restock-cell">
+                            <!-- Collapsed state: show Restock button -->
+                            <ng-container *ngIf="restockingId !== item._id">
+                                <button class="btn btn-sm btn-primary" (click)="openRestock(item)">
+                                    + Restock
+                                </button>
+                            </ng-container>
+
+                            <!-- Expanded state: inline restock form -->
+                            <ng-container *ngIf="restockingId === item._id">
+                                <div class="restock-form">
+                                    <input type="number" [(ngModel)]="restockQty" min="1" placeholder="Qty"
+                                        class="restock-input" [disabled]="restocking" />
+                                    <input type="text" [(ngModel)]="restockReason" placeholder="Reason"
+                                        class="restock-reason" [disabled]="restocking" />
+                                    <button class="btn btn-sm btn-success" (click)="confirmRestock(item)"
+                                        [disabled]="restocking || !restockQty || restockQty < 1">
+                                        {{ restocking ? '...' : '✓' }}
+                                    </button>
+                                    <button class="btn btn-sm btn-ghost" (click)="cancelRestock()"
+                                        [disabled]="restocking">
+                                        ✕
+                                    </button>
+                                </div>
+                            </ng-container>
                         </td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
-        <div class="empty-state" *ngIf="!loading && alerts.length === 0">
+        <div class="empty-state" *ngIf="!loading && alerts.length === 0 && !error">
             <h3>All Good!</h3>
             <p>No low stock items detected.</p>
         </div>

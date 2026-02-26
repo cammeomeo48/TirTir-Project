@@ -260,3 +260,26 @@
         grid-template-columns: 1fr;
     }
 }
+/* === LOW STOCK WIDGET === */
+.low-stock-widget {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-left: 4px solid var(--danger, #d32f2f);
+    border-radius: 4px;
+    padding: 16px;
+    margin-top: 24px;
+}
+.low-stock-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.low-stock-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #f5f5f5;
+    font-size: 14px;
+}
+.low-stock-item:last-child { border-bottom: none; }
+.item-name { font-weight: 500; color: #121212; }
+.item-stock { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 12px; }
+.item-stock.out { background: rgba(211,47,47,0.1); color: #d32f2f; }
+.item-stock.low { background: rgba(230,81,0,0.1); color: #e65100; }

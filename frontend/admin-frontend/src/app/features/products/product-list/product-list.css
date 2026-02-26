@@ -222,3 +222,18 @@
         overflow-x: auto;
     }
 }
+/* === QUICK EDIT === */
+tr.editing { background: #fafafa; }
+.qe-input, .qe-select {
+    padding: 5px 8px;
+    border: 1px solid #bdbdbd;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: inherit;
+    background: #fff;
+    width: 100%;
+}
+.qe-input:focus, .qe-select:focus { outline: none; border-color: #000; }
+.qe-name { min-width: 140px; }
+.qe-price { width: 72px; }
+.qe-stock { width: 64px; }
