@@ -1,0 +1,5 @@
+﻿[dotenv@17.2.3] injecting env (16) from .env -- tip: ≡ƒôí add observability to secrets: https://dotenvx.com/ops
+PAYMENT_METHOD: { VNPAY: 'VNPAY', MOMO: 'MOMO', CARD: 'CARD', COD: 'COD' }
+COD exists: true
+Γ£à Validation PASSED - COD is accepted by schema
+Schema enum for paymentMethod: [ 'VNPAY', 'MOMO', 'CARD', 'COD' ]

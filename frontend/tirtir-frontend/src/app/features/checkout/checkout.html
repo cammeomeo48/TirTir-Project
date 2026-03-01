@@ -25,7 +25,7 @@
                             <span *ngIf="getFieldError('phone')" class="field-error">{{ getFieldError('phone') }}</span>
                         </div>
 
-                        <div class="form-field" :>
+                        <div class="form-field">
                             <label>CITY / REGION</label>
                             <input type="text" formControlName="city" placeholder="Your city" class="field-input"
                                 [class.error]="getFieldError('city')" />
@@ -47,6 +47,7 @@
                                     <option value="VNPAY">VNPAY (E-Wallet)</option>
                                     <option value="MOMO">MOMO</option>
                                     <option value="CARD">CREDIT / DEBIT CARD</option>
+                                    <option value="COD">CASH ON DELIVERY (COD)</option>
                                 </select>
                             </div>
                         </div>

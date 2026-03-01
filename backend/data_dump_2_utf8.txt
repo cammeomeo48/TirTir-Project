@@ -1,0 +1,150 @@
+﻿[dotenv@17.2.3] injecting env (16) from .env -- tip: ΓÜÖ∩╕Å  enable debug logging with { debug: true }
+Connected
+Sample Data:
+[
+  {
+    "_id": "696b48215bfaa09989483362",
+    "Product_ID": "PRD-MK-PINK",
+    "Name": "Tirtir Mask Fit All-Cover Cushion",
+    "Thumbnail_Images": "assets/images/products/PRD-MK-PINK/Main-Images/thumb.webp"
+  },
+  {
+    "_id": "696b48215bfaa09989483363",
+    "Product_ID": "PRD-MK-AURA",
+    "Name": "Tirtir Mask Fit Aura Cushion",
+    "Thumbnail_Images": "assets/images/products/PRD-MK-AURA/Main-Images/thumb.webp"
+  },
+  {
+    "_id": "696b48215bfaa09989483367",
+    "Product_ID": "PRD-MK-TINT-02",
+    "Name": "Mini Waterism Glow Tint",
+    "Thumbnail_Images": "assets/images/products/PRD-MK-TINT-01/Main-Images/thumb.webp"
+  },
+  {
+    "_id": "696b48215bfaa0998948336b",
+    "Product_ID": "PRD-SK-COL-01",
+    "Name": "Collagen Core Glow Mask",
+    "Thumbnail_Images": "assets/images/products/PRD-SK-COL-01/Main-Images/thumb.webp"
+  },
+  {
+    "_id": "696b48215bfaa0998948336f",
+    "Product_ID": "PRD-SK-OIL-01",
+    "Name": "Organic Jojoba Oil",
+    "Thumbnail_Images": "assets/images/products/PRD-SK-OIL-01/Main-Images/thumb.webp"
+  },
+  {
+    "_id": "696b48215bfaa09989483371",
+    "Product_ID": "PRD-SK-BALM-01",
+    "Name": "Hydro Boost Enzyme Cleansing Balm",
+    "Thumbnail_Images": "assets/images/products/PRD-SK-BALM-01/Main-Images/thumb.webp"
+  },
+  {
+    "_id": "696b48215bfaa09989483364",
+    "Product_ID": "PRD-MK-BASE-01",
+    "Name": "Mask Fit Tone Up Essence",
+    "Thumbnail_Images": "assets/images/products/PRD-MK-BASE-01/Main-Images/thumb.webp"
+  },
+  {
+    "_id": "696b48215bfaa09989483366",
+    "Product_ID": "PRD-MK-BALM-01",
+    "Name": "Waterism Glow Melting Balm",
+    "Thumbnail_Images": "assets/images/products/PRD-MK-BALM-01/Main-Images/thumb.webp"
+  },
+  {
+    "_id": "696b48215bfaa09989483368",
+    "Product_ID": "PRD-MK-BALM-02",
+    "Name": "Water Mellow Lip Balm",
+    "Thumbnail_Images": "assets/images/products/PRD-MK-BALM-02/Main-Images/thumb.webp"
+  },
+  {
+    "_id": "696b48215bfaa09989483372",
+    "Product_ID": "PRD-SK-ROSE-01",
+    "Name": "Dermatir Pure Rosemary Calming Mask",
+    "Thumbnail_Images": "assets/images/products/PRD-SK-ROSE-01/Main-Images/thumb.webp"
+  },
+  {
+    "_id": "696b48215bfaa09989483374",
+    "Product_ID": "PRD-SK-MILK-03",
+    "Name": "Milk Creamy Foam Cleanser",
+    "Thumbnail_Images": "assets/images/products/PRD-SK-MILK-03/Main-Images/thumb.webp"
+  },
+  {
+    "_id": "696b48215bfaa09989483361",
+    "Product_ID": "PRD-MK-RED",
+    "Name": "Tirtir Mask Fit Red Cushion",
+    "Thumbnail_Images": "assets/images/products/PRD-MK-RED/Main-Images/thumb.webp"
+  },
+  {
+    "_id": "696b48215bfaa09989483365",
+    "Product_ID": "PRD-MK-TINT-01",
+    "Name": "Waterism Glow Tint",
+    "Thumbnail_Images": "assets/images/products/PRD-MK-TINT-01/Main-Images/thumb.webp"
+  },
+  {
+    "_id": "696b48215bfaa0998948336c",
+    "Product_ID": "PRD-SK-COL-02",
+    "Name": "Collagen Lifting Eye Cream",
+    "Thumbnail_Images": "assets/images/products/PRD-SK-COL-02/Main-Images/thumb.webp"
+  },
+  {
+    "_id": "696b48215bfaa0998948336d",
+    "Product_ID": "PRD-SK-MILK-01",
+    "Name": "Milk Skin Toner",
+    "Thumbnail_Images": "assets/images/products/PRD-SK-MILK-01/Main-Images/thumb.webp"
+  },
+  {
+    "_id": "696b48215bfaa09989483370",
+    "Product_ID": "PRD-SK-SOS-01",
+    "Name": "SOS Serum",
+    "Thumbnail_Images": "assets/images/products/PRD-SK-SOS-01/Main-Images/thumb.webp"
+  },
+  {
+    "_id": "696b48215bfaa09989483373",
+    "Product_ID": "PRD-SK-SUN-HYDRO",
+    "Name": "Hydro UV Shield Sunscreen",
+    "Thumbnail_Images": "assets/images/products/PRD-SK-SUN-HYDRO/Main-Images/thumb.webp"
+  },
+  {
+    "_id": "696b48215bfaa09989483376",
+    "Product_ID": "PRD-SK-MATCHA-02",
+    "Name": "Matcha Calming Cream",
+    "Thumbnail_Images": "assets/images/products/PRD-SK-MATCHA-02/Main-Images/thumb.webp"
+  },
+  {
+    "_id": "696b48215bfaa09989483369",
+    "Product_ID": "PRD-MK-FIXER",
+    "Name": "Mask Fit Make Up Fixer",
+    "Thumbnail_Images": "assets/images/products/PRD-MK-FIXER/Main-Images/thumb.webp"
+  },
+  {
+    "_id": "696b48215bfaa0998948336a",
+    "Product_ID": "PRD-SK-CER-01",
+    "Name": "Ceramic Cream",
+    "Thumbnail_Images": "assets/images/products/PRD-SK-CER-01/Main-Images/thumb.webp"
+  }
+]
+All Unique Concerns: [
+  'Barrier Repair, Glow',
+  'Brightening, Priming',
+  'Calming, Redness',
+  'Deep Cleanse, Hydration',
+  'Deep Hydration, Multi-use',
+  'Deep Moisture, Soothing',
+  'Glass Skin, Hydration',
+  'Glow, Dewy Finish',
+  'High Coverage, Matte Finish',
+  'High Coverage, Satin Finish',
+  'Hydrating, Glowlasting',
+  'Lifting, Bubble Peeling',
+  'Makeup Longevity',
+  'Makeup Removal, Pore Care',
+  'Soft Melting, Glowlasting',
+  'Soothing Routine',
+  'Soothing, Antioxidant',
+  'Soothing, Hydration',
+  'Soothing, Sebum Control',
+  'UV Protection, Hydration',
+  'Water-volumizing, Glowlasting',
+  'Watercolor, Glowlasting',
+  'Wrinkles, Dark Circles'
+]

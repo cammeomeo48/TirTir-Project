@@ -76,6 +76,8 @@ export class CheckoutComponent implements OnInit {
                 // 2. CHUYỂN HƯỚNG THANH TOÁN LUÔN (KHÔNG CÒN CASE COD)
                 if (paymentMethod === 'VNPAY' || paymentMethod === 'CARD') {
                     this.createVnPayUrl(response.orderId, this.getTotal(), paymentMethod);
+                } else if (paymentMethod === 'COD') {
+                    this.router.navigate(['/order-confirmation', response.orderId]);
                 } else if (paymentMethod === 'MOMO') {
                     // Logic Momo (Sắp có)
                     alert('Ví Momo đang bảo trì. Vui lòng chọn VNPay.');

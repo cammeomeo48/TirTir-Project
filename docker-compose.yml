@@ -42,6 +42,7 @@ services:
     volumes:
       - ./backend:/app # Hot-reload Node files
       - /app/node_modules # Prevent host node_modules from overwriting container's
+      - ./frontend/tirtir-frontend/public/assets:/frontend/tirtir-frontend/public/assets
     depends_on:
       - ai-service
       - redis

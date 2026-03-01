@@ -20,9 +20,6 @@ const { apiLimiter } = require('./middlewares/rateLimit');
 
 const app = express();
 
-// Rate Limiting (Global API Protection)
-app.use('/api/', apiLimiter);
-
 // 1. Performance Monitoring (Response Time)
 app.use(responseTime((req, res, time) => {
   const method = req.method;
@@ -38,13 +35,16 @@ app.use(responseTime((req, res, time) => {
 // 2. Request Logging (Morgan -> Winston)
 app.use(morgan('combined', { stream: logger.stream }));
 
-// CORS Configuration - MUST BE FIRST
+// 3. CORS Configuration - MUST BE FIRST
 app.use(cors({
   origin: ['http://localhost:4200', 'http://127.0.0.1:4200', 'http://localhost:4201', 'http://127.0.0.1:4201'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'sentry-trace', 'baggage']
 }));
+
+// 2. Rate Limiting (Global API Protection) - placed after CORS
+app.use('/api/', apiLimiter);
 
 // Mongoose Debug Logging
 if (process.env.NODE_ENV !== 'production') {
