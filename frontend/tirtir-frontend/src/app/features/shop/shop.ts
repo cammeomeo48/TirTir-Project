@@ -3,13 +3,14 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ProductCard } from '../../shared/components/product-card/product-card';
+import { SkeletonLoaderComponent } from '../../shared/components/skeleton-loader/skeleton-loader';
 import { PRODUCTS, ProductData } from '../../core/constants/products.data';
 import { ProductService } from '../../core/services/product.service';
 
 @Component({
   selector: 'app-shop',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, ProductCard],
+  imports: [CommonModule, RouterModule, FormsModule, ProductCard, SkeletonLoaderComponent],
   templateUrl: './shop.html',
   styleUrl: './shop.css',
 })

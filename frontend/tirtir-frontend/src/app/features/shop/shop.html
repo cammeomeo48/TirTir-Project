@@ -71,7 +71,10 @@
 
 <!-- Filter Controls Bar -->
 <section class="filter-bar">
-    <div class="container">
+    <div *ngIf="isLoading" class="container">
+        <app-skeleton-loader type="filter-bar"></app-skeleton-loader>
+    </div>
+    <div class="container" *ngIf="!isLoading">
         <div class="filter-bar-inner">
             <div class="filter-left">
                 <button class="filter-toggle" (click)="toggleFilters()">
@@ -149,47 +152,46 @@
             </aside>
 
             <!-- Product Grid -->
-            <div class="product-grid-container" [class.loading]="isLoading">
-                <div class="loading-overlay" *ngIf="isLoading">
-                    <div class="spinner"></div>
-                </div>
+            <div class="products-grid" *ngIf="isLoading">
+                <app-skeleton-loader *ngFor="let i of [1,2,3,4,5,6,7,8,9,10,11,12]"
+                    type="product-card"></app-skeleton-loader>
+            </div>
 
-                <div class="products-grid" *ngIf="!isLoading && paginatedProducts.length > 0; else noProducts">
-                    <app-product-card *ngFor="let product of paginatedProducts; trackBy: trackByProduct"
-                        [product]="product"></app-product-card>
-                </div>
+            <div class="products-grid" *ngIf="!isLoading && paginatedProducts.length > 0; else noProducts">
+                <app-product-card *ngFor="let product of paginatedProducts; trackBy: trackByProduct"
+                    [product]="product"></app-product-card>
+            </div>
 
-                <ng-template #noProducts>
-                    <div class="no-products" *ngIf="!isLoading">
-                        <div class="no-results-content">
-                            <span class="no-results-icon">🔍</span>
-                            <h3>No products found</h3>
-                            <p *ngIf="searchTerm">We couldn't find any products matching "{{searchTerm}}".</p>
-                            <p *ngIf="!searchTerm">No products match the selected filters.</p>
-                            <button class="clear-search-btn" routerLink="/shop">
-                                BACK TO ALL PRODUCTS
-                            </button>
-                        </div>
-                    </div>
-                </ng-template>
-
-                <!-- Pagination -->
-                <nav class="pagination" *ngIf="!isLoading && displayProducts.length > 0">
-                    <button class="page-btn" [disabled]="currentPage === 1" (click)="goToPage(currentPage - 1)">
-                        ← Previous
-                    </button>
-                    <div class="page-numbers">
-                        <button *ngFor="let page of pages" class="page-num" [class.active]="page === currentPage"
-                            (click)="goToPage(page)">
-                            {{ page }}
+            <ng-template #noProducts>
+                <div class="no-products" *ngIf="!isLoading">
+                    <div class="no-results-content">
+                        <span class="no-results-icon">🔍</span>
+                        <h3>No products found</h3>
+                        <p *ngIf="searchTerm">We couldn't find any products matching "{{searchTerm}}".</p>
+                        <p *ngIf="!searchTerm">No products match the selected filters.</p>
+                        <button class="clear-search-btn" routerLink="/shop">
+                            BACK TO ALL PRODUCTS
                         </button>
                     </div>
-                    <button class="page-btn" [disabled]="currentPage === totalPages"
-                        (click)="goToPage(currentPage + 1)">
-                        Next →
+                </div>
+            </ng-template>
+
+            <!-- Pagination -->
+            <nav class="pagination" *ngIf="!isLoading && displayProducts.length > 0">
+                <button class="page-btn" [disabled]="currentPage === 1" (click)="goToPage(currentPage - 1)">
+                    ← Previous
+                </button>
+                <div class="page-numbers">
+                    <button *ngFor="let page of pages" class="page-num" [class.active]="page === currentPage"
+                        (click)="goToPage(page)">
+                        {{ page }}
                     </button>
-                </nav>
-            </div>
+                </div>
+                <button class="page-btn" [disabled]="currentPage === totalPages" (click)="goToPage(currentPage + 1)">
+                    Next →
+                </button>
+            </nav>
         </div>
+    </div>
     </div>
 </section>
