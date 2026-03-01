@@ -1,5 +1,5 @@
 import { Component, ElementRef, ViewChild, OnDestroy, OnInit, signal } from '@angular/core';
-import { CommonModule, DecimalPipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
@@ -33,7 +33,7 @@ interface ShadeMatch {
 @Component({
   selector: 'app-shade-finder',
   standalone: true,
-  imports: [CommonModule, FormsModule, DecimalPipe, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './shade-finder.html',
   styleUrls: ['./shade-finder.css']
 })

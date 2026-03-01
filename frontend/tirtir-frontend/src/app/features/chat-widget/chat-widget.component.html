@@ -15,7 +15,7 @@
             <app-chat-messages *ngIf="activeTab === 'messages'" (startChat)="startChat()">
             </app-chat-messages>
 
-            <app-chat-settings *ngIf="activeTab === 'settings'"></app-chat-settings>
+            <app-chat-settings *ngIf="activeTab === 'settings'" (closeChat)="toggleChat()"></app-chat-settings>
 
             <!-- Bottom Navigation -->
             <nav class="bottom-nav">

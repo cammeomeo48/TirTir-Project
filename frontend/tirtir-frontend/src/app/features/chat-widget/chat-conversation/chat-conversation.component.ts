@@ -74,27 +74,12 @@ export class ChatConversationComponent implements OnInit, AfterViewChecked {
 
         this.chatService.sendMessage(msg).subscribe({
             next: (response: any) => {
-                // Backend returns JSON from Python script.
-                // Assuming response has 'response', 'message', or we take the whole object if it is string
-                const botReply = response.response || response.message || JSON.stringify(response);
-
-                this.messages.push({
-                    text: botReply,
-                    sender: 'bot',
-                    timestamp: new Date()
-                });
-
                 this.isTyping = false;
                 this.scrollToBottom();
             },
             error: (err) => {
-                console.error('Failed to send message', err);
+                console.error('Failed to send message:', err);
                 this.isTyping = false;
-                this.messages.push({
-                    text: "Sorry, I'm having trouble connecting to the server.",
-                    sender: 'bot',
-                    timestamp: new Date()
-                });
             }
         });
     }

@@ -3,17 +3,33 @@
         <h2>Settings</h2>
     </div>
 
-    <div class="profile-section">
+    <div class="profile-section" *ngIf="authService.currentUser$ | async as user; else guestProfile">
         <div class="avatar-large">
-            <span role="img" aria-label="user">⛵</span>
+            <img *ngIf="user.avatar" [src]="getAvatarUrl(user.avatar)" alt="User Avatar" class="avatar-img">
+            <span *ngIf="!user.avatar" role="img" aria-label="user">⛵</span>
         </div>
         <div class="profile-info">
+            <h3 class="user-name">{{ user.name }}</h3>
             <p>Contact information</p>
-            <button class="edit-btn">
+            <button class="edit-btn" (click)="handleAction()">
                 <i class="fas fa-edit"></i> Edit information
             </button>
         </div>
     </div>
+
+    <ng-template #guestProfile>
+        <div class="profile-section">
+            <div class="avatar-large guest-avatar">
+                <i class="fas fa-user"></i>
+            </div>
+            <div class="profile-info">
+                <p>Welcome to Chatbot</p>
+                <button class="edit-btn sign-in-btn" (click)="handleAction()">
+                    <i class="fas fa-sign-in-alt"></i> Sign in
+                </button>
+            </div>
+        </div>
+    </ng-template>
 
     <div class="settings-list">
         <div class="section-title">CS Language</div>
@@ -44,12 +60,27 @@
 
         <div class="setting-item">
             <div class="setting-label">
+                <i class="fas fa-desktop"></i>
+                <span>Desktop notifications</span>
+            </div>
+            <div class="setting-control">
+                <label class="switch">
+                    <input type="checkbox" [checked]="chatService.desktopNotificationEnabled()"
+                        (change)="toggleDesktopNotifications($event)">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+        </div>
+
+        <div class="setting-item">
+            <div class="setting-label">
                 <i class="fas fa-bell"></i>
                 <span>Alert sound</span>
             </div>
             <div class="setting-control">
                 <label class="switch">
-                    <input type="checkbox" checked>
+                    <input type="checkbox" [checked]="chatService.alertSoundEnabled()"
+                        (change)="toggleAlertSound($event)">
                     <span class="slider round"></span>
                 </label>
             </div>

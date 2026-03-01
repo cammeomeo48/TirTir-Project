@@ -5,14 +5,14 @@ import { Router } from '@angular/router';
 import { CartService } from '../../core/services/cart.service';
 import { OrderService } from '../../core/services/order.service';
 import { Cart } from '../../core/models';
-import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner';
+// import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
 @Component({
     selector: 'app-checkout',
     standalone: true,
-    imports: [CommonModule, ReactiveFormsModule, LoadingSpinnerComponent],
+    imports: [CommonModule, ReactiveFormsModule],
     templateUrl: './checkout.html',
     styleUrls: ['./checkout.css'],
 })
