@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
+import { take } from 'rxjs';
 import { FaceTrackerService } from '../../core/services/face-tracker.service';
 import { CartService } from '../../core/services/cart.service';
 import { environment } from '../../../environments/environment';
@@ -187,7 +188,7 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
     this.http.post<ShadeMatch[]>(`${environment.apiUrl}/shades/match`, {
       ...color,
       skinType: this.selectedSkinType
-    }).subscribe({
+    }).pipe(take(1)).subscribe({
       next: (results) => {
         this.matchResults = results;
         this.bestMatch = results.length > 0 ? results[0] : null;

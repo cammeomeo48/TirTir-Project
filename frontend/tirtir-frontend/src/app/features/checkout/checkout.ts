@@ -8,6 +8,7 @@ import { Cart } from '../../core/models';
 // import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { ToastService } from '../../core/services/toast.service';
 
 @Component({
     selector: 'app-checkout',
@@ -22,6 +23,7 @@ export class CheckoutComponent implements OnInit {
     private orderService = inject(OrderService);
     private router = inject(Router);
     private http = inject(HttpClient);
+    private toastService = inject(ToastService);
 
     checkoutForm: FormGroup;
     cart: Cart | null = null;
@@ -68,6 +70,13 @@ export class CheckoutComponent implements OnInit {
 
         const { fullName, phone, address, city, paymentMethod } = this.checkoutForm.value;
 
+        // 1. CHẶN MOMO TRUỚC KHI GỌI API (Vì đang bảo trì)
+        if (paymentMethod === 'MOMO') {
+            this.toastService.warning('Ví Momo đang bảo trì. Vui lòng chọn VNPay.');
+            this.loading = false;
+            return;
+        }
+
         this.orderService.createOrder({
             shippingAddress: { fullName, phone, address, city },
             paymentMethod,
@@ -78,16 +87,12 @@ export class CheckoutComponent implements OnInit {
                     this.createVnPayUrl(response.orderId, this.getTotal(), paymentMethod);
                 } else if (paymentMethod === 'COD') {
                     this.router.navigate(['/order-confirmation', response.orderId]);
-                } else if (paymentMethod === 'MOMO') {
-                    // Logic Momo (Sắp có)
-                    alert('Ví Momo đang bảo trì. Vui lòng chọn VNPay.');
-                    this.loading = false;
-                    // Hoặc chuyển hướng nếu đã tích hợp xong
                 }
             },
             error: (err) => {
                 this.loading = false;
-                this.error = err.error?.message || 'Lỗi đặt hàng';
+                console.error('Full Checkout Error:', err);
+                this.error = err.error?.message || err.message || 'Lỗi đặt hàng';
             },
         });
     }
@@ -105,7 +110,7 @@ export class CheckoutComponent implements OnInit {
                 next: (res) => window.location.href = res.paymentUrl,
                 error: (err) => {
                     this.loading = false;
-                    alert('Lỗi kết nối cổng thanh toán');
+                    this.toastService.error('Lỗi kết nối cổng thanh toán');
                 }
             });
     }
