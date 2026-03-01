@@ -11,13 +11,15 @@ import { ProductService } from '../../../core/services/product.service';
 import { NotificationService } from '../../../core/services/notification.service'; // Import
 import { TimeAgoPipe } from '../../pipes/time-ago.pipe'; // Import
 import { INotification } from '../../../core/models/notification.model'; // Import
+import { FreeShippingBarComponent } from '../free-shipping-bar/free-shipping-bar.component';
+import { CurrencyPipe } from '@angular/common';
 
 import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, MakeupMegaMenuComponent, SkincareMegaMenuComponent, TimeAgoPipe], // Add TimeAgoPipe
+  imports: [CommonModule, RouterModule, FormsModule, MakeupMegaMenuComponent, SkincareMegaMenuComponent, TimeAgoPipe, FreeShippingBarComponent, CurrencyPipe], // Add TimeAgoPipe
   templateUrl: './header.html',
   styleUrl: './header.css',
 })
@@ -35,6 +37,8 @@ export class HeaderComponent implements OnInit {
   private searchSubject = new Subject<string>();
 
   cartCount = this.cartService.cartCount;
+  cart$ = this.cartService.cart$;
+  showMiniCart = false;
 
   // Notification State
   showNotifications = false;
@@ -138,5 +142,10 @@ export class HeaderComponent implements OnInit {
   markAllRead(event: Event) {
     event.stopPropagation(); // Prevent dropdown close or navigation
     this.notificationService.markAllAsRead().subscribe();
+  }
+
+  // ===== Mini Cart Logic =====
+  toggleMiniCart(show: boolean) {
+    this.showMiniCart = show;
   }
 }

@@ -7,11 +7,12 @@ import { CartService } from '../../core/services/cart.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Cart, CartItem } from '../../core/models';
 import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner';
+import { FreeShippingBarComponent } from '../../shared/components/free-shipping-bar/free-shipping-bar.component';
 
 @Component({
     selector: 'app-cart',
     standalone: true,
-    imports: [CommonModule, RouterModule, FormsModule, LoadingSpinnerComponent],
+    imports: [CommonModule, RouterModule, FormsModule, LoadingSpinnerComponent, FreeShippingBarComponent],
     templateUrl: './cart.html',
     styleUrls: ['./cart.css'],
 })
@@ -50,7 +51,11 @@ export class CartComponent implements OnInit {
     }
 
     updateQuantity(item: CartItem, newQuantity: number): void {
-        if (newQuantity < 1) return;
+        if (newQuantity < 1) {
+            // Auto-Remove Logic
+            this.removeItemWithoutConfirm(item);
+            return;
+        }
 
         this.cartService.addToCart({
             productId: item.product._id,
@@ -65,6 +70,68 @@ export class CartComponent implements OnInit {
             },
         });
     }
+
+    removeItemWithoutConfirm(item: CartItem): void {
+        this.cartService.removeCartItem(item.product._id, item.shade).subscribe({
+            next: () => {
+                // Future enhancement: Use a Toast Service here
+                alert('Item removed from cart');
+                this.loadCart();
+            },
+            error: (err) => {
+                this.error = err.message;
+            },
+        });
+    }
+
+    // --- QUICK EDIT LOGIC --- //
+    editingItemId: string | null = null;
+    editingItemShade: string | null = null;
+
+    toggleEditShade(item: CartItem): void {
+        const uniqueId = item.product._id + '-' + (item.shade || '');
+        if (this.editingItemId === uniqueId) {
+            // Cancel edit
+            this.editingItemId = null;
+            this.editingItemShade = null;
+        } else {
+            // Start edit
+            this.editingItemId = uniqueId;
+            this.editingItemShade = item.shade || '';
+        }
+    }
+
+    isEditingShade(item: CartItem): boolean {
+        const uniqueId = item.product._id + '-' + (item.shade || '');
+        return this.editingItemId === uniqueId;
+    }
+
+    saveNewShade(item: CartItem, event: any): void {
+        const newShade = event.target.value;
+        if (newShade === item.shade) {
+            this.toggleEditShade(item); // No change, just close
+            return;
+        }
+
+        // Send the HTTP request using the extended updateCartItem method
+        this.cartService.updateCartItem(
+            item.product._id,
+            item.quantity,
+            undefined, // We don't need 'shade' because we are sending old/new
+            item.shade, // oldShade
+            newShade   // newShade
+        ).subscribe({
+            next: () => {
+                this.editingItemId = null;
+                this.loadCart(); // Reload to show new shade and potentially merged quantities
+            },
+            error: (err) => {
+                this.error = err.message;
+                this.editingItemId = null;
+            }
+        });
+    }
+    // ------------------------- //
 
     getImageUrl(url: string): string {
         if (!url) return '';
@@ -105,12 +172,7 @@ export class CartComponent implements OnInit {
     removeItem(item: CartItem): void {
         if (!confirm('Remove this item from your cart?')) return;
 
-        // Set quantity to 0 to remove item
-        this.cartService.addToCart({
-            productId: item.product._id,
-            quantity: 0,
-            shade: item.shade,
-        }).subscribe({
+        this.cartService.removeCartItem(item.product._id, item.shade).subscribe({
             next: () => {
                 this.loadCart();
             },

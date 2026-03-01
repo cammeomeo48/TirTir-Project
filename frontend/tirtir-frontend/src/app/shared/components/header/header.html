@@ -77,9 +77,9 @@
                 </a>
 
                 <!-- Notification Icon -->
-                <div class="action-btn notification-wrapper" (mouseenter)="toggleNotifications(true)"
+                <div class="notification-wrapper" (mouseenter)="toggleNotifications(true)"
                     (mouseleave)="toggleNotifications(false)">
-                    <a routerLink="/account/notifications" class="notif-btn" aria-label="Notifications">
+                    <a routerLink="/account/notifications" class="action-btn notif-btn" aria-label="Notifications">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="1.5">
                             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
@@ -132,17 +132,61 @@
                 </div>
 
                 <!-- Cart Icon -->
-                <a routerLink="/cart" class="action-btn cart-btn" aria-label="Cart">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="1.5">
-                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path>
-                        <line x1="3" y1="6" x2="21" y2="6"></line>
-                        <path d="M16 10a4 4 0 0 1-8 0"></path>
-                    </svg>
-                    <span class="badge" *ngIf="cartCount() > 0">
-                        {{ cartCount() }}
-                    </span>
-                </a>
+                <div class="cart-wrapper" (mouseenter)="toggleMiniCart(true)" (mouseleave)="toggleMiniCart(false)">
+                    <a routerLink="/cart" class="action-btn cart-link" aria-label="Cart">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
+                            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <path d="M16 10a4 4 0 0 1-8 0"></path>
+                        </svg>
+                        <span class="badge" *ngIf="cartCount() > 0">
+                            {{ cartCount() }}
+                        </span>
+                    </a>
+
+                    <!-- Mini Cart Dropdown -->
+                    <div class="mini-cart-dropdown" [class.visible]="showMiniCart" *ngIf="(cart$ | async) as cart">
+                        <ng-container *ngIf="cart.items && cart.items.length > 0">
+                            <div class="mini-cart-shipping">
+                                <app-free-shipping-bar [currentTotal]="cart.totalPrice || 0"></app-free-shipping-bar>
+                            </div>
+
+                            <div class="mini-cart-items">
+                                <!-- Show recent max 3-5 items -->
+                                <div class="mini-cart-item" *ngFor="let item of cart.items.slice(0, 3)">
+                                    <div class="mini-item-img">
+                                        <img [src]="item.product.Thumbnail_Images" [alt]="item.product.Name"
+                                            onerror="this.src='/assets/placeholder.png'">
+                                    </div>
+                                    <div class="mini-item-info">
+                                        <div class="mini-item-name">{{ item.product.Name }}</div>
+                                        <div class="mini-item-meta">{{ item.shade }} | Qty: {{ item.quantity }}</div>
+                                        <div class="mini-item-price">{{ item.product.Price | currency:'USD' }}</div>
+                                    </div>
+                                </div>
+                                <div class="mini-cart-more" *ngIf="cart.items.length > 3">
+                                    + {{ cart.items.length - 3 }} more item(s)...
+                                </div>
+                            </div>
+
+                            <div class="mini-cart-footer">
+                                <div class="mini-cart-total">
+                                    <span>Subtotal</span>
+                                    <span>{{ cart.totalPrice | currency:'USD' }}</span>
+                                </div>
+                                <button class="mini-cart-btn" routerLink="/cart" (click)="showMiniCart = false">VIEW
+                                    FULL BAG</button>
+                            </div>
+                        </ng-container>
+
+                        <div class="mini-cart-empty" *ngIf="!cart.items || cart.items.length === 0">
+                            <p>Your bag is empty.</p>
+                            <button class="mini-cart-btn-outline" routerLink="/shop" (click)="showMiniCart = false">SHOP
+                                NOW</button>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="search-wrapper">
                     <button class="action-btn" aria-label="Search" (click)="toggleSearch()">

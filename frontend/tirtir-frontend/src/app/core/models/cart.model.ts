@@ -6,6 +6,8 @@ export interface CartItem {
         Thumbnail_Images: string;
         Original_Price?: number;
         Size?: string;
+        slug: string; // Added for hyperlinks
+        Product_Attributes?: any[]; // Added for quick edit
     };
     quantity: number;
     shade?: string;
@@ -31,4 +33,6 @@ export interface UpdateCartItemRequest {
     productId: string;
     quantity: number;
     shade?: string;
+    oldShade?: string; // Quick edit support
+    newShade?: string; // Quick edit support
 }

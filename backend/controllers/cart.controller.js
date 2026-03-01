@@ -105,13 +105,16 @@ exports.addToCart = async (req, res) => {
             total += (item.price || 0) * item.quantity;
         });
         cart.totalPrice = total;
-        cart.recoveryNotificationSent = false; // Reset abandoned cart flag
+        cart.abandonedEmailSent = false; // Reset abandoned cart flag
         console.log("   Total Price:", total);
 
         await cart.save();
         console.log("✅ Cart Saved Successfully!");
 
-        const populatedCart = await Cart.findById(cart._id).populate('items.product');
+        const populatedCart = await Cart.findById(cart._id).populate({
+            path: 'items.product',
+            select: 'Name Price Original_Price Thumbnail_Images Stock_Quantity slug Product_Attributes Product_ID'
+        });
         res.status(200).json(populatedCart);
 
     } catch (error) {
@@ -126,7 +129,7 @@ exports.addToCart = async (req, res) => {
 exports.updateCartItem = async (req, res) => {
     try {
         const userId = req.user.id;
-        const { productId, shade, quantity } = req.body;
+        const { productId, shade, quantity, oldShade, newShade } = req.body;
 
         // Note: quantity here is the NEW TARGET quantity, not delta
         if (quantity < 0) {
@@ -138,8 +141,11 @@ exports.updateCartItem = async (req, res) => {
             return res.status(404).json({ message: "Cart not found" });
         }
 
+        // Use oldShade if provided (Quick Edit), otherwise use shade (Standard Update)
+        const targetShade = (oldShade !== undefined) ? oldShade : shade;
+
         const itemIndex = cart.items.findIndex(
-            p => p.product.toString() === productId && p.shade === shade
+            p => p.product.toString() === productId && p.shade === targetShade
         );
 
         if (itemIndex === -1) {
@@ -161,18 +167,36 @@ exports.updateCartItem = async (req, res) => {
                 });
             } else {
                 cart.items[itemIndex].quantity = quantity;
-                // Update price snapshot to current if needed, or keep original?
-                // Usually keep original unless re-added, but here we update so maybe update price too?
-                // Letting it update to ensure total accuracy
                 cart.items[itemIndex].price = product.Price;
+
+                // Handle Quick Attribute Edit
+                if (newShade !== undefined && newShade !== targetShade) {
+                    // Check if the NEW shade already exists in the cart to merge them
+                    const existingNewShadeIndex = cart.items.findIndex(
+                        (p, index) => index !== itemIndex && p.product.toString() === productId && p.shade === newShade
+                    );
+
+                    if (existingNewShadeIndex > -1) {
+                        // Merge quantities
+                        cart.items[existingNewShadeIndex].quantity += quantity;
+                        // Remove the old item
+                        cart.items.splice(itemIndex, 1);
+                    } else {
+                        // Just update the shade string
+                        cart.items[itemIndex].shade = newShade;
+                    }
+                }
             }
         }
 
         cart.totalPrice = calculateTotal(cart);
-        cart.recoveryNotificationSent = false; // Reset abandoned cart flag
+        cart.abandonedEmailSent = false; // Reset abandoned cart flag
         await cart.save();
 
-        const populatedCart = await Cart.findById(cart._id).populate('items.product');
+        const populatedCart = await Cart.findById(cart._id).populate({
+            path: 'items.product',
+            select: 'Name Price Original_Price Thumbnail_Images Stock_Quantity slug Product_Attributes Product_ID'
+        });
         res.status(200).json(populatedCart);
 
     } catch (error) {
@@ -210,10 +234,13 @@ exports.removeFromCart = async (req, res) => {
         }
 
         cart.totalPrice = calculateTotal(cart);
-        cart.recoveryNotificationSent = false; // Reset abandoned cart flag
+        cart.abandonedEmailSent = false; // Reset abandoned cart flag
         await cart.save();
 
-        const populatedCart = await Cart.findById(cart._id).populate('items.product');
+        const populatedCart = await Cart.findById(cart._id).populate({
+            path: 'items.product',
+            select: 'Name Price Original_Price Thumbnail_Images Stock_Quantity slug Product_Attributes Product_ID'
+        });
         res.status(200).json(populatedCart);
 
     } catch (error) {
@@ -246,7 +273,10 @@ exports.clearCart = async (req, res) => {
 exports.getCart = async (req, res) => {
     try {
         const userId = req.user.id;
-        let cart = await Cart.findOne({ user: userId }).populate('items.product');
+        let cart = await Cart.findOne({ user: userId }).populate({
+            path: 'items.product',
+            select: 'Name Price Original_Price Thumbnail_Images Stock_Quantity slug Product_Attributes Product_ID'
+        });
 
         if (!cart) {
             // Return empty cart structure instead of 404 to allow frontend to handle gracefully

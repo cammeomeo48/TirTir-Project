@@ -61,6 +61,12 @@ export const routes: Routes = [
             }
         ]
     },
+    // Admin routes
+    {
+        path: 'admin/settings',
+        loadComponent: () => import('./features/admin/settings/settings.component').then(m => m.AdminSettingsComponent),
+        canActivate: [authGuard]
+    },
     // Collection pages (category-based product listings)
     { path: 'deals', loadComponent: () => import('./features/deals/deals').then(m => m.DealsComponent) },
     { path: 'collections/:slug', component: CollectionComponent },

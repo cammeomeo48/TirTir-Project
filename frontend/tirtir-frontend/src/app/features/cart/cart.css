@@ -74,6 +74,12 @@
     color: #111;
     letter-spacing: 0.5px;
     text-transform: uppercase;
+    transition: color 0.2s;
+}
+
+a:hover .product-name {
+    color: #FF6B9D;
+    text-decoration: underline;
 }
 
 .product-meta {
@@ -81,6 +87,57 @@
     color: #888;
     margin-bottom: 6px;
     letter-spacing: 0.5px;
+}
+
+/* Quick Edit Styles */
+.shade-editor {
+    display: flex;
+    align-items: center;
+}
+
+.clickable-meta {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: color 0.2s;
+}
+
+.clickable-meta:hover {
+    color: #111;
+}
+
+.clickable-meta:hover .edit-icon {
+    stroke: #111;
+}
+
+.edit-icon {
+    stroke: #888;
+    transition: stroke 0.2s;
+    margin-bottom: 1px;
+}
+
+.shade-select {
+    font-size: 12px;
+    color: #111;
+    padding: 4px 24px 4px 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #fff;
+    cursor: pointer;
+    margin-bottom: 6px;
+    outline: none;
+    font-family: inherit;
+    letter-spacing: 0.5px;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 6px center;
+    background-size: 14px;
+}
+
+.shade-select:focus {
+    border-color: #111;
 }
 
 .product-actions {

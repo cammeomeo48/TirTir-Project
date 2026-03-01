@@ -72,11 +72,14 @@ export class CartService {
     }
 
     /**
-     * Update cart item quantity (set to exact new target quantity)
-     * Calls PUT /cart/update with the new target quantity
+     * Update cart item quantity or shade (Quick Edit)
      */
-    updateCartItem(productId: string, quantity: number, shade?: string): Observable<Cart> {
-        return this.http.put<Cart>(`${this.apiUrl}/update`, { productId, quantity, shade: shade || 'null' }).pipe(
+    updateCartItem(productId: string, quantity: number, shade?: string, oldShade?: string, newShade?: string): Observable<Cart> {
+        const payload: any = { productId, quantity, shade: shade || 'null' };
+        if (oldShade !== undefined) payload.oldShade = oldShade;
+        if (newShade !== undefined) payload.newShade = newShade;
+
+        return this.http.put<Cart>(`${this.apiUrl}/update`, payload).pipe(
             tap((cart) => {
                 this.cartSubject.next(cart);
                 this.updateCartCount(cart);
