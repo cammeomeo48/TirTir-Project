@@ -21,6 +21,8 @@ export interface BackendProduct {
   Description_Images?: string[]; // Deprecated/Fallback
   Full_Description?: string;
   How_To_Use?: string;
+  Rating_Average?: number; // ADDED
+  Rating_Count?: number;   // ADDED
 }
 
 @Injectable({
@@ -111,9 +113,9 @@ export class ProductService {
       slug: bp.slug || bp.Product_ID.toLowerCase(), // Fallback
       name: bp.Name,
       price: bp.Price,
-      originalPrice: bp.Price * 1.2, // Mock original price
-      rating: 4.8, // Mock rating
-      reviewCount: 150, // Mock reviews
+      originalPrice: bp.Price, // Use price since no real originalPrice field exists in backend
+      rating: bp.Rating_Average || 0, // USE REAL FIELD
+      reviewCount: bp.Rating_Count || 0, // USE REAL FIELD
       description: bp.description || bp.Name,
       fullDescription: bp.Full_Description || bp.description || bp.Name,
       keyFeatures: [], // Mock or empty

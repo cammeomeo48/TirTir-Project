@@ -1,11 +1,6 @@
 import { Routes } from '@angular/router';
-import { HomeComponent } from './features/home/home';
-import { ShopComponent } from './features/shop/shop';
-import { ProductDetailComponent } from './features/product-detail/product-detail';
 import { MakeupComponent } from './features/makeup/makeup';
 import { CushionComponent } from './features/cushion/cushion';
-import { CollectionComponent } from './features/collection/collection';
-import { ShadeFinderComponent } from './features/shade-finder/shade-finder';
 import { LoginComponent } from './features/auth/login/login';
 import { RegisterComponent } from './features/auth/register/register';
 import { ForgotPasswordComponent } from './features/auth/forgot-password/forgot-password';
@@ -19,8 +14,8 @@ import { canDeactivateGuard } from './core/guards/can-deactivate.guard';
 import { ContactComponent } from './features/contact/contact';
 
 export const routes: Routes = [
-    { path: '', component: HomeComponent },
-    { path: 'shop', component: ShopComponent },
+    { path: '', loadComponent: () => import('./features/home/home').then(m => m.HomeComponent) },
+    { path: 'shop', loadComponent: () => import('./features/shop/shop').then(m => m.ShopComponent) },
     { path: 'contact', component: ContactComponent },
     // Auth routes
     { path: 'login', component: LoginComponent },
@@ -69,9 +64,9 @@ export const routes: Routes = [
     },
     // Collection pages (category-based product listings)
     { path: 'deals', loadComponent: () => import('./features/deals/deals').then(m => m.DealsComponent) },
-    { path: 'collections/:slug', component: CollectionComponent },
+    { path: 'collections/:slug', loadComponent: () => import('./features/collection/collection').then(m => m.CollectionComponent) },
     // Virtual Services (Shade Finder)
-    { path: 'virtual-services', component: ShadeFinderComponent },
+    { path: 'virtual-services', loadComponent: () => import('./features/shade-finder/shade-finder').then(m => m.ShadeFinderComponent) },
     // Legacy routes for backward compatibility
     { path: 'makeup/cushions', component: CushionComponent },
     // Gift Card route (must be before :slug)
@@ -80,7 +75,7 @@ export const routes: Routes = [
         loadComponent: () => import('./features/gift-card/gift-card').then(m => m.GiftCardComponent)
     },
     // Product detail page
-    { path: 'products/:slug', component: ProductDetailComponent },
+    { path: 'products/:slug', loadComponent: () => import('./features/product-detail/product-detail').then(m => m.ProductDetailComponent) },
     // Policy pages
     { path: 'policies/terms-of-service', loadComponent: () => import('./features/policies/terms/terms').then(m => m.TermsComponent) },
     { path: 'policies/privacy-policy', loadComponent: () => import('./features/policies/privacy/privacy').then(m => m.PrivacyComponent) },

@@ -31,7 +31,7 @@ const mapProductToFrontend = (product) => {
         Stock_Quantity: product.Stock_Quantity, // Added Stock Quantity
         Stock_Reserved: product.Stock_Reserved || 0, // Added Reserved Stock
         Rating_Average: product.Rating_Average || 0, // Added Rating Average
-        // Add any other fields if FE requests them later. 
+        Rating_Count: product.Rating_Count || 0, // Added Rating Count
     };
 };
 
@@ -81,7 +81,7 @@ exports.getLowStockProducts = async (req, res) => {
         const products = await Product.find({ Stock_Quantity: { $lte: threshold } })
             .select('Name Product_ID Stock_Quantity Stock_Reserved Thumbnail_Images')
             .sort({ Stock_Quantity: 1 });
-        
+
         res.json(products);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -94,7 +94,7 @@ exports.getProductStockHistory = async (req, res) => {
         const history = await StockHistory.find({ product: req.params.id })
             .sort({ createdAt: -1 })
             .populate('performedBy', 'firstName lastName email');
-            
+
         res.json(history);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -113,11 +113,11 @@ exports.getSearchSuggestions = async (req, res) => {
     try {
         const { keyword } = req.query;
         if (!keyword) return res.json([]);
-        
-        const suggestions = await Product.find({ 
-            Name: { $regex: keyword, $options: 'i' } 
+
+        const suggestions = await Product.find({
+            Name: { $regex: keyword, $options: 'i' }
         }).select('Name slug -_id').limit(5);
-        
+
         res.json(suggestions);
     } catch (error) {
         res.status(500).json({ message: error.message });
