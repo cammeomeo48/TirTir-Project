@@ -1,44 +1,60 @@
-const { spawn } = require('child_process');
-const path = require('path');
+const axios = require('axios');
 
-exports.chatWithBot = (req, res) => {
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+
+/**
+ * @route   POST /api/v1/chat
+ * @desc    Process a chatbot message via FastAPI AI Microservice.
+ *          Model is loaded ONCE in FastAPI — no per-request Python spawn overhead.
+ * @access  Public
+ */
+exports.chatWithBot = async (req, res) => {
     const { message } = req.body;
 
-    if (!message) {
-        return res.status(400).json({ message: "Vui lòng nhập nội dung tin nhắn." });
+    if (!message || !message.trim()) {
+        return res.status(400).json({ success: false, message: 'Vui lòng nhập nội dung tin nhắn.' });
     }
 
-    // Đường dẫn đến file python
-    const scriptPath = path.join(__dirname, '..', 'chatbot', 'chatbot.py');
+    try {
+        const response = await axios.post(
+            `${AI_SERVICE_URL}/chat`,
+            { message: message.trim() },
+            { timeout: 5000, headers: { 'Content-Type': 'application/json' } }
+        );
 
-    // Gọi Python process
-    // Lưu ý: Đảm bảo máy chủ đã cài python và lệnh 'python' hoạt động
-    const pythonProcess = spawn('python', [scriptPath, message]);
+        if (response.data.success) {
+            return res.json(response.data.data);
+        }
 
-    let dataString = '';
+        return res.status(500).json({
+            success: false,
+            message: response.data.error || 'AI Service returned failure',
+        });
 
-    // Nhận dữ liệu từ Python in ra (stdout)
-    pythonProcess.stdout.on('data', (data) => {
-        dataString += data.toString();
-    });
-
-    // Nhận lỗi (stderr)
-    pythonProcess.stderr.on('data', (data) => {
-        console.error(`Python Error: ${data}`);
-    });
-
-    // Khi Python chạy xong
-    pythonProcess.on('close', (code) => {
-        try {
-            // Parse chuỗi JSON từ Python gửi về
-            const result = JSON.parse(dataString);
-            res.json(result);
-        } catch (error) {
-            console.error("Parse Error:", error, "Raw Data:", dataString);
-            res.status(500).json({ 
-                message: "Lỗi xử lý AI, vui lòng thử lại sau.", 
-                debug: dataString 
+    } catch (error) {
+        // FastAPI server not running
+        if (error.code === 'ECONNREFUSED') {
+            return res.status(503).json({
+                success: false,
+                message: 'AI Chatbot Service chưa chạy. Vui lòng khởi động ai-service.',
             });
         }
-    });
+        // Request timed out
+        if (error.code === 'ECONNABORTED') {
+            return res.status(504).json({
+                success: false,
+                message: 'AI Chatbot đang quá tải, vui lòng thử lại sau.',
+            });
+        }
+        // FastAPI returned 4xx/5xx (e.g. CSV not found)
+        if (error.response) {
+            return res.status(error.response.status >= 500 ? 502 : 400).json({
+                success: false,
+                message: error.response.data?.detail || 'Lỗi Chatbot Service',
+            });
+        }
+
+        console.error('Chat Controller Error:', error.message);
+        return res.status(500).json({ success: false, message: 'Lỗi hệ thống AI.' });
+    }
 };

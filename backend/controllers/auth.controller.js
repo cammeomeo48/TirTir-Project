@@ -21,11 +21,14 @@ const getJwtSecret = () => {
 };
 
 // ===== HELPER: Generate JWT Token =====
+// Expiry is controlled by JWT_EXPIRE in .env (default: 7d)
+// Examples: '7d', '30d', '1y', '2y'
 const generateToken = (userId, userRole) => {
+    const expiresIn = process.env.JWT_EXPIRE || '7d';
     return jwt.sign(
         { id: userId, role: userRole },
         getJwtSecret(),
-        { expiresIn: '7d' } // Token valid for 7 days
+        { expiresIn }
     );
 };
 

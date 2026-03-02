@@ -27,63 +27,215 @@ const { validate } = require('../middlewares/validate');
 // ===== PUBLIC ROUTES (No authentication required) =====
 
 /**
- * @route   POST /api/v1/auth/register
- * @desc    Register new user with email verification
- * @access  Public
+ * @swagger
+ * tags:
+ *   name: Auth
+ *   description: Đăng ký, đăng nhập, xác thực email và quản lý mật khẩu
  */
-// Apply Rate Limiting to Login/Register
+
+/**
+ * @swagger
+ * /auth/register:
+ *   post:
+ *     summary: Đăng ký tài khoản mới
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, email, password]
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: Nguyen Van A
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: user@tirtir.com
+ *               password:
+ *                 type: string
+ *                 minLength: 6
+ *                 example: secret123
+ *     responses:
+ *       201:
+ *         description: Đăng ký thành công. Email xác thực đã được gửi.
+ *       400:
+ *         description: Dữ liệu không hợp lệ hoặc email đã tồn tại
+ */
 router.post('/register', authLimiter, registerValidator, validate, register);
 
 /**
- * @route   POST /api/v1/auth/login
- * @desc    Login user and return JWT token
- * @access  Public
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     summary: Đăng nhập
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: user@tirtir.com
+ *               password:
+ *                 type: string
+ *                 example: secret123
+ *     responses:
+ *       200:
+ *         description: Đăng nhập thành công. Trả về JWT token.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 token:
+ *                   type: string
+ *       400:
+ *         description: Dữ liệu không hợp lệ
+ *       401:
+ *         description: Sai email hoặc mật khẩu
+ *       403:
+ *         description: Tài khoản bị khóa
  */
 router.post('/login', authLimiter, loginValidator, validate, login);
 
 /**
- * @route   GET /api/v1/auth/verify-email/:token
- * @desc    Verify user email (redirects to frontend)
- * @access  Public
+ * @swagger
+ * /auth/verify-email/{token}:
+ *   get:
+ *     summary: Xác thực email người dùng
+ *     tags: [Auth]
+ *     security: []
+ *     parameters:
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Token xác thực được gửi qua email
+ *     responses:
+ *       302:
+ *         description: Redirect về frontend sau khi xác thực thành công
+ *       400:
+ *         description: Token không hợp lệ hoặc đã hết hạn
  */
 router.get('/verify-email/:token', verifyEmail);
 
 /**
- * @route   POST /api/v1/auth/forgot-password
- * @desc    Send password reset email
- * @access  Public
+ * @swagger
+ * /auth/forgot-password:
+ *   post:
+ *     summary: Gửi email đặt lại mật khẩu
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: user@tirtir.com
+ *     responses:
+ *       200:
+ *         description: Email đặt lại mật khẩu đã được gửi
+ *       404:
+ *         description: Không tìm thấy tài khoản với email này
  */
 router.post('/forgot-password', forgotPassword);
 
 /**
- * @route   PUT /api/v1/auth/reset-password/:resettoken
- * @desc    Reset user password with token
- * @access  Public
+ * @swagger
+ * /auth/reset-password/{resettoken}:
+ *   put:
+ *     summary: Đặt lại mật khẩu với token
+ *     tags: [Auth]
+ *     security: []
+ *     parameters:
+ *       - in: path
+ *         name: resettoken
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [password]
+ *             properties:
+ *               password:
+ *                 type: string
+ *                 minLength: 6
+ *                 example: newpassword123
+ *     responses:
+ *       200:
+ *         description: Đặt lại mật khẩu thành công
+ *       400:
+ *         description: Token không hợp lệ hoặc đã hết hạn
  */
 router.put('/reset-password/:resettoken', resetPassword);
 
 // ===== PROTECTED ROUTES (Require authentication) =====
 
 /**
- * @route   GET /api/v1/auth/me
- * @desc    Get current logged-in user info
- * @access  Private
+ * @swagger
+ * /auth/me:
+ *   get:
+ *     summary: Lấy thông tin người dùng hiện tại
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Thông tin người dùng
+ *       401:
+ *         description: Chưa đăng nhập
  */
 router.get('/me', protect, getMe);
 
 /**
- * @route   GET /api/v1/auth/logout
- * @desc    Logout current user
- * @access  Private
+ * @swagger
+ * /auth/logout:
+ *   get:
+ *     summary: Đăng xuất
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Đăng xuất thành công
  */
 router.get('/logout', protect, logout);
 
 // ===== FUTURE IMPLEMENTATION =====
 
 /**
- * @route   POST /api/v1/auth/refresh-token
- * @desc    Refresh JWT token (placeholder)
- * @access  Public
+ * @swagger
+ * /auth/refresh-token:
+ *   post:
+ *     summary: Làm mới JWT token (Placeholder)
+ *     tags: [Auth]
+ *     security: []
+ *     responses:
+ *       501:
+ *         description: Chưa triển khai
  */
 router.post('/refresh-token', refreshToken);
 

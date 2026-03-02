@@ -18,6 +18,32 @@ require('./cron/abandonedCart.cron'); // Initialize Cron Jobs
 
 const { apiLimiter } = require('./middlewares/rateLimit');
 
+// ─── Swagger API Docs ────────────────────────────────────────────────────────
+const swaggerJsdoc = require('swagger-jsdoc');
+const swaggerUi = require('swagger-ui-express');
+
+const swaggerOptions = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'TirTir Cosmetics API',
+      version: '1.0.0',
+      description: 'REST API documentation for TirTir Cosmetics E-Commerce Platform',
+    },
+    servers: [{ url: `http://localhost:${process.env.PORT || 5001}/api/v1`, description: 'Development server' }],
+    components: {
+      securitySchemes: {
+        bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+      },
+    },
+    security: [{ bearerAuth: [] }],
+  },
+  apis: ['./routes/*.js'], // Auto-scan all route files for JSDoc annotations
+};
+
+const swaggerSpec = swaggerJsdoc(swaggerOptions);
+// ─────────────────────────────────────────────────────────────────────────────
+
 const app = express();
 
 // 1. Performance Monitoring (Response Time)
@@ -179,6 +205,17 @@ const wishlistRoutes = require("./routes/wishlist.routes");
 
 app.get("/", (req, res) => res.send("API Running"));
 app.get("/api/v1/health", (req, res) => res.json({ ok: true, msg: "alive" }));
+
+// ─── Swagger Docs (Development Only) ────────────────────────────────────────
+if (process.env.NODE_ENV !== 'production') {
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+    customSiteTitle: 'TirTir API Docs',
+    swaggerOptions: { persistAuthorization: true },
+  }));
+  app.get('/api-docs.json', (req, res) => res.json(swaggerSpec));
+  logger.info('📚 Swagger UI available at http://localhost:5001/api-docs');
+}
+// ─────────────────────────────────────────────────────────────────────────────
 app.get("/debug-sentry", function mainHandler(req, res) {
   Sentry.startSpan({
     op: "test",

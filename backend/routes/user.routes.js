@@ -13,7 +13,9 @@ const {
     deleteAddress,
     setDefaultAddress
 } = require('../controllers/user.controller');
-const { getMyReviews } = require('../controllers/review.controller'); // Import review controller
+const { getMyReviews } = require('../controllers/review.controller');
+const { updateProfileValidator, changePasswordValidator, addressValidator } = require('../validators/user.validator');
+const { validate } = require('../middlewares/validate');
 
 /**
  * User Profile & Address Management Routes
@@ -21,26 +23,26 @@ const { getMyReviews } = require('../controllers/review.controller'); // Import 
  */
 
 // ===== PROFILE ROUTES =====
-router.get('/my-reviews', protect, getMyReviews); // Get my reviews
+router.get('/my-reviews', protect, getMyReviews);
 
 router.route('/profile')
-    .get(protect, getProfile)        // Get user profile
-    .put(protect, updateProfile);     // Update user profile
+    .get(protect, getProfile)
+    .put(protect, updateProfileValidator, validate, updateProfile);
 
-router.post('/change-password', protect, changePassword);  // Change password
+router.post('/change-password', protect, changePasswordValidator, validate, changePassword);
 
 // Avatar upload route
-router.post('/avatar/upload', protect, uploadMiddleware, uploadAvatar);  // Upload avatar
+router.post('/avatar/upload', protect, uploadMiddleware, uploadAvatar);
 
 // ===== ADDRESS ROUTES =====
 router.route('/addresses')
-    .get(protect, getAddresses)       // Get all addresses
-    .post(protect, addAddress);       // Add new address
+    .get(protect, getAddresses)
+    .post(protect, addressValidator, validate, addAddress);
 
 router.route('/addresses/:id')
-    .put(protect, updateAddress)      // Update specific address
-    .delete(protect, deleteAddress);  // Delete specific address
+    .put(protect, addressValidator, validate, updateAddress)
+    .delete(protect, deleteAddress);
 
-router.patch('/addresses/:id/set-default', protect, setDefaultAddress);  // Set default address
+router.patch('/addresses/:id/set-default', protect, setDefaultAddress);
 
 module.exports = router;
