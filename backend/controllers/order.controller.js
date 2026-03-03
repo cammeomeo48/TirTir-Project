@@ -3,6 +3,7 @@ const Cart = require('../models/cart.model');
 const Product = require('../models/product.model');
 const StockHistory = require('../models/stock.history.model');
 const { ORDER_STATUS } = require('../constants');
+const { createNotification } = require('./notification.controller');
 
 // 1. TẠO ĐƠN HÀNG (CHECKOUT)
 // Implements: Atomic Updates & Reservation Strategy
@@ -28,15 +29,15 @@ exports.createOrder = async (req, res) => {
             // Try to reserve stock ATOMICALLY
             // Decrement Stock_Quantity, Increment Stock_Reserved
             const updatedProduct = await Product.findOneAndUpdate(
-                { 
-                    _id: item.product._id, 
+                {
+                    _id: item.product._id,
                     Stock_Quantity: { $gte: item.quantity } // Condition: Stock must be enough
                 },
-                { 
-                    $inc: { 
+                {
+                    $inc: {
                         Stock_Quantity: -item.quantity,
-                        Stock_Reserved: item.quantity 
-                    } 
+                        Stock_Reserved: item.quantity
+                    }
                 },
                 { new: true }
             );
@@ -45,15 +46,15 @@ exports.createOrder = async (req, res) => {
                 // ROLLBACK PREVIOUSLY RESERVED ITEMS
                 for (const reserved of reservedProducts) {
                     await Product.findByIdAndUpdate(reserved.id, {
-                        $inc: { 
+                        $inc: {
                             Stock_Quantity: reserved.qty,
-                            Stock_Reserved: -reserved.qty 
+                            Stock_Reserved: -reserved.qty
                         }
                     });
                 }
 
-                return res.status(400).json({ 
-                    message: `Hết hàng hoặc không đủ số lượng cho sản phẩm: ${item.product.Name}` 
+                return res.status(400).json({
+                    message: `Hết hàng hoặc không đủ số lượng cho sản phẩm: ${item.product.Name}`
                 });
             }
 
@@ -172,9 +173,9 @@ exports.updateOrderStatus = async (req, res) => {
         }
 
         const oldStatus = order.status;
-        
+
         // --- STOCK MANAGEMENT LOGIC ---
-        
+
         // 1. Pending -> Processing: CONFIRM Stock (Deduct from Reserved)
         // Note: Stock was already deducted from Stock_Quantity when Order was placed (Pending).
         // It is currently in Stock_Reserved. We just need to remove it from Stock_Reserved.
@@ -207,9 +208,9 @@ exports.updateOrderStatus = async (req, res) => {
             for (const item of order.items) {
                 // Return to Stock
                 const product = await Product.findByIdAndUpdate(item.product._id, {
-                    $inc: { 
+                    $inc: {
                         Stock_Quantity: item.quantity,
-                        Stock_Reserved: -item.quantity 
+                        Stock_Reserved: -item.quantity
                     }
                 }, { new: true });
 
@@ -258,6 +259,40 @@ exports.updateOrderStatus = async (req, res) => {
         order.status = status;
         const updatedOrder = await order.save();
 
+        // ─── Gửi notification cho chủ đơn hàng ────────────────────────────────
+        const orderIdStr = order._id.toString();
+        const shortId = orderIdStr.slice(-6).toUpperCase();
+        const notifMap = {
+            Processing: {
+                title: '🛒 Đơn hàng đang xử lý',
+                message: `Đơn hàng #${shortId} đã được xác nhận và đang được xử lý.`
+            },
+            Shipped: {
+                title: '🚚 Đơn hàng đang giao',
+                message: `Đơn hàng #${shortId} đã được giao cho đơn vị vận chuyển.`
+            },
+            Delivered: {
+                title: '✅ Giao hàng thành công',
+                message: `Đơn hàng #${shortId} đã được giao thành công. Cảm ơn bạn đã mua sắm!`
+            },
+            Cancelled: {
+                title: '❌ Đơn hàng đã bị hủy',
+                message: `Đơn hàng #${shortId} đã bị hủy. Liên hệ hỗ trợ nếu cần trợ giúp.`
+            }
+        };
+
+        if (notifMap[status]) {
+            const userIdToNotify = order.user?._id || order.user;
+            await createNotification(
+                userIdToNotify,
+                'order',
+                notifMap[status].title,
+                notifMap[status].message,
+                `/account/orders`
+            );
+        }
+        // ──────────────────────────────────────────────────────────────────────
+
         res.json({ message: "Cập nhật trạng thái thành công", order: updatedOrder });
     } catch (error) {
         console.error("Update Order Error:", error);
@@ -278,8 +313,8 @@ exports.cancelOrder = async (req, res) => {
 
         // Chỉ cho phép hủy khi trạng thái là Pending
         if (order.status !== 'Pending') {
-            return res.status(400).json({ 
-                message: "Không thể hủy đơn hàng này vì đã được xử lý hoặc vận chuyển." 
+            return res.status(400).json({
+                message: "Không thể hủy đơn hàng này vì đã được xử lý hoặc vận chuyển."
             });
         }
 
@@ -290,9 +325,9 @@ exports.cancelOrder = async (req, res) => {
         for (const item of order.items) {
             // Return to Stock: Increase Available, Decrease Reserved
             const product = await Product.findByIdAndUpdate(item.product._id, {
-                $inc: { 
-                    Stock_Quantity: item.quantity, 
-                    Stock_Reserved: -item.quantity 
+                $inc: {
+                    Stock_Quantity: item.quantity,
+                    Stock_Reserved: -item.quantity
                 }
             }, { new: true });
 
@@ -322,7 +357,7 @@ exports.cancelOrder = async (req, res) => {
 exports.getOrderTracking = async (req, res) => {
     try {
         const order = await Order.findById(req.params.id).select('status createdAt updatedAt');
-        
+
         if (!order) {
             return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
         }
@@ -337,10 +372,10 @@ exports.getOrderTracking = async (req, res) => {
 
         // Nếu đã hủy thì timeline khác
         if (order.status === 'Cancelled') {
-             timeline.push({ status: "Đã hủy", time: order.updatedAt, done: true });
+            timeline.push({ status: "Đã hủy", time: order.updatedAt, done: true });
         }
 
-        res.json({ 
+        res.json({
             orderId: order._id,
             currentStatus: order.status,
             timeline: timeline
@@ -371,7 +406,7 @@ exports.reorder = async (req, res) => {
         // 3. Đẩy items cũ vào giỏ (Merge logic)
         for (const item of oldOrder.items) {
             // Kiểm tra xem sản phẩm còn bán không (Optional)
-            
+
             const existingItemIndex = cart.items.findIndex(
                 p => p.product.toString() === item.product.toString() && p.shade === item.shade
             );

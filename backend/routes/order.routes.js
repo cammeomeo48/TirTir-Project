@@ -4,6 +4,7 @@ const orderController = require('../controllers/order.controller');
 const { protect, authorize } = require('../middlewares/auth');
 const { createOrderValidator, updateStatusValidator } = require('../validators/order.validator');
 const { validate } = require('../middlewares/validate');
+const { checkoutLimiter } = require('../middlewares/rateLimit');
 
 
 /**
@@ -46,7 +47,7 @@ const { validate } = require('../middlewares/validate');
  *       401:
  *         description: Chưa đăng nhập
  */
-router.post('/create', protect, createOrderValidator, validate, orderController.createOrder);
+router.post('/create', protect, checkoutLimiter, createOrderValidator, validate, orderController.createOrder);
 
 /**
  * @swagger

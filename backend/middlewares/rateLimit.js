@@ -24,3 +24,45 @@ exports.authLimiter = rateLimit({
         message: 'Too many login attempts, please try again after 15 minutes'
     }
 });
+
+// ─── Per-User Rate Limiter ────────────────────────────────────────────────────
+// Uses authenticated userId as the key — prevents users from hammering
+// sensitive endpoints even if they share an IP (e.g. behind a corporate proxy).
+// Falls back to IP if user is not authenticated.
+
+const createUserLimiter = (max, windowMs, message) => rateLimit({
+    windowMs,
+    max,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => {
+        // Use userId if authenticated, else fall back to IP
+        return req.user?.id?.toString() || req.ip;
+    },
+    message: {
+        success: false,
+        message: message || `Too many requests, please try again later`
+    }
+});
+
+// 10 checkout attempts per hour per user
+exports.checkoutLimiter = createUserLimiter(
+    10,
+    60 * 60 * 1000,
+    'Too many orders placed. Please wait before placing another order.'
+);
+
+// 5 review submissions per hour per user
+exports.reviewLimiter = createUserLimiter(
+    5,
+    60 * 60 * 1000,
+    'Too many reviews submitted. You can submit up to 5 reviews per hour.'
+);
+
+// 20 AI skin scans per hour per user
+exports.aiScanLimiter = createUserLimiter(
+    20,
+    60 * 60 * 1000,
+    'Too many AI scan requests. You can perform up to 20 scans per hour.'
+);
+

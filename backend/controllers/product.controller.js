@@ -513,8 +513,112 @@ exports.deleteProduct = async (req, res) => {
 };
 
 exports.bulkImport = async (req, res) => {
-    // Stub
-    res.status(501).json({ message: "Not implemented yet" });
+    // Requires: multer middleware (upload.single('file')) on the route
+    if (!req.file) {
+        return res.status(400).json({ message: 'No CSV file uploaded. Use field name "file".' });
+    }
+
+    try {
+        // Dynamically import csv-parse (ESM package, use parse/sync or callback)
+        const { parse } = require('csv-parse/sync');
+
+        // Parse CSV from buffer
+        const records = parse(req.file.buffer, {
+            columns: true,          // Use first row as column headers
+            skip_empty_lines: true,
+            trim: true,
+            cast: (value, context) => {
+                // Auto-cast numeric columns
+                const numericCols = ['Price', 'Stock_Quantity', 'Stock_Reserved', 'Sold_Quantity', 'Rating_Average', 'Rating_Count'];
+                if (numericCols.includes(context.column) && value !== '') {
+                    const n = Number(value);
+                    return isNaN(n) ? value : n;
+                }
+                if (value === 'true') return true;
+                if (value === 'false') return false;
+                return value;
+            }
+        });
+
+        if (!records || records.length === 0) {
+            return res.status(400).json({ message: 'CSV file is empty or has no valid rows.' });
+        }
+
+        const REQUIRED_COLS = ['Product_ID', 'Name', 'Price', 'Category'];
+        const firstRow = records[0];
+        const missingCols = REQUIRED_COLS.filter(col => !(col in firstRow));
+        if (missingCols.length > 0) {
+            return res.status(400).json({
+                message: `CSV is missing required columns: ${missingCols.join(', ')}`,
+                hint: 'Required columns: Product_ID, Name, Price, Category'
+            });
+        }
+
+        // Build bulkWrite operations
+        const ops = [];
+        const errors = [];
+
+        for (let i = 0; i < records.length; i++) {
+            const row = records[i];
+            const rowNum = i + 2; // +2 because row 1 is header
+
+            // Validate required fields
+            if (!row.Product_ID || !row.Name || row.Price === undefined || !row.Category) {
+                errors.push({ row: rowNum, Product_ID: row.Product_ID || '?', reason: 'Missing required fields (Product_ID, Name, Price, Category)' });
+                continue;
+            }
+
+            if (isNaN(Number(row.Price)) || Number(row.Price) < 0) {
+                errors.push({ row: rowNum, Product_ID: row.Product_ID, reason: `Invalid Price: "${row.Price}"` });
+                continue;
+            }
+
+            // Auto-generate slug
+            const slug = generateSlug(row.Name);
+
+            ops.push({
+                updateOne: {
+                    filter: { Product_ID: row.Product_ID },
+                    update: { $set: { ...row, slug } },
+                    upsert: true
+                }
+            });
+        }
+
+        if (ops.length === 0) {
+            return res.status(400).json({
+                message: 'No valid rows to import.',
+                errors
+            });
+        }
+
+        // Execute bulk operation — ordered: false continues on individual write errors
+        const result = await Product.bulkWrite(ops, { ordered: false });
+
+        const inserted = result.upsertedCount || 0;
+        const updated = result.modifiedCount || 0;
+        const failed = errors.length;
+
+        console.log(`📦 Bulk Import: ${inserted} inserted, ${updated} updated, ${failed} failed out of ${records.length} rows`);
+
+        return res.status(200).json({
+            success: true,
+            message: `Import finished: ${inserted} inserted, ${updated} updated, ${failed} failed`,
+            inserted,
+            updated,
+            failed,
+            total: records.length,
+            errors: errors.length > 0 ? errors : undefined
+        });
+
+    } catch (err) {
+        console.error('Bulk Import Error:', err);
+        // csv-parse throws on malformed CSV
+        if (err.code === 'CSV_RECORD_INCONSISTENT_COLUMNS' || err.code?.startsWith('CSV_')) {
+            return res.status(400).json({ message: `CSV parsing error: ${err.message}` });
+        }
+        return res.status(500).json({ message: err.message });
+    }
 };
 
 exports.updateStock = async (req, res) => {

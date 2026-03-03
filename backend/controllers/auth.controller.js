@@ -14,22 +14,30 @@ const { createNotification } = require('./notification.controller');
 // ===== HELPER: Get JWT Secret =====
 const getJwtSecret = () => {
     const secret = process.env.JWT_SECRET;
-    if (!secret) {
-        throw new Error('FATAL: JWT_SECRET is not defined in environment variables');
-    }
+    if (!secret) throw new Error('FATAL: JWT_SECRET is not defined in environment variables');
     return secret;
 };
 
-// ===== HELPER: Generate JWT Token =====
-// Expiry is controlled by JWT_EXPIRE in .env (default: 7d)
-// Examples: '7d', '30d', '1y', '2y'
-const generateToken = (userId, userRole) => {
-    const expiresIn = process.env.JWT_EXPIRE || '7d';
+// ===== HELPER: Generate Short-lived Access Token (15m default) =====
+const generateAccessToken = (userId, userRole) => {
+    const expiresIn = process.env.JWT_EXPIRE || '15m';
     return jwt.sign(
         { id: userId, role: userRole },
         getJwtSecret(),
         { expiresIn }
     );
+};
+
+// ===== HELPER: Generate Opaque Refresh Token & Save Hash to DB =====
+// Returns the plain refresh token string (sent to client)
+const generateAndSaveRefreshToken = async (user) => {
+    const plainToken = crypto.randomBytes(40).toString('hex');
+    const hashed = crypto.createHash('sha256').update(plainToken).digest('hex');
+    const expireDays = parseInt(process.env.JWT_REFRESH_EXPIRE_DAYS || '30', 10);
+    user.refreshToken = hashed;
+    user.refreshTokenExpire = new Date(Date.now() + expireDays * 24 * 60 * 60 * 1000);
+    await user.save({ validateBeforeSave: false });
+    return plainToken;
 };
 
 /**
@@ -113,12 +121,14 @@ exports.register = async (req, res) => {
         if (isDevelopment) {
             console.log('🔥 DEV MODE: Email verification bypassed');
 
-            const token = generateToken(newUser._id, newUser.role);
+            const accessToken = generateAccessToken(newUser._id, newUser.role);
+            const refreshToken = await generateAndSaveRefreshToken(newUser);
 
             return res.status(201).json({
                 success: true,
                 message: 'Registration successful! Auto-verified in development mode.',
-                token,
+                token: accessToken,
+                refreshToken,
                 user: {
                     id: newUser._id,
                     name: newUser.name,
@@ -335,8 +345,9 @@ exports.login = async (req, res) => {
             });
         }
 
-        // ===== GENERATE JWT TOKEN =====
-        const token = generateToken(user._id, user.role);
+        // ===== GENERATE TOKENS =====
+        const accessToken = generateAccessToken(user._id, user.role);
+        const refreshToken = await generateAndSaveRefreshToken(user);
 
         console.log(`✅ User logged in: ${email} (ID: ${user._id})`);
 
@@ -346,7 +357,8 @@ exports.login = async (req, res) => {
         // ===== SUCCESSFUL LOGIN =====
         return res.status(200).json({
             success: true,
-            token,
+            token: accessToken,
+            refreshToken,
             user: {
                 id: user._id,
                 name: user.name,
@@ -532,15 +544,17 @@ exports.resetPassword = async (req, res) => {
         user.resetPasswordExpire = undefined;
         await user.save();
 
-        // Generate JWT token for immediate login
-        const token = generateToken(user._id, user.role);
+        // Generate tokens for immediate login
+        const accessToken = generateAccessToken(user._id, user.role);
+        const refreshToken = await generateAndSaveRefreshToken(user);
 
         console.log(`✅ Password reset successful: ${user.email}`);
 
         return res.status(200).json({
             success: true,
             message: 'Password reset successful',
-            token,
+            token: accessToken,
+            refreshToken,
             user: {
                 id: user._id,
                 name: user.name,
@@ -565,12 +579,17 @@ exports.resetPassword = async (req, res) => {
  */
 exports.logout = async (req, res) => {
     try {
-        // Logout is handled on client-side by clearing the token
-        // In future: implement token blacklisting with Redis
+        // Clear refresh token from DB (true server-side logout)
+        if (req.user && req.user.id) {
+            await User.findByIdAndUpdate(req.user.id, {
+                refreshToken: undefined,
+                refreshTokenExpire: undefined
+            });
+        }
 
         return res.status(200).json({
             success: true,
-            message: 'Logged out successfully. Please clear your token from storage.'
+            message: 'Logged out successfully.'
         });
 
     } catch (error) {
@@ -587,9 +606,58 @@ exports.logout = async (req, res) => {
  * @desc    Refresh JWT token (placeholder for future implementation)
  * @access  Public
  */
+/**
+ * @route   POST /api/v1/auth/refresh-token
+ * @desc    Issue a new access token + rotate refresh token
+ * @access  Public (requires valid refreshToken in body)
+ */
 exports.refreshToken = async (req, res) => {
-    return res.status(501).json({
-        success: false,
-        message: 'Refresh token functionality not yet implemented'
-    });
+    try {
+        const { refreshToken } = req.body;
+
+        if (!refreshToken) {
+            return res.status(400).json({ success: false, message: 'Refresh token is required' });
+        }
+
+        // Hash the incoming token to compare with DB
+        const hashed = crypto.createHash('sha256').update(refreshToken).digest('hex');
+
+        // Find user with matching, non-expired refresh token
+        const user = await User.findOne({
+            refreshToken: hashed,
+            refreshTokenExpire: { $gt: Date.now() }
+        }).select('+refreshToken +refreshTokenExpire');
+
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid or expired refresh token. Please login again.'
+            });
+        }
+
+        if (user.isBlocked) {
+            return res.status(403).json({ success: false, message: 'Your account has been blocked.' });
+        }
+
+        // Issue new access token
+        const newAccessToken = generateAccessToken(user._id, user.role);
+
+        // Rotate refresh token (invalidate old one, issue new one)
+        const newRefreshToken = await generateAndSaveRefreshToken(user);
+
+        console.log(`🔄 Token refreshed for user: ${user.email}`);
+
+        return res.status(200).json({
+            success: true,
+            token: newAccessToken,
+            refreshToken: newRefreshToken
+        });
+
+    } catch (error) {
+        console.error('❌ Refresh Token Error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Server error during token refresh'
+        });
+    }
 };
