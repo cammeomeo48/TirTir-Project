@@ -1,5 +1,5 @@
 <div class="gift-card-container">
-    <div class="gift-card-content">
+    <div class="gift-card-content" *ngIf="giftCardProduct">
         <!-- Left: Image -->
         <div class="gift-card-image">
             <img src="/assets/images/additional/giftcard/GifCardMain.jpeg" alt="TIRTIR Gift Card">
@@ -31,5 +31,8 @@
                 Add to cart
             </button>
         </div>
+    </div>
+    <div class="loading-state" *ngIf="loading && !giftCardProduct">
+        Loading...
     </div>
 </div>

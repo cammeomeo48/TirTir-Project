@@ -25,6 +25,8 @@ export class CartComponent implements OnInit {
     loading = true;
     error = '';
     promoCode = '';
+    promoMessage = '';
+    promoError = '';
 
     ngOnInit(): void {
         this.loadCart();
@@ -162,11 +164,22 @@ export class CartComponent implements OnInit {
     }
 
     applyPromoCode(): void {
-        if (!this.promoCode.trim()) return;
-        // TODO: Implement promo code application with backend
-        console.log('Applying promo code:', this.promoCode);
-        // For now, just show a message
-        alert('Promo code functionality will be available soon!');
+        this.promoError = '';
+        this.promoMessage = '';
+        if (!this.promoCode.trim()) {
+            this.promoError = 'Please enter a coupon code';
+            return;
+        }
+
+        this.cartService.applyCoupon(this.promoCode).subscribe({
+            next: (updatedCart) => {
+                this.cart = updatedCart;
+                this.promoMessage = 'Coupon applied successfully!';
+            },
+            error: (err) => {
+                this.promoError = err.message || 'Invalid coupon or expired.';
+            }
+        });
     }
 
     removeItem(item: CartItem): void {

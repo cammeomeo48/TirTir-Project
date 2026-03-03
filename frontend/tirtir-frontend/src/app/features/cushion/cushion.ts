@@ -71,7 +71,7 @@ export class CushionComponent implements OnInit {
 
     ngOnInit(): void {
         // 1. Fetch Products
-        this.productService.getProducts({ keyword: 'cushion', limit: 20 }).subscribe({
+        this.productService.getProducts({ category: 'cushion', limit: 20 }).subscribe({
             next: (response) => this.products = response.data,
             error: (err) => console.error('Error loading cushions:', err)
         });

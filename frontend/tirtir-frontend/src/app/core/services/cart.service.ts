@@ -72,6 +72,19 @@ export class CartService {
     }
 
     /**
+     * Apply a coupon code
+     */
+    applyCoupon(code: string): Observable<Cart> {
+        return this.http.post<Cart>(`${environment.apiUrl}/coupons/apply`, { code }).pipe(
+            tap((cart) => {
+                this.cartSubject.next(cart);
+                this.updateCartCount(cart);
+            }),
+            catchError(this.handleError)
+        );
+    }
+
+    /**
      * Update cart item quantity or shade (Quick Edit)
      */
     updateCartItem(productId: string, quantity: number, shade?: string, oldShade?: string, newShade?: string): Observable<Cart> {

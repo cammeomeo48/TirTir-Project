@@ -65,17 +65,11 @@ export class ProductDetailComponent implements OnInit {
   }
 
   fetchSuggestions() {
-    this.productService.getProducts({ limit: 4 }).subscribe(res => {
-      this.suggestedProducts = res.data.filter((p: any) => p.slug !== this.product.slug);
-      // Dummy "Deal" suggestion
-      this.suggestedProducts.push({
-        name: 'Ultimate Beauty Combo',
-        price: 89,
-        originalPrice: 120,
-        images: ['https://tirtir.global/cdn/shop/files/7085731777013_1_800x.jpg'],
-        isDeal: true,
-        slug: 'deals'
-      });
+    const category = this.product?.category || 'skincare';
+    this.productService.getProducts({ category, limit: 5 }).subscribe(res => {
+      this.suggestedProducts = res.data
+        .filter((p: any) => p.slug !== this.product.slug)
+        .slice(0, 4); // Suggest up to 4 related products
     });
   }
 

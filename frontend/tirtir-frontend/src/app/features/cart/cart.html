@@ -110,6 +110,19 @@
                             <span>Shipping</span>
                             <span class="summary-value">FREE</span>
                         </div>
+                        <div class="summary-row" *ngIf="cart.coupon">
+                            <span>Discount</span>
+                            <span class="summary-value discount-val">-${{ cart.discountAmount?.toFixed(2) }}</span>
+                        </div>
+                    </div>
+
+                    <div class="promo-section">
+                        <div class="promo-input-group">
+                            <input type="text" [(ngModel)]="promoCode" placeholder="Promo code" class="promo-input">
+                            <button (click)="applyPromoCode()" class="apply-btn">APPLY</button>
+                        </div>
+                        <p class="promo-msg success" *ngIf="promoMessage">{{ promoMessage }}</p>
+                        <p class="promo-msg error" *ngIf="promoError">{{ promoError }}</p>
                     </div>
 
                     <div class="summary-row summary-total">
