@@ -1,13 +1,13 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
-export type SkeletonType = 'product-card' | 'product-detail' | 'cart-item' | 'list-item';
+export type SkeletonType = 'product-card' | 'product-detail' | 'cart-item' | 'list-item' | 'filter-bar';
 
 @Component({
-    selector: 'app-skeleton-loader',
-    standalone: true,
-    imports: [CommonModule],
-    template: `
+  selector: 'app-skeleton-loader',
+  standalone: true,
+  imports: [CommonModule],
+  template: `
     <div class="skeleton-wrapper" [ngClass]="type">
       <div class="shimmer"></div>
       
@@ -37,6 +37,12 @@ export type SkeletonType = 'product-card' | 'product-detail' | 'cart-item' | 'li
         </div>
       </div>
 
+      <!-- Filter Bar Skeleton -->
+      <div *ngIf="type === 'filter-bar'" class="filter-bar-skeleton">
+        <div class="text-skeleton toggle"></div>
+        <div class="text-skeleton sort"></div>
+      </div>
+
       <!-- Cart Item Skeleton -->
       <div *ngIf="type === 'cart-item'" class="cart-skeleton">
         <div class="img-skeleton small"></div>
@@ -48,7 +54,7 @@ export type SkeletonType = 'product-card' | 'product-detail' | 'cart-item' | 'li
       </div>
     </div>
   `,
-    styles: [`
+  styles: [`
     .skeleton-wrapper {
       position: relative;
       overflow: hidden;
@@ -109,6 +115,18 @@ export type SkeletonType = 'product-card' | 'product-detail' | 'cart-item' | 'li
     .desc { height: 1rem; width: 100%; }
     .btn-skeleton { height: 3.5rem; width: 100%; margin-top: 2rem; background: #e0e0e0; }
 
+    /* Filter Bar */
+    .filter-bar-skeleton {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 0;
+      height: 60px;
+      width: 100%;
+    }
+    .filter-bar-skeleton .toggle { width: 150px; height: 1.5rem; margin: 0; }
+    .filter-bar-skeleton .sort { width: 200px; height: 2rem; margin: 0; }
+
     /* Cart Item */
     .cart-skeleton {
       display: flex;
@@ -124,5 +142,5 @@ export type SkeletonType = 'product-card' | 'product-detail' | 'cart-item' | 'li
   `]
 })
 export class SkeletonLoaderComponent {
-    @Input() type: SkeletonType = 'product-card';
+  @Input() type: SkeletonType = 'product-card';
 }
