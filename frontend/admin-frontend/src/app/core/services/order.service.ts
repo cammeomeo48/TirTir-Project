@@ -55,7 +55,7 @@ export class OrderService {
     constructor(private http: HttpClient) { }
 
     getAllOrders(): Observable<any> {
-        return this.http.get(`${this.apiUrl}`);
+        return this.http.get(`${environment.apiUrl}/admin/orders`);
     }
 
     getOrderById(id: string): Observable<any> {
@@ -88,6 +88,10 @@ export class OrderService {
     }
 
     getOrderStats(): Observable<any> {
-        return this.http.get(`${this.apiUrl}/stats`);
+        return this.http.get(`${environment.apiUrl}/admin/orders/stats`);
+    }
+
+    cancelOrder(orderId: string): Observable<any> {
+        return this.http.post(`${environment.apiUrl}/orders/${orderId}/cancel`, {});
     }
 }

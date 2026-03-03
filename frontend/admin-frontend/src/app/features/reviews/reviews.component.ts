@@ -1,18 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
-import { environment } from '../../../environments/environment';
-
-interface Review {
-    _id: string;
-    user: { name: string; email: string };
-    product: { Product_Name: string; _id: string };
-    rating: number;
-    comment: string;
-    createdAt: string;
-    status?: string;
-}
+import { ReviewService, Review } from '../../core/services/review.service';
 
 @Component({
     selector: 'app-reviews',
@@ -89,10 +78,10 @@ interface Review {
             <tbody>
                 <tr *ngFor="let review of filteredReviews">
                     <td>
-                        <div class="customer-name">{{ review.user?.name || 'Anonymous' }}</div>
-                        <div class="customer-email">{{ review.user?.email || '' }}</div>
+                        <div class="customer-name">{{ review.user.name || 'Anonymous' }}</div>
+                        <div class="customer-email">{{ review.user.email || '' }}</div>
                     </td>
-                    <td class="product-name">{{ review.product?.Product_Name || 'N/A' }}</td>
+                    <td class="product-name">{{ review.product.Product_Name || 'N/A' }}</td>
                     <td>
                         <span class="stars">{{ getStars(review.rating) }}</span>
                         <span class="rating-num">{{ review.rating }}/5</span>
@@ -148,14 +137,14 @@ export class ReviewsComponent implements OnInit {
     searchQuery = '';
     selectedRating = '';
 
-    constructor(private http: HttpClient) { }
+    constructor(private reviewService: ReviewService) { }
 
     ngOnInit() { this.loadReviews(); }
 
     loadReviews() {
         this.loading = true;
         this.error = null;
-        this.http.get<any>(`${environment.apiUrl}/admin/reviews`).subscribe({
+        this.reviewService.getAllReviews().subscribe({
             next: (data) => {
                 this.reviews = Array.isArray(data) ? data : (data.reviews || data.data || []);
                 this.applyFilters();
@@ -173,8 +162,8 @@ export class ReviewsComponent implements OnInit {
         if (this.searchQuery.trim()) {
             const q = this.searchQuery.toLowerCase();
             filtered = filtered.filter(r =>
-                r.product?.Product_Name?.toLowerCase().includes(q) ||
-                r.user?.name?.toLowerCase().includes(q)
+                r.product.Product_Name.toLowerCase().includes(q) ||
+                r.user.name.toLowerCase().includes(q)
             );
         }
         if (this.selectedRating) {
@@ -185,7 +174,7 @@ export class ReviewsComponent implements OnInit {
 
     deleteReview(id: string) {
         if (!confirm('Delete this review?')) return;
-        this.http.delete(`${environment.apiUrl}/admin/reviews/${id}`).subscribe({
+        this.reviewService.deleteReview(id).subscribe({
             next: () => this.loadReviews(),
             error: () => alert('Failed to delete review')
         });

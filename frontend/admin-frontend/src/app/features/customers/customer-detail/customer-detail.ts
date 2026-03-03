@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CustomerService, Customer } from '../../../core/services/customer.service';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 @Component({
     selector: 'app-customer-detail',
@@ -34,31 +36,24 @@ export class CustomerDetailComponent implements OnInit {
         this.loading = true;
         this.error = null;
 
-        // Load customer details and orders in parallel (mock-style sequential for now as observables)
-        this.customerService.getCustomerById(id).subscribe({
-            next: (data) => {
-                this.customer = data;
-                this.loadOrders(id);
+        forkJoin({
+            customer: this.customerService.getCustomerById(id),
+            orders: this.customerService.getCustomerOrders(id).pipe(
+                catchError(err => {
+                    console.error('Customer orders error:', err);
+                    return of([]); // Return empty array on error so customer info still loads
+                })
+            )
+        }).subscribe({
+            next: (result) => {
+                this.customer = result.customer;
+                this.orders = Array.isArray(result.orders) ? result.orders : [];
+                this.loading = false;
             },
             error: (err) => {
                 this.error = 'Failed to load customer details';
                 this.loading = false;
                 console.error('Customer details error:', err);
-            }
-        });
-    }
-
-    loadOrders(id: string): void {
-        this.customerService.getCustomerOrders(id).subscribe({
-            next: (data) => {
-                this.orders = Array.isArray(data) ? data : [];
-                this.loading = false;
-            },
-            error: (err) => {
-                console.error('Customer orders error:', err);
-                // Don't block page if orders fail
-                this.orders = [];
-                this.loading = false;
             }
         });
     }

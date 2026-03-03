@@ -48,11 +48,8 @@ export class StockLogsComponent implements OnInit {
             },
             error: (err) => {
                 console.error('Logs load error:', err);
-                this.error = 'Failed to load stock logs';
+                this.error = 'Failed to load stock logs: ' + (err.error?.message || err.message || 'Server error');
                 this.loading = false;
-
-                // Mock data for demo if backend fails
-                this.logs = [];
             }
         });
     }

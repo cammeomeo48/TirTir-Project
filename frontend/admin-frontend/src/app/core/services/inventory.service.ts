@@ -39,7 +39,7 @@ export interface StockAdjustment {
     providedIn: 'root'
 })
 export class InventoryService {
-    private apiUrl = `${environment.apiUrl}/admin/inventory`;
+    private apiUrl = `${environment.apiUrl}/inventory`;
 
     constructor(private http: HttpClient) { }
 
