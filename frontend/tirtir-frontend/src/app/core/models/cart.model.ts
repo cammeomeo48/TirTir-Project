@@ -21,6 +21,9 @@ export interface Cart {
     totalPrice: number;
     createdAt?: Date;
     updatedAt?: Date;
+
+    coupon?: any; 
+    discountAmount?: number;
 }
 
 export interface AddToCartRequest {
