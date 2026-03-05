@@ -6,6 +6,7 @@ const { buildCacheKey, getCache, setCache } = require('../utils/redisCache');
 
 // FastAPI AI Microservice URL
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+const AI_SERVICE_API_KEY = process.env.AI_SERVICE_API_KEY || '';
 
 /**
  * ===== AI BEAUTY ADVISOR CONTROLLER =====
@@ -45,7 +46,10 @@ const callAIService = async (imageBase64) => {
             image_base64: imageBase64
         }, {
             timeout: 5000, // 5s — FastAPI should respond well within this on local/same network
-            headers: { 'Content-Type': 'application/json' }
+            headers: {
+                'Content-Type': 'application/json',
+                ...(AI_SERVICE_API_KEY && { 'X-API-Key': AI_SERVICE_API_KEY })
+            }
         });
 
         if (response.data.success) {

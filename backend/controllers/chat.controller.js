@@ -1,6 +1,7 @@
 const axios = require('axios');
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+const AI_SERVICE_API_KEY = process.env.AI_SERVICE_API_KEY || '';
 
 /**
  * @route   POST /api/v1/chat
@@ -19,7 +20,13 @@ exports.chatWithBot = async (req, res) => {
         const response = await axios.post(
             `${AI_SERVICE_URL}/chat`,
             { message: message.trim() },
-            { timeout: 5000, headers: { 'Content-Type': 'application/json' } }
+            {
+                timeout: 5000,
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(AI_SERVICE_API_KEY && { 'X-API-Key': AI_SERVICE_API_KEY })
+                }
+            }
         );
 
         if (response.data.success) {

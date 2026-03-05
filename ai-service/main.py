@@ -7,17 +7,47 @@ Models are loaded ONCE at startup via lifespan event:
 
 import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Security, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
+from starlette.responses import JSONResponse
 import logging
 import time
+
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from skin_analyzer import SkinAnalyzer
 from chatbot_engine import ChatbotEngine
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# ─── Rate Limiter ──────────────────────────────────────────────────────────────
+limiter = Limiter(key_func=get_remote_address)
+
+# ─── API Key Auth ──────────────────────────────────────────────────────────────
+AI_API_KEY = os.environ.get("AI_SERVICE_API_KEY", "")
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+
+async def verify_api_key(api_key: str = Security(api_key_header)):
+    """
+    Validate API key from X-API-Key header.
+    If AI_SERVICE_API_KEY env var is not set, skip auth (dev mode).
+    """
+    # No key configured → skip auth (backward compatible for dev)
+    if not AI_API_KEY:
+        return True
+    if api_key and api_key == AI_API_KEY:
+        return True
+    raise HTTPException(
+        status_code=403,
+        detail="Invalid or missing API key. Provide X-API-Key header."
+    )
+
 
 # ─── Global references — set during lifespan startup ──────────────────────────
 analyzer: SkinAnalyzer | None = None
@@ -45,6 +75,11 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning(f"⚠️  Chatbot CSV not found at {_CHATBOT_CSV}. /chat endpoint will be unavailable.")
 
+    if AI_API_KEY:
+        logger.info("🔑 API Key authentication is ENABLED.")
+    else:
+        logger.warning("⚠️  AI_SERVICE_API_KEY not set — authentication disabled (dev mode).")
+
     elapsed = time.time() - start
     logger.info(f"✅ All models loaded in {elapsed:.2f}s. Ready to serve.")
     yield
@@ -57,9 +92,24 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="TirTir AI Service",
-    version="2.0.0",
+    version="2.1.0",
     lifespan=lifespan
 )
+
+# Attach rate limiter to app
+app.state.limiter = limiter
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={
+            "success": False,
+            "error": f"Rate limit exceeded: {exc.detail}. Please try again later."
+        }
+    )
+
 
 # CORS — allow Node.js backend to call this service
 app.add_middleware(
@@ -98,19 +148,23 @@ class ChatResponse(BaseModel):
 
 @app.get("/health")
 async def health_check():
+    """Health check — no auth, no rate limit."""
     return {
         "status": "ok",
         "skin_analyzer_loaded": analyzer is not None,
         "chatbot_loaded": chatbot is not None,
-        "service": "TirTir AI Service v2",
+        "service": "TirTir AI Service v2.1",
+        "auth_enabled": bool(AI_API_KEY),
     }
 
 
-@app.post("/analyze", response_model=AnalyzeResponse)
-async def analyze_skin(request: AnalyzeRequest):
+@app.post("/analyze", response_model=AnalyzeResponse, dependencies=[Depends(verify_api_key)])
+@limiter.limit("10/minute")
+async def analyze_skin(request: AnalyzeRequest, req: Request):
     """
     Analyze skin from a base64-encoded image.
     Returns skin tone, undertone, concerns, and confidence.
+    Rate limit: 10 requests/minute per IP.
     """
     if analyzer is None:
         raise HTTPException(status_code=503, detail="AI model not loaded yet")
@@ -146,11 +200,13 @@ async def analyze_skin(request: AnalyzeRequest):
     )
 
 
-@app.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
+@app.post("/chat", response_model=ChatResponse, dependencies=[Depends(verify_api_key)])
+@limiter.limit("30/minute")
+async def chat(request: ChatRequest, req: Request):
     """
     Process a Vietnamese beauty query and return a structured bot response.
     Model is loaded at startup — sub-millisecond inference, no spawn overhead.
+    Rate limit: 30 requests/minute per IP.
     """
     if chatbot is None:
         raise HTTPException(

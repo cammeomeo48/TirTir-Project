@@ -18,6 +18,8 @@ services:
     build: ./ai-service
     ports:
       - "8000:8000"
+    environment:
+      - AI_SERVICE_API_KEY=${AI_SERVICE_API_KEY:-}
     volumes:
       - ./ai-service:/app # Hot-reload Python files
     restart: unless-stopped
@@ -39,6 +41,7 @@ services:
       # Override service URLs to use Docker internal network names
       - AI_SERVICE_URL=http://ai-service:8000
       - REDIS_URL=redis://redis:6379
+      - AI_SERVICE_API_KEY=${AI_SERVICE_API_KEY:-}
     volumes:
       - ./backend:/app # Hot-reload Node files
       - /app/node_modules # Prevent host node_modules from overwriting container's
