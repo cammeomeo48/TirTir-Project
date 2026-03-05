@@ -18,6 +18,7 @@ export const routes: Routes = [
                 path: 'dashboard',
                 component: DashboardComponent
             },
+            // ─── Products ─────────────────────────────────────────
             {
                 path: 'products',
                 data: { roles: ['admin'] },
@@ -52,6 +53,7 @@ export const routes: Routes = [
                     },
                 ],
             },
+            // ─── Orders ───────────────────────────────────────────
             {
                 path: 'orders',
                 children: [
@@ -71,6 +73,7 @@ export const routes: Routes = [
                     },
                 ],
             },
+            // ─── Customers ────────────────────────────────────────
             {
                 path: 'customers',
                 children: [
@@ -90,6 +93,34 @@ export const routes: Routes = [
                     },
                 ],
             },
+            // ─── Marketing (alias → Coupons) ──────────────────────
+            {
+                path: 'marketing',
+                children: [
+                    {
+                        path: '',
+                        loadComponent: () =>
+                            import('./features/coupons/coupon-list/coupon-list').then(
+                                (m) => m.CouponListComponent
+                            ),
+                    },
+                    {
+                        path: 'add',
+                        loadComponent: () =>
+                            import('./features/coupons/coupon-form/coupon-form').then(
+                                (m) => m.CouponFormComponent
+                            ),
+                    },
+                    {
+                        path: 'edit/:id',
+                        loadComponent: () =>
+                            import('./features/coupons/coupon-form/coupon-form').then(
+                                (m) => m.CouponFormComponent
+                            ),
+                    },
+                ],
+            },
+            // ─── Coupons (kept for backward compat) ───────────────
             {
                 path: 'coupons',
                 children: [
@@ -116,6 +147,7 @@ export const routes: Routes = [
                     },
                 ],
             },
+            // ─── Reviews ──────────────────────────────────────────
             {
                 path: 'reviews',
                 loadComponent: () =>
@@ -123,6 +155,16 @@ export const routes: Routes = [
                         (m) => m.ReviewsComponent
                     ),
             },
+            // ─── Analytics ────────────────────────────────────────
+            {
+                path: 'analytics',
+                data: { roles: ['admin'] },
+                loadComponent: () =>
+                    import('./features/analytics/analytics.component').then(
+                        (m) => m.AnalyticsComponent
+                    ),
+            },
+            // ─── Inventory ────────────────────────────────────────
             {
                 path: 'inventory',
                 data: { roles: ['admin', 'inventory_staff'] },
@@ -150,6 +192,7 @@ export const routes: Routes = [
                     },
                 ],
             },
+            // ─── Staff Users ──────────────────────────────────────
             {
                 path: 'users',
                 data: { roles: ['admin'] },
@@ -164,11 +207,13 @@ export const routes: Routes = [
                     }
                 ]
             },
+            // ─── Settings ─────────────────────────────────────────
             {
                 path: 'settings',
                 data: { roles: ['admin'] },
                 loadComponent: () => import('./features/settings/settings.component').then(m => m.SettingsComponent)
             },
+            // ─── Default ──────────────────────────────────────────
             {
                 path: '',
                 redirectTo: 'dashboard',

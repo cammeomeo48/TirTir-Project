@@ -36,9 +36,12 @@ export class RevenueChartComponent implements OnInit, AfterViewInit {
     this.dashboardService.getRevenueChart().subscribe({
       next: (data) => {
         this.loading = false;
-        // Allow change detection to update the view and create the canvas
+        // data is RevenuePoint[] — array of { _id: date-string, revenue: number, count: number }
+        const points = Array.isArray(data) ? data : [];
+        const labels = points.map((p: any) => p._id);
+        const revenues = points.map((p: any) => p.revenue);
         setTimeout(() => {
-          this.createChart(data.labels, data.data);
+          this.createChart(labels, revenues);
         });
       },
       error: (err) => {

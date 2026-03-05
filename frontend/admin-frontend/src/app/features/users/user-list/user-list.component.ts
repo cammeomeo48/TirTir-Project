@@ -16,7 +16,7 @@ export class UserListComponent implements OnInit {
   loading = false;
   error: string | null = null;
 
-  constructor(private userService: UserService) {}
+  constructor(private userService: UserService) { }
 
   ngOnInit(): void {
     this.loadUsers();
@@ -24,7 +24,7 @@ export class UserListComponent implements OnInit {
 
   loadUsers(): void {
     this.loading = true;
-    this.userService.getAdminUsers().subscribe({
+    this.userService.getAllUsers().subscribe({
       next: (data) => {
         this.users = data;
         this.loading = false;

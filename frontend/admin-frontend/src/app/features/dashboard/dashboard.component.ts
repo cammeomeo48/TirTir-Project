@@ -1,71 +1,140 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { DashboardService, DashboardStats } from '../../core/services/dashboard.service';
-import { RevenueChartComponent } from './revenue-chart/revenue-chart';
-import { TopProductsTableComponent } from './top-products-table/top-products-table';
-import { RecentOrdersComponent } from './recent-orders/recent-orders';
+import { DashboardService, DashboardStats, RevenuePoint, TopProduct } from '../../core/services/dashboard.service';
 
 @Component({
     selector: 'app-dashboard',
     standalone: true,
-    imports: [CommonModule, RouterModule, RevenueChartComponent, TopProductsTableComponent, RecentOrdersComponent],
+    imports: [CommonModule, RouterModule],
     templateUrl: './dashboard.component.html',
     styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent implements OnInit {
+    // Stats
     stats: DashboardStats | null = null;
-    isLoading = true;
+    statsLoading = true;
+    statsError: string | null = null;
 
-    // Low stock alerts for dashboard widget
-    lowStockAlerts: any[] = [];
+    // Revenue chart
+    revenueData: RevenuePoint[] = [];
+    revenueLoading = true;
+    maxRevenue = 1;
+
+    // Top products
+    topProducts: TopProduct[] = [];
+    topProductsLoading = true;
+
+    // Recent orders (via admin/orders with limit=5)
+    recentOrders: any[] = [];
+    recentOrdersLoading = true;
+
+    // Low stock alerts
+    lowStockItems: any[] = [];
     lowStockLoading = true;
-
-    // Conversion + AI insights
-    conversionData: any = null;
-    aiInsights: any = null;
 
     constructor(private dashboardService: DashboardService) { }
 
-    ngOnInit() {
+    ngOnInit(): void {
         this.loadStats();
-        this.loadLowStockAlerts();
-        this.loadConversionStats();
+        this.loadRevenue();
+        this.loadTopProducts();
+        this.loadRecentOrders();
+        this.loadLowStock();
     }
 
-    loadStats() {
+    loadStats(): void {
+        this.statsLoading = true;
         this.dashboardService.getStats().subscribe({
             next: (data) => {
                 this.stats = data;
-                this.isLoading = false;
-            },
-            error: (error) => {
-                console.error('Error loading stats:', error);
-                this.isLoading = false;
-            }
-        });
-    }
-
-    loadLowStockAlerts() {
-        this.dashboardService.getLowStockAlerts().subscribe({
-            next: (data) => {
-                this.lowStockAlerts = Array.isArray(data) ? data.slice(0, 5) : [];
-                this.lowStockLoading = false;
+                this.statsLoading = false;
             },
             error: () => {
-                this.lowStockLoading = false;
+                this.statsError = 'Failed to load stats';
+                this.statsLoading = false;
             }
         });
     }
 
-    loadConversionStats() {
-        this.dashboardService.getConversionStats().subscribe({
-            next: (data) => { this.conversionData = data; },
-            error: () => { /* Silently fail — widget simply won't show */ }
+    loadRevenue(): void {
+        this.revenueLoading = true;
+        this.dashboardService.getRevenueChart().subscribe({
+            next: (data) => {
+                this.revenueData = Array.isArray(data) ? data : [];
+                this.maxRevenue = Math.max(...this.revenueData.map(d => d.revenue), 1);
+                this.revenueLoading = false;
+            },
+            error: () => { this.revenueLoading = false; }
         });
-        this.dashboardService.getAiInsights().subscribe({
-            next: (data) => { this.aiInsights = data; },
-            error: () => { /* Silently fail */ }
+    }
+
+    loadTopProducts(): void {
+        this.dashboardService.getTopProducts().subscribe({
+            next: (data) => {
+                this.topProducts = Array.isArray(data) ? data.slice(0, 10) : [];
+                this.topProductsLoading = false;
+            },
+            error: () => { this.topProductsLoading = false; }
         });
+    }
+
+    loadRecentOrders(): void {
+        this.dashboardService.getAllOrders(1).subscribe({
+            next: (data: any) => {
+                const orders = Array.isArray(data) ? data : (data?.orders ?? []);
+                this.recentOrders = orders.slice(0, 5);
+                this.recentOrdersLoading = false;
+            },
+            error: () => { this.recentOrdersLoading = false; }
+        });
+    }
+
+    loadLowStock(): void {
+        this.dashboardService.getLowStockAlerts().subscribe({
+            next: (data: any) => {
+                const items = data?.lowStock?.items ?? (Array.isArray(data) ? data : []);
+                this.lowStockItems = items.slice(0, 5);
+                this.lowStockLoading = false;
+            },
+            error: () => { this.lowStockLoading = false; }
+        });
+    }
+
+    // ── Helpers ─────────────────────────────────────────────────
+    getTotalOrders(): number {
+        if (!this.stats?.ordersByStatus) return 0;
+        return Object.values(this.stats.ordersByStatus)
+            .reduce((sum: number, v) => sum + (Number(v) || 0), 0);
+    }
+
+    getBarWidth(revenue: number): string {
+        return `${Math.round((revenue / this.maxRevenue) * 100)}%`;
+    }
+
+    formatCurrency(val: number): string {
+        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
+    }
+
+    formatDate(date: string): string {
+        return new Date(date).toLocaleDateString('vi-VN');
+    }
+
+    getStatusClass(status: string): string {
+        const map: { [k: string]: string } = {
+            Pending: 'badge-pending',
+            Processing: 'badge-processing',
+            Shipped: 'badge-shipped',
+            Delivered: 'badge-delivered',
+            Cancelled: 'badge-cancelled'
+        };
+        return map[status] ?? 'badge-default';
+    }
+
+    /** Trả về URL ảnh đầu tiên, dù Thumbnail_Images là string hay string[] */
+    getThumb(img: string | string[] | undefined): string {
+        if (!img) return '';
+        if (Array.isArray(img)) return img[0] ?? '';
+        return img;
     }
 }

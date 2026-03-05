@@ -3,12 +3,19 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
+/**
+ * OrderService — maps to backend:
+ *   GET  /api/v1/admin/orders      (admin list, requires auth+admin)
+ *   GET  /api/v1/orders/:id        (detail, requires auth)
+ *   PUT  /api/v1/orders/update-status  (requires auth+admin/cs/inventory)
+ */
+
 export interface OrderItem {
     Product: {
         _id: string;
         Product_Name: string;
         Product_ID: string;
-        Thumbnail_Images: string[];
+        Thumbnail_Images: string | string[];
     };
     Quantity: number;
     Price: number;
@@ -21,12 +28,12 @@ export interface Order {
         name: string;
         email: string;
     };
-    items: any[];
-    Order_Items: OrderItem[];
-    totalAmount: number;
-    Total_Price: number;
+    Order_Items?: OrderItem[];
+    items?: any[];
+    totalAmount?: number;
+    Total_Price?: number;
     status: string;
-    paymentMethod: string;
+    paymentMethod?: string;
     paymentStatus?: string;
     shippingAddress: {
         fullName: string;
@@ -46,49 +53,50 @@ export interface StatusHistory {
     note?: string;
 }
 
-@Injectable({
-    providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class OrderService {
-    private apiUrl = `${environment.apiUrl}/orders`;
+    private adminOrdersUrl = `${environment.apiUrl}/admin/orders`;
+    private ordersUrl = `${environment.apiUrl}/orders`;
 
     constructor(private http: HttpClient) { }
 
-    getAllOrders(): Observable<any> {
-        return this.http.get(`${environment.apiUrl}/admin/orders`);
+    /**
+     * GET /api/v1/admin/orders
+     * Response: { orders: [...], page, pages, total }
+     */
+    getAllOrders(page = 1, status?: string): Observable<any> {
+        let params = new HttpParams().set('page', page.toString());
+        if (status) params = params.set('status', status);
+        return this.http.get<any>(this.adminOrdersUrl, { params });
     }
 
+    /**
+     * GET /api/v1/orders/:id
+     * Response: Order object
+     */
     getOrderById(id: string): Observable<any> {
-        return this.http.get(`${this.apiUrl}/${id}`);
+        return this.http.get<any>(`${this.ordersUrl}/${id}`);
     }
 
-    getOrdersByStatus(status: string): Observable<any> {
-        const params = new HttpParams().set('status', status);
-        return this.http.get(this.apiUrl, { params });
-    }
-
-    getOrdersByDateRange(startDate: string, endDate: string): Observable<any> {
-        const params = new HttpParams()
-            .set('startDate', startDate)
-            .set('endDate', endDate);
-        return this.http.get(this.apiUrl, { params });
-    }
-
+    /**
+     * PUT /api/v1/orders/update-status
+     * Body: { orderId, status }
+     * Status enum: Pending | Processing | Shipped | Delivered | Cancelled
+     */
     updateOrderStatus(orderId: string, status: string, note?: string): Observable<any> {
-        // Correct endpoint: /api/v1/orders/update-status (PUT)
-        // Correct payload: { orderId, status }
-        // Note: The backend route is /orders/update-status, NOT /admin/orders/...
-        // We need to use the base apiUrl but point to /orders
-        const baseUrl = this.apiUrl.replace('/admin/orders', '/orders');
-        return this.http.put(`${baseUrl}/update-status`, { orderId, status, note });
+        const body: any = { orderId, status };
+        if (note) body.note = note;
+        return this.http.put<any>(`${this.ordersUrl}/update-status`, body);
     }
 
+    /** GET /api/v1/orders/:id/tracking */
     getOrderTracking(id: string): Observable<any> {
-        return this.http.get(`${this.apiUrl}/${id}/tracking`);
+        return this.http.get<any>(`${this.ordersUrl}/${id}/tracking`);
     }
 
+    /** GET /api/v1/admin/orders/stats */
     getOrderStats(): Observable<any> {
-        return this.http.get(`${environment.apiUrl}/admin/orders/stats`);
+        return this.http.get<any>(`${this.adminOrdersUrl}/stats`);
     }
 
     cancelOrder(orderId: string): Observable<any> {
