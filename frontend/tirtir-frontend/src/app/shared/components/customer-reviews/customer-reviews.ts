@@ -13,6 +13,7 @@ export interface Review {
     helpful: number;
     shade?: string;
     likedByUser?: boolean;
+    images?: string[];  // User-submitted review photos
 }
 
 @Component({
@@ -28,6 +29,9 @@ export class CustomerReviewsComponent {
     averageRating = 4.8;
     totalReviews = 2847;
     isWritingReview = false;
+
+    // Lightbox state for review photo gallery
+    lightboxPhoto: string | null = null;
 
     newReview = {
         rating: 5,
@@ -119,5 +123,23 @@ export class CustomerReviewsComponent {
     deleteReview(reviewId: number) {
         this.reviews = this.reviews.filter(r => r.id !== reviewId);
         this.totalReviews--;
+    }
+
+    /**
+     * Returns a flat list of all image URLs from all reviews
+     * Used to populate the masonry photo gallery.
+     */
+    get reviewPhotos(): string[] {
+        return this.reviews
+            .filter(r => r.images && r.images.length > 0)
+            .flatMap(r => r.images!);
+    }
+
+    openLightbox(photo: string): void {
+        this.lightboxPhoto = photo;
+    }
+
+    closeLightbox(): void {
+        this.lightboxPhoto = null;
     }
 }

@@ -64,14 +64,14 @@ export class CushionComponent implements OnInit {
         }
     ];
 
-    // Mock cushion products matching TIRTIR collection
+    // Fetched cushion products from the database
     products: any[] = [];
 
     constructor(private productService: ProductService) { }
 
     ngOnInit(): void {
-        // 1. Fetch Products
-        this.productService.getProducts({ category: 'cushion', limit: 20 }).subscribe({
+        // 1. Fetch Real Products by Category
+        this.productService.getProductsByCategory('cushion', 20).subscribe({
             next: (response) => this.products = response.data,
             error: (err) => console.error('Error loading cushions:', err)
         });

@@ -87,6 +87,10 @@ export class ProductService {
     );
   }
 
+  getProductsByCategory(category: string, limit: number = 20): Observable<{ data: ProductData[], total: number, categories: any[], concerns: any[], skinTypes: any[] }> {
+    return this.getProducts({ category, limit });
+  }
+
   getProductDetail(idOrSlug: string): Observable<ProductData> {
     return this.http.get<BackendProduct>(`${this.apiUrl}/${idOrSlug}`).pipe(
       map(this.mapToProductData)

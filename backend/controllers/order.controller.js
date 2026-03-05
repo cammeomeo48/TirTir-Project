@@ -2,36 +2,40 @@ const Order = require('../models/order.model');
 const Cart = require('../models/cart.model');
 const Product = require('../models/product.model');
 const StockHistory = require('../models/stock.history.model');
+const mongoose = require('mongoose');
 const { ORDER_STATUS } = require('../constants');
 const { createNotification } = require('./notification.controller');
 
 // 1. TẠO ĐƠN HÀNG (CHECKOUT)
-// Implements: Atomic Updates & Reservation Strategy
+// Implements: MongoDB ClientSession Transactions & Atomic Updates
 exports.createOrder = async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
         const userId = req.user.id;
         const { shippingAddress, paymentMethod } = req.body;
 
-        const cart = await Cart.findOne({ user: userId }).populate('items.product');
+        const cart = await Cart.findOne({ user: userId }).populate('items.product').session(session);
 
         if (!cart || cart.items.length === 0) {
+            await session.abortTransaction();
+            session.endSession();
             return res.status(400).json({ message: "Giỏ hàng trống!" });
         }
 
         const orderItems = [];
         let calculatedTotal = 0;
-        const reservedProducts = []; // Keep track to rollback if needed
+        const reservedProducts = [];
 
-        // --- ATOMIC RESERVATION LOOP ---
+        // --- ATOMIC RESERVATION LOOP IN TRANSACTION ---
         for (const item of cart.items) {
             if (!item.product) continue;
 
-            // Try to reserve stock ATOMICALLY
-            // Decrement Stock_Quantity, Increment Stock_Reserved
             const updatedProduct = await Product.findOneAndUpdate(
                 {
                     _id: item.product._id,
-                    Stock_Quantity: { $gte: item.quantity } // Condition: Stock must be enough
+                    Stock_Quantity: { $gte: item.quantity }
                 },
                 {
                     $inc: {
@@ -39,26 +43,18 @@ exports.createOrder = async (req, res) => {
                         Stock_Reserved: item.quantity
                     }
                 },
-                { new: true }
+                { new: true, session }
             );
 
             if (!updatedProduct) {
-                // ROLLBACK PREVIOUSLY RESERVED ITEMS
-                for (const reserved of reservedProducts) {
-                    await Product.findByIdAndUpdate(reserved.id, {
-                        $inc: {
-                            Stock_Quantity: reserved.qty,
-                            Stock_Reserved: -reserved.qty
-                        }
-                    });
-                }
-
+                // If the product is out of stock, Abort Transaction completely
+                await session.abortTransaction();
+                session.endSession();
                 return res.status(400).json({
-                    message: `Hết hàng hoặc không đủ số lượng cho sản phẩm: ${item.product.Name}`
+                    message: `Product out of stock or insufficient quantity for: ${item.product.Name}`
                 });
             }
 
-            // Track for rollback/success logging
             reservedProducts.push({ id: item.product._id, qty: item.quantity, price: item.product.Price });
 
             orderItems.push({
@@ -83,38 +79,39 @@ exports.createOrder = async (req, res) => {
             status: ORDER_STATUS.PENDING
         });
 
-        const savedOrder = await newOrder.save();
+        const savedOrder = await newOrder.save({ session });
 
         // --- LOG HISTORY (RESERVE ACTION) ---
         for (const reserved of reservedProducts) {
-            // Need to fetch latest state for accurate balance_after or calculate it
-            // For performance, we can estimate or fetch. Let's fetch to be safe or use the returned atomic doc if we stored it.
-            // Simplified: Just log the action.
-            await StockHistory.create({
+            await StockHistory.create([{
                 product: reserved.id,
                 action: 'Reserve',
-                change_type: 'Decrease', // Stock decreased (moved to reserved)
+                change_type: 'Decrease',
                 source_id: savedOrder._id.toString(),
-                balance_before: 0, // Not strictly querying to save time, or we can improve this
-                balance_after: 0,  // TODO: Improve balance tracking in high concurrency
+                balance_before: 0,
+                balance_after: 0,
                 changeAmount: reserved.qty,
                 reason: 'Order Placed (Reserved)',
                 performedBy: userId
-            });
+            }], { session });
         }
 
-        await Cart.findOneAndDelete({ user: userId });
+        await Cart.findOneAndDelete({ user: userId }).session(session);
+
+        // Commit transaction
+        await session.commitTransaction();
+        session.endSession();
 
         res.status(201).json({
             message: "Đặt hàng thành công!",
-            orderId: newOrder._id
+            orderId: savedOrder._id
         });
 
     } catch (error) {
         console.error("Create Order Error:", error);
-        // Attempt Rollback if crash happens in middle (Best effort)
-        // In real world, use Transactions.
-        res.status(500).json({ message: "Lỗi Server khi tạo đơn hàng." });
+        await session.abortTransaction();
+        session.endSession();
+        res.status(500).json({ message: "Lỗi Server khi tạo đơn hàng. (Transaction Aborted)" });
     }
 };
 

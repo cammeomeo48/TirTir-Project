@@ -122,22 +122,24 @@ export class ChatService {
         }
     }
 
-    // POST /chat/start - Client-side only (Mock)
+    // POST /chat/start
     initiateChat(userData?: any): Observable<any> {
-        // Mock success response
-        return new Observable(observer => {
-            observer.next({ success: true });
-            observer.complete();
-        });
+        return this.http.post<any>(`${this.apiUrl}/start`, userData).pipe(
+            catchError(error => {
+                console.error('Failed to initiate chat:', error);
+                throw error;
+            })
+        );
     }
 
-    // GET /chat/history - Client-side only (Mock)
+    // GET /chat/history
     getChatHistory(): Observable<ChatMessage[]> {
-        // Mock empty history
-        return new Observable(observer => {
-            observer.next([]);
-            observer.complete();
-        });
+        return this.http.get<ChatMessage[]>(`${this.apiUrl}/history`).pipe(
+            catchError(error => {
+                console.error('Failed to load chat history:', error);
+                return of([]);
+            })
+        );
     }
 
     // POST /chat (Real Backend API)
@@ -154,7 +156,6 @@ export class ChatService {
         // Calls POST /api/v1/chat
         return this.http.post<any>(`${this.apiUrl}`, { message: text }).pipe(
             tap(response => {
-                // [REAL LOGIC]: Handle real bot response when Backend is ready
                 if (response) {
                     const botText = response.reply || response.response || response.message;
                     if (botText) {
@@ -173,35 +174,24 @@ export class ChatService {
                 }
             }),
             catchError((error: any) => {
-                console.warn('Backend API /chat failed. Falling back to Mock Messaage...', error.message);
-
-                // [PLACEHOLDER LOGIC]: Simulate bot response until BE is complete
-                setTimeout(() => {
-                    this.handleIncomingMessage({
-                        text: 'This is a simulated AI response! (Backend API is currently offline/incomplete).',
-                        sender: 'bot',
-                        timestamp: new Date()
-                    });
-                }, 1000);
-
-                // Return a safe observable so the component's 'next' block executes and stops the typing indicator
-                return of(null);
+                console.error('Backend API /chat failed:', error.message);
+                this.handleIncomingMessage({
+                    text: 'Sorry, I am currently unable to process your request. Please try again later.',
+                    sender: 'bot',
+                    timestamp: new Date()
+                });
+                throw error;
             })
         );
     }
 
-    // GET /chat/options - Client-side only (Mock)
+    // GET /chat/options
     getQuickReplies(): Observable<QuickReply[]> {
-        // Mock TIRTIR default options
-        return new Observable(observer => {
-            observer.next([
-                { label: 'Shipping Inquiry', value: 'shipping', icon: '📦' },
-                { label: 'Product Inquiry', value: 'product', icon: '💄' },
-                { label: 'Return/Refund', value: 'refund', icon: '💵' },
-                { label: 'Modify/Cancel', value: 'order', icon: '✏️' },
-                { label: 'Other Inquiries', value: 'other', icon: '❓' }
-            ]);
-            observer.complete();
-        });
+        return this.http.get<QuickReply[]>(`${this.apiUrl}/options`).pipe(
+            catchError(error => {
+                console.error('Failed to load quick replies:', error);
+                return of([]);
+            })
+        );
     }
 }

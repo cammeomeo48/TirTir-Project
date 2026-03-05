@@ -228,3 +228,50 @@ app-root {
 ::-webkit-scrollbar-thumb:hover {
   background: #a1a1a1;
 }
+
+/* =====================================================
+   ACCESSIBILITY: SMOOTH TRANSITION
+   ===================================================== */
+body {
+  transition: background-color 0.3s, color 0.3s, filter 0.3s;
+}
+
+/* =====================================================
+   HIGH CONTRAST MODE (Accessibility Widget)
+   ===================================================== */
+body.high-contrast-mode {
+  --color-background: #000 !important;
+  --color-text: #ffd100 !important;
+  --color-primary: #ffd100 !important;
+  --color-border: #ffd100 !important;
+  background-color: #000 !important;
+  color: #ffd100 !important;
+}
+
+body.high-contrast-mode *:not(img):not(svg):not(video) {
+  background-color: #000 !important;
+  color: #ffd100 !important;
+  border-color: #ffd100 !important;
+}
+
+body.high-contrast-mode a,
+body.high-contrast-mode button {
+  color: #ffd100 !important;
+  text-decoration: underline !important;
+}
+
+body.high-contrast-mode img {
+  filter: invert(1) hue-rotate(180deg) saturate(2) !important;
+  outline: 2px solid #ffd100 !important;
+}
+
+body.high-contrast-mode input,
+body.high-contrast-mode select,
+body.high-contrast-mode textarea {
+  border: 2px solid #ffd100 !important;
+}
+
+body.high-contrast-mode :focus {
+  outline: 3px solid #ffd100 !important;
+  outline-offset: 2px !important;
+}

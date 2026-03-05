@@ -51,15 +51,15 @@ exports.getAllReviewsAdmin = async (req, res) => {
 };
 
 exports.getProductReviews = async (req, res) => {
-// ... existing code ...
+    // ... existing code ...
     try {
         const rawId = req.params.id;
         const productId = await resolveProductId(rawId);
-        
+
         if (!productId) {
-             return res.status(404).json({ message: "Product not found" });
+            return res.status(404).json({ message: "Product not found" });
         }
-        
+
         // Pagination
         const page = parseInt(req.query.page, 10) || 1;
         const limit = parseInt(req.query.limit, 10) || 10;
@@ -88,7 +88,7 @@ exports.getProductReviews = async (req, res) => {
     }
 };
 
-// @desc    Create a review
+// @desc    Create a review (with optional photo uploads via multer)
 // @route   POST /api/v1/products/:id/reviews
 // @access  Private (Requires Verified Purchase)
 exports.createReview = async (req, res) => {
@@ -96,15 +96,12 @@ exports.createReview = async (req, res) => {
         const rawId = req.params.id;
         const productId = await resolveProductId(rawId);
         const userId = req.user.id;
-        const { rating, title, comment, images } = req.body;
+        const { rating, title, comment } = req.body;
 
         if (!productId) {
             return res.status(404).json({ message: "Product not found" });
         }
-        
-        // We already resolved ID, but verify existence explicitly if needed (resolveProductId checks existence too)
-        // const product = await Product.findById(productId); 
-        
+
         // 1. Check if user already reviewed
         const alreadyReviewed = await Review.findOne({ product: productId, user: userId });
         if (alreadyReviewed) {
@@ -112,18 +109,28 @@ exports.createReview = async (req, res) => {
         }
 
         // 2. Check for Verified Purchase
-        // User must have an order with this product that is 'Delivered' (or 'Shipped' depending on policy)
-        // We look for orders by this user, containing this product item
         const hasPurchased = await Order.findOne({
             user: userId,
             'items.product': productId,
-            status: { $in: ['Delivered', 'Shipped', 'Completed'] } // Allow Shipped too in case status update lags
+            status: { $in: ['Delivered', 'Shipped', 'Completed'] }
         });
 
         if (!hasPurchased) {
-            return res.status(403).json({ 
-                message: "You can only review products you have purchased and received." 
+            return res.status(403).json({
+                message: "You can only review products you have purchased and received."
             });
+        }
+
+        // 3. Handle uploaded photos from multer (req.files)
+        // Upload route should use: upload.array('images', 5)
+        let uploadedImages = [];
+        if (req.files && req.files.length > 0) {
+            uploadedImages = req.files.map(file => `/uploads/${file.filename}`);
+        }
+        // Also accept pre-uploaded URL strings from req.body.images
+        if (req.body.images) {
+            const bodyImages = Array.isArray(req.body.images) ? req.body.images : [req.body.images];
+            uploadedImages = [...uploadedImages, ...bodyImages];
         }
 
         const review = await Review.create({
@@ -132,7 +139,7 @@ exports.createReview = async (req, res) => {
             rating,
             title,
             comment,
-            images,
+            images: uploadedImages,
             verifiedPurchase: true
         });
 
@@ -145,6 +152,7 @@ exports.createReview = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
 
 // @desc    Update a review
 // @route   PUT /api/v1/reviews/:id
@@ -166,7 +174,7 @@ exports.updateReview = async (req, res) => {
             new: true,
             runValidators: true
         });
-        
+
         // Recalculate average manually or ensure hook runs (findByIdAndUpdate doesn't trigger save middleware)
         // We added a post findOneAndDelete hook, but for Update we might need to manually trigger static
         await Review.getAverageRating(review.product);
