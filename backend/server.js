@@ -10,7 +10,7 @@ const mongoSanitize = require('express-mongo-sanitize');
 const morgan = require('morgan');
 const responseTime = require('response-time');
 const Sentry = require("@sentry/node");
-const { nodeProfilingIntegration } = require("@sentry/profiling-node"); // Keep this if needed for types, but init is in instrument.js
+// Note: @sentry/profiling-node is loaded in instrument.js with graceful fallback
 
 const errorHandler = require('./middlewares/error');
 const logger = require('./utils/logger');
