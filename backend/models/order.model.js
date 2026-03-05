@@ -29,17 +29,21 @@ const OrderSchema = new mongoose.Schema({
         city: { type: String, required: true }
     },
     paymentMethod: {
-        type: String,
-        // Tự động nhận:  'VNPAY', 'MOMO', 'CARD' từ file constants
-        enum: Object.values(PAYMENT_METHOD), 
-        default: PAYMENT_METHOD.VNPAY,
-        required: true
+    type: String,
+    enum: ['MOMO', 'VNPAY'],
+    required: true
     },
-    paymentStatus: { // THÊM TRƯỜNG NÀY ĐỂ TRACKING
+    paymentStatus: {
         type: String,
-        enum: Object.values(PAYMENT_STATUS),
-        default: PAYMENT_STATUS.PENDING
+        enum: ['PENDING', 'PAID', 'FAILED', 'REFUNDED'],
+        default: 'PENDING'
     },
+    orderStatus: {
+        type: String,
+        enum: ['PROCESSING', 'SHIPPING', 'DELIVERED', 'CANCELLED'],
+        default: 'PROCESSING'
+    },
+    paymentTranId: { type: String }, // Lưu mã giao dịch của Momo/VNPay để dùng khi Refund
     paymentInfo: { // Lưu dữ liệu trả về từ VNPay/Momo để đối soát
         type: Object,
         default: {}
@@ -48,11 +52,7 @@ const OrderSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
-    status: {
-        type: String,
-        enum: Object.values(ORDER_STATUS),
-        default: ORDER_STATUS.PENDING
-    }
-}, { timestamps: true });
+    },
+ { timestamps: true });
 
 module.exports = mongoose.model('Order', OrderSchema);
