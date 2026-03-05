@@ -1,4 +1,5 @@
 const rateLimit = require('express-rate-limit');
+const { ipKeyGenerator } = require('express-rate-limit');
 
 // General API rate limit (1000 requests per 15 minutes in dev)
 exports.apiLimiter = rateLimit({
@@ -37,7 +38,7 @@ const createUserLimiter = (max, windowMs, message) => rateLimit({
     legacyHeaders: false,
     keyGenerator: (req) => {
         // Use userId if authenticated, else fall back to IP
-        return req.user?.id?.toString() || req.ip;
+        return req.user?.id?.toString() || ipKeyGenerator(req);
     },
     message: {
         success: false,
