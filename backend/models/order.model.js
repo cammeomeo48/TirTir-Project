@@ -15,9 +15,9 @@ const OrderSchema = new mongoose.Schema({
                 ref: 'Product',
                 required: true
             },
-            name: String,       
+            name: String,
             quantity: Number,
-            price: Number,      
+            price: Number,
             shade: String,
             image: String
         }
@@ -29,14 +29,23 @@ const OrderSchema = new mongoose.Schema({
         city: { type: String, required: true }
     },
     paymentMethod: {
-    type: String,
-    enum: ['MOMO', 'VNPAY'],
-    required: true
-    },
-    paymentStatus: {
         type: String,
-        enum: ['PENDING', 'PAID', 'FAILED', 'REFUNDED'],
-        default: 'PENDING'
+        enum: ['MOMO', 'VNPAY'],
+        required: true
+    },
+    status: {
+        type: String,
+        enum: Object.values(ORDER_STATUS),
+        default: ORDER_STATUS.PENDING
+    },
+    // ─── GHN Shipping Integration ────────────────────────────────────────────
+    ghnOrderCode: {
+        type: String,
+        default: null  // Populated when Admin marks order as Shipped
+    },
+    ghnProcessedEvents: {
+        type: [String],
+        default: []    // Stores processed GHN event UUIDs for idempotency
     },
     orderStatus: {
         type: String,
@@ -52,7 +61,7 @@ const OrderSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
-    },
- { timestamps: true });
+},
+    { timestamps: true });
 
 module.exports = mongoose.model('Order', OrderSchema);

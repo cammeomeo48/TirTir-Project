@@ -1,0 +1,96 @@
+<div class="simulator-page">
+    <div class="page-header">
+        <div>
+            <h1>🚚 GHN Shipping Simulator</h1>
+            <p class="subtitle">Test GHN webhook flow — simulate delivery events for <strong>Shipped</strong> orders</p>
+        </div>
+        <button class="btn-refresh" (click)="loadOrders()" [disabled]="loading">
+            {{ loading ? 'Loading...' : '🔄 Refresh' }}
+        </button>
+    </div>
+
+    <!-- Search -->
+    <div class="search-bar">
+        <input type="text" placeholder="🔍 Search by customer name or GHN order code..." [(ngModel)]="search"
+            (ngModel)="search" (input)="onSearchChange()" class="search-input" />
+        <span class="result-count" *ngIf="!loading">{{ total }} orders found</span>
+    </div>
+
+    <!-- Error -->
+    <div class="alert-error" *ngIf="error">{{ error }}</div>
+
+    <!-- Empty state -->
+    <div class="empty-state" *ngIf="!loading && orders.length === 0">
+        <div class="empty-icon">📦</div>
+        <p>No Shipped orders found. Mark an order as <strong>Shipped</strong> first.</p>
+    </div>
+
+    <!-- Orders Table -->
+    <div class="table-container" *ngIf="orders.length > 0">
+        <table class="orders-table">
+            <thead>
+                <tr>
+                    <th>Order</th>
+                    <th>Customer</th>
+                    <th>GHN Code</th>
+                    <th>Amount</th>
+                    <th>Date</th>
+                    <th>Simulate GHN Event</th>
+                    <th>Result</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let order of orders; trackBy: trackByFn">
+                    <td class="order-id">{{ shortId(order._id) }}</td>
+                    <td>
+                        <div class="customer-name">{{ order.shippingAddress.fullName }}</div>
+                        <div class="customer-phone">{{ order.shippingAddress.phone }}</div>
+                    </td>
+                    <td>
+                        <span class="ghn-code" *ngIf="order.ghnOrderCode">{{ order.ghnOrderCode }}</span>
+                        <span class="ghn-code-empty" *ngIf="!order.ghnOrderCode">—</span>
+                    </td>
+                    <td>{{ formatPrice(order.totalAmount) }}</td>
+                    <td class="date-cell">{{ formatDate(order.createdAt) }}</td>
+                    <td>
+                        <div class="sim-buttons">
+                            <button *ngFor="let opt of ghnStatusOptions" [class]="'sim-btn ' + opt.cls"
+                                (click)="simulate(order, opt.value)" [disabled]="order._simulating">
+                                {{ order._simulating ? '⏳' : opt.label }}
+                            </button>
+                        </div>
+                    </td>
+                    <td>
+                        <span *ngIf="order._result" [class]="'result-badge result-' + order._resultType">{{
+                            order._result }}</span>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" *ngIf="totalPages > 1">
+        <button [disabled]="page === 1" (click)="page = page - 1; loadOrders()">← Prev</button>
+        <span>Page {{ page }} / {{ totalPages }}</span>
+        <button [disabled]="page >= totalPages" (click)="page = page + 1; loadOrders()">Next →</button>
+    </div>
+
+    <!-- How it works -->
+    <div class="info-box">
+        <h3>📖 How it works</h3>
+        <ol>
+            <li>Mark an order as <strong>Processing</strong>, then <strong>Shipped</strong> in Orders page.</li>
+            <li>When marked <strong>Shipped</strong>, backend auto-creates a GHN shipping order and saves the tracking
+                code.</li>
+            <li>Click <strong>✅ Delivered</strong> above to simulate GHN calling our webhook with status
+                <code>delivered</code>.</li>
+            <li>Order auto-updates to <strong>Delivered</strong>, stock logs are written, and customer gets a
+                notification.</li>
+            <li><strong>↩ Return</strong> / <strong>❌ Cancel</strong> simulate hoàn hàng — order becomes Cancelled and
+                stock is restocked.</li>
+        </ol>
+        <p class="info-note">In production: Register <code>/api/v1/shipping/ghn-webhook</code> in the GHN Merchant
+            Portal and set <code>GHN_API_KEY</code> + <code>GHN_SHOP_ID</code> in your environment.</p>
+    </div>
+</div>

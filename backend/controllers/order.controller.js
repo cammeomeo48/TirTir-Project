@@ -5,6 +5,8 @@ const StockHistory = require('../models/stock.history.model');
 const mongoose = require('mongoose');
 const { ORDER_STATUS } = require('../constants');
 const { createNotification } = require('./notification.controller');
+// Lazy-load to avoid circular dep: shipping.controller → order.model ← order.controller
+const getShippingController = () => require('./shipping.controller');
 
 // 1. TẠO ĐƠN HÀNG (CHECKOUT)
 // Implements: MongoDB ClientSession Transactions & Atomic Updates
@@ -252,6 +254,20 @@ exports.updateOrderStatus = async (req, res) => {
         }
 
         // --- END STOCK LOGIC ---
+
+        // ─── GHN: Create Shipping Order when Admin marks Shipped ─────────────
+        if (status === 'Shipped' && oldStatus === 'Processing') {
+            try {
+                const { createGHNOrder } = getShippingController();
+                await createGHNOrder(order);
+            } catch (ghnErr) {
+                // GHN failed → leave order at Processing (createGHNOrder already rolled back status)
+                return res.status(ghnErr.statusCode || 502).json({
+                    message: ghnErr.message,
+                    hint: 'Order status reverted to Processing. Please try again or create GHN shipment manually.'
+                });
+            }
+        }
 
         order.status = status;
         const updatedOrder = await order.save();

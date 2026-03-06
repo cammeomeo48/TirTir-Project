@@ -271,6 +271,7 @@ app.use("/api/v1/wishlist", wishlistRoutes);
 app.use("/api/v1/settings", require("./routes/setting.routes")); // Add Settings Routes
 app.use("/api/v1/marketing", require("./routes/marketing.routes")); // Add Marketing Routes
 app.use("/api/v1/notifications", require("./routes/notification.routes")); // Add Notification Routes
+app.use("/api/v1/shipping", require("./routes/shipping.routes")); // GHN Shipping Integration
 
 // Sentry Error Handler (Must be before any other error middleware)
 if (process.env.SENTRY_DSN) {
@@ -288,6 +289,11 @@ async function start() {
     await mongoose.connect(MONGO_URI);
     console.log("MongoDB connected");
     await ensureSlugs(); // Auto-populate slugs
+
+    // Start GHN status polling cron job (fallback for missed webhooks)
+    const { startGHNPollingJob } = require('./jobs/checkGHNStatus');
+    startGHNPollingJob();
+
     app.listen(PORT, () => console.log(`Server running: http://localhost:${PORT}`));
   } catch (err) {
     console.error("Startup error:", err.message);

@@ -170,6 +170,14 @@ export const routes: Routes = [
                 loadComponent: () => import('./features/settings/settings.component').then(m => m.SettingsComponent)
             },
             {
+                path: 'shipping-simulator',
+                data: { roles: ['admin'] },
+                loadComponent: () =>
+                    import('./features/shipping-simulator/shipping-simulator').then(
+                        (m) => m.ShippingSimulatorComponent
+                    ),
+            },
+            {
                 path: '',
                 redirectTo: 'dashboard',
                 pathMatch: 'full'
