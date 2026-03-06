@@ -11,6 +11,8 @@ export interface ShippingAddress {
     fullName: string;
     phone: string;
     address: string;
+    ward?: string;
+    district?: string;
     city: string;
 }
 
