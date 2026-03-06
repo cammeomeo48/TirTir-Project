@@ -57,6 +57,12 @@
         <button (click)="loadCoupons()" class="retry-btn">Retry</button>
     </div>
 
+    <!-- Action Error Banner -->
+    <div *ngIf="actionError" style="background:#fde8e8;border:1px solid #f5c6c6;border-radius:4px;padding:10px 16px;margin-bottom:12px;color:#b71c1c;font-size:14px;display:flex;justify-content:space-between;align-items:center;">
+        {{ actionError }}
+        <button (click)="actionError = null" style="background:none;border:none;cursor:pointer;color:#b71c1c;">✕</button>
+    </div>
+
     <!-- Data Table -->
     <div class="table-container" *ngIf="!loading && !error && filteredCoupons.length > 0">
         <table class="data-table">
@@ -110,9 +116,17 @@
                             [title]="coupon.Status === 'active' ? 'Deactivate' : 'Activate'">
                             {{ coupon.Status === 'active' ? 'Deactivate' : 'Activate' }}
                         </button>
-                        <button class="btn btn-sm btn-danger" (click)="deleteCoupon(coupon._id!)" title="Delete">
-                            Delete
-                        </button>
+                        <!-- Inline delete confirm -->
+                        <ng-container *ngIf="pendingDeleteId !== coupon._id">
+                            <button class="btn btn-sm btn-danger" (click)="requestDelete(coupon._id!)" title="Delete">
+                                Delete
+                            </button>
+                        </ng-container>
+                        <ng-container *ngIf="pendingDeleteId === coupon._id">
+                            <span style="font-size:12px;color:#b71c1c;font-weight:600;">Sure?</span>
+                            <button class="btn btn-sm btn-danger" (click)="confirmDelete(coupon._id!)">Yes</button>
+                            <button class="btn btn-sm btn-outline" (click)="cancelDelete()">No</button>
+                        </ng-container>
                     </td>
                 </tr>
             </tbody>
