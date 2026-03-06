@@ -7,7 +7,9 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "seed:admin": "node scripts/seed-admin.js",
+    "migrate:remove-cod": "node scripts/migrate-remove-cod.js"
   },
   "keywords": [],
   "author": "",

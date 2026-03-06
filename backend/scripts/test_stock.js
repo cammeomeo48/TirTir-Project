@@ -80,7 +80,7 @@ async function run() {
               address: '123 Test Street, Ward 1, Dist 1', 
               city: 'HCM City' 
           },
-          paymentMethod: 'COD'
+          paymentMethod: 'MOMO'
       })
   });
   const orderData = await res.json();
