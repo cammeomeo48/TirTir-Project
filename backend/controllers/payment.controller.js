@@ -132,7 +132,7 @@ exports.vnpayReturn = async (req, res, next) => {
         if (rspCode === '00') {
              // Cập nhật trạng thái đơn hàng = PAID tại đây hoặc trong IPN
              await Order.findByIdAndUpdate(orderId, { 
-                 paymentStatus: 'paid', 
+                 paymentStatus: 'PAID', 
                  paymentMethod: 'VNPAY',
                  paymentTranId: vnp_TransactionNo
              });
@@ -177,10 +177,10 @@ exports.vnpayIPN = async (req, res, next) => {
         // if (order.totalAmount * 100 !== parseInt(vnp_Params['vnp_Amount'])) ...
 
         // Kiểm tra trạng thái đơn hàng hiện tại (chống update chồng chéo)
-        if (order.paymentStatus !== 'paid') {
+        if (order.paymentStatus !== 'PAID') {
             if (rspCode === '00') {
                 // Thành công
-                order.paymentStatus = 'paid';
+                order.paymentStatus = 'PAID';
                 order.paymentTranId = vnp_TransactionNo;
                 order.paymentInfo = vnp_Params; // Lưu lại log VNPay
                 await order.save();
@@ -274,7 +274,7 @@ exports.momoReturn = async (req, res, next) => {
         if (resultCode == '0') {
              // Cập nhật DB
              await Order.findByIdAndUpdate(orderId, { 
-                 paymentStatus: 'paid', 
+                 paymentStatus: 'PAID', 
                  paymentMethod: 'MOMO' ,
                  paymentTranId: transId
              });
@@ -295,7 +295,7 @@ exports.momoIPN = async (req, res, next) => {
         
         if (resultCode == '0') {
             await Order.findByIdAndUpdate(orderId, { 
-                 paymentStatus: 'paid',
+                 paymentStatus: 'PAID',
                  paymentTranId: transId,
                  paymentInfo: req.body 
             });
