@@ -35,6 +35,8 @@ export class CheckoutComponent implements OnInit {
             fullName: ['', Validators.required],
             phone: ['', Validators.required],
             address: ['', Validators.required],
+            ward: [''],           // Phường / xã (optional but sent to GHN)
+            district: [''],       // Quận / huyện (optional but sent to GHN)
             city: ['', Validators.required],
             paymentMethod: ['VNPAY', Validators.required],
         });
@@ -68,7 +70,7 @@ export class CheckoutComponent implements OnInit {
         this.loading = true;
         this.error = '';
 
-        const { fullName, phone, address, city, paymentMethod } = this.checkoutForm.value;
+        const { fullName, phone, address, ward, district, city, paymentMethod } = this.checkoutForm.value;
 
         // 1. CHẶN MOMO TRUỚC KHI GỌI API (Vì đang bảo trì)
         if (paymentMethod === 'MOMO') {
@@ -78,7 +80,7 @@ export class CheckoutComponent implements OnInit {
         }
 
         this.orderService.createOrder({
-            shippingAddress: { fullName, phone, address, city },
+            shippingAddress: { fullName, phone, address, ward: ward || '', district: district || '', city },
             paymentMethod,
         }).subscribe({
             next: (response: any) => {

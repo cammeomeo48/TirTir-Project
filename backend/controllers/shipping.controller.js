@@ -128,8 +128,8 @@ const createGHNOrder = async (order) => {
             to_name: order.shippingAddress.fullName,
             to_phone: order.shippingAddress.phone,
             to_address: order.shippingAddress.address,
-            to_ward_name: '',
-            to_district_name: order.shippingAddress.city,
+            to_ward_name: order.shippingAddress.ward || '',
+            to_district_name: order.shippingAddress.district || order.shippingAddress.city,
             to_province_name: order.shippingAddress.city,
             cod_amount: 0, // 0 because all payments are prepaid (no COD)
             weight: 500,

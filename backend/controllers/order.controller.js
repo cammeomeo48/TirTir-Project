@@ -8,114 +8,128 @@ const { createNotification } = require('./notification.controller');
 // Lazy-load to avoid circular dep: shipping.controller → order.model ← order.controller
 const getShippingController = () => require('./shipping.controller');
 
-// 1. TẠO ĐƠN HÀNG (CHECKOUT)
-// Implements: MongoDB ClientSession Transactions & Atomic Updates
-exports.createOrder = async (req, res) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
+// ─── Helper: check if sessions are supported (Replica Set / Atlas only) ────────
+let _sessionSupported = null; // null = not yet checked, true/false = cached result
+const isSessionSupported = async () => {
+    if (_sessionSupported !== null) return _sessionSupported;
     try {
-        const userId = req.user.id;
-        const { shippingAddress, paymentMethod } = req.body;
+        const session = await mongoose.startSession();
+        await session.endSession();
+        _sessionSupported = true;
+    } catch {
+        _sessionSupported = false;
+    }
+    return _sessionSupported;
+};
 
-        const cart = await Cart.findOne({ user: userId }).populate('items.product').session(session);
+// 1. TẠO ĐƠN HÀNG (CHECKOUT)
+// Uses MongoDB Transactions (Replica Set / Atlas) with graceful fallback to
+// atomic findOneAndUpdate for standalone MongoDB (dev/demo without replica set).
+exports.createOrder = async (req, res) => {
+    const useTransactions = await isSessionSupported();
 
-        if (!cart || cart.items.length === 0) {
+    if (useTransactions) {
+        // ── TRANSACTION PATH (Atlas / Replica Set) ──────────────────────────────
+        const session = await mongoose.startSession();
+        session.startTransaction();
+        try {
+            const result = await _createOrderLogic(req, session);
+            await session.commitTransaction();
+            session.endSession();
+            return res.status(201).json({ message: "Đặt hàng thành công!", orderId: result });
+        } catch (error) {
             await session.abortTransaction();
             session.endSession();
-            return res.status(400).json({ message: "Giỏ hàng trống!" });
+            console.error("Create Order Error (TX):", error);
+            return res.status(error.statusCode || 500).json({ message: error.message || "Lỗi Server khi tạo đơn hàng." });
         }
-
-        const orderItems = [];
-        let calculatedTotal = 0;
-        const reservedProducts = [];
-
-        // --- ATOMIC RESERVATION LOOP IN TRANSACTION ---
-        for (const item of cart.items) {
-            if (!item.product) continue;
-
-            const updatedProduct = await Product.findOneAndUpdate(
-                {
-                    _id: item.product._id,
-                    Stock_Quantity: { $gte: item.quantity }
-                },
-                {
-                    $inc: {
-                        Stock_Quantity: -item.quantity,
-                        Stock_Reserved: item.quantity
-                    }
-                },
-                { new: true, session }
-            );
-
-            if (!updatedProduct) {
-                // If the product is out of stock, Abort Transaction completely
-                await session.abortTransaction();
-                session.endSession();
-                return res.status(400).json({
-                    message: `Product out of stock or insufficient quantity for: ${item.product.Name}`
-                });
-            }
-
-            reservedProducts.push({ id: item.product._id, qty: item.quantity, price: item.product.Price });
-
-            orderItems.push({
-                product: item.product._id,
-                name: item.product.Name,
-                quantity: item.quantity,
-                price: item.product.Price,
-                shade: item.shade,
-                image: item.product.Thumbnail_Images
-            });
-
-            calculatedTotal += item.product.Price * item.quantity;
+    } else {
+        // ── FALLBACK PATH (Standalone MongoDB) ─────────────────────────────────
+        try {
+            const result = await _createOrderLogic(req, null);
+            return res.status(201).json({ message: "Đặt hàng thành công!", orderId: result });
+        } catch (error) {
+            console.error("Create Order Error (Fallback):", error);
+            return res.status(error.statusCode || 500).json({ message: error.message || "Lỗi Server khi tạo đơn hàng." });
         }
-
-        // --- CREATE ORDER ---
-        const newOrder = new Order({
-            user: userId,
-            items: orderItems,
-            shippingAddress,
-            paymentMethod,
-            totalAmount: calculatedTotal,
-            status: ORDER_STATUS.PENDING
-        });
-
-        const savedOrder = await newOrder.save({ session });
-
-        // --- LOG HISTORY (RESERVE ACTION) ---
-        for (const reserved of reservedProducts) {
-            await StockHistory.create([{
-                product: reserved.id,
-                action: 'Reserve',
-                change_type: 'Decrease',
-                source_id: savedOrder._id.toString(),
-                balance_before: 0,
-                balance_after: 0,
-                changeAmount: reserved.qty,
-                reason: 'Order Placed (Reserved)',
-                performedBy: userId
-            }], { session });
-        }
-
-        await Cart.findOneAndDelete({ user: userId }).session(session);
-
-        // Commit transaction
-        await session.commitTransaction();
-        session.endSession();
-
-        res.status(201).json({
-            message: "Đặt hàng thành công!",
-            orderId: savedOrder._id
-        });
-
-    } catch (error) {
-        console.error("Create Order Error:", error);
-        await session.abortTransaction();
-        session.endSession();
-        res.status(500).json({ message: "Lỗi Server khi tạo đơn hàng. (Transaction Aborted)" });
     }
 };
+
+// ─── Shared order-creation logic (works with or without session) ─────────────
+async function _createOrderLogic(req, session) {
+    const userId = req.user.id;
+    const { shippingAddress, paymentMethod } = req.body;
+
+    const cartQuery = Cart.findOne({ user: userId }).populate('items.product');
+    const cart = session ? await cartQuery.session(session) : await cartQuery;
+
+    if (!cart || cart.items.length === 0) {
+        const err = new Error("Giỏ hàng trống!"); err.statusCode = 400; throw err;
+    }
+
+    const orderItems = [];
+    let calculatedTotal = 0;
+    const reservedProducts = [];
+
+    for (const item of cart.items) {
+        if (!item.product) continue;
+
+        const opts = session ? { new: true, session } : { new: true };
+        const updatedProduct = await Product.findOneAndUpdate(
+            { _id: item.product._id, Stock_Quantity: { $gte: item.quantity } },
+            { $inc: { Stock_Quantity: -item.quantity, Stock_Reserved: item.quantity } },
+            opts
+        );
+
+        if (!updatedProduct) {
+            // Rollback previously reserved items (only needed in fallback path)
+            if (!session) {
+                for (const r of reservedProducts) {
+                    await Product.findByIdAndUpdate(r.id, {
+                        $inc: { Stock_Quantity: r.qty, Stock_Reserved: -r.qty }
+                    });
+                }
+            }
+            const err = new Error(`Hết hàng hoặc không đủ số lượng cho: ${item.product.Name}`);
+            err.statusCode = 400; throw err;
+        }
+
+        reservedProducts.push({ id: item.product._id, qty: item.quantity, price: item.product.Price });
+        orderItems.push({
+            product: item.product._id,
+            name: item.product.Name,
+            quantity: item.quantity,
+            price: item.product.Price,
+            shade: item.shade,
+            image: item.product.Thumbnail_Images
+        });
+        calculatedTotal += item.product.Price * item.quantity;
+    }
+
+    const newOrder = new Order({
+        user: userId, items: orderItems, shippingAddress, paymentMethod,
+        totalAmount: calculatedTotal, status: ORDER_STATUS.PENDING
+    });
+
+    const savedOrder = session ? await newOrder.save({ session }) : await newOrder.save();
+
+    for (const reserved of reservedProducts) {
+        const historyDoc = [{
+            product: reserved.id, action: 'Reserve', change_type: 'Decrease',
+            source_id: savedOrder._id.toString(), balance_before: 0, balance_after: 0,
+            changeAmount: reserved.qty, reason: 'Order Placed (Reserved)', performedBy: userId
+        }];
+        session
+            ? await StockHistory.create(historyDoc, { session })
+            : await StockHistory.create(historyDoc[0]);
+    }
+
+    const cartDeleteQuery = Cart.findOneAndDelete({ user: userId });
+    session ? await cartDeleteQuery.session(session) : await cartDeleteQuery;
+
+    return savedOrder._id;
+}
+
 
 // 2. LẤY DANH SÁCH ĐƠN HÀNG CỦA USER
 exports.getMyOrders = async (req, res) => {

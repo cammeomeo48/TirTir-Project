@@ -26,7 +26,9 @@ const OrderSchema = new mongoose.Schema({
         fullName: { type: String, required: true },
         phone: { type: String, required: true },
         address: { type: String, required: true },
-        city: { type: String, required: true }
+        ward: { type: String, default: '' },         // Phường / xã
+        district: { type: String, default: '' },     // Quận / huyện (GHN to_district_name)
+        city: { type: String, required: true }       // Tỉnh / thành phố (GHN to_province_name)
     },
     paymentMethod: {
         type: String,
