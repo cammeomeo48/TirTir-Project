@@ -20,6 +20,8 @@ exports.authLimiter = rateLimit({
     max: 5, // Limit each IP to 5 requests per windowMs
     standardHeaders: true,
     legacyHeaders: false,
+    // Skip rate limiting in development so testing doesn't get blocked
+    skip: () => process.env.NODE_ENV === 'development',
     message: {
         success: false,
         message: 'Too many login attempts, please try again after 15 minutes'

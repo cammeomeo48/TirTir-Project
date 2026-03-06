@@ -16,7 +16,7 @@ export interface ShippingAddress {
 
 export type OrderStatus = 'Pending' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
 
-export type PaymentMethod = 'COD' | 'BANK_TRANSFER';
+export type PaymentMethod = 'VNPAY' | 'MOMO' | 'CARD';
 
 export interface Order {
     _id: string;

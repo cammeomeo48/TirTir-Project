@@ -10,7 +10,6 @@ exports.PAYMENT_METHOD = {
     VNPAY: 'VNPAY',
     MOMO: 'MOMO',
     CARD: 'CARD', // Visa, Master, etc.
-    COD: 'COD'
 };
 
 exports.PAYMENT_STATUS = {

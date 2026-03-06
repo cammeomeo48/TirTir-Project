@@ -7,10 +7,13 @@
 
     <!-- Navigation -->
     <nav class="sidebar-nav">
-        <a *ngFor="let item of visibleItems" [routerLink]="item.route" routerLinkActive="active"
-            [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }" class="nav-item">
-            <span class="nav-icon">{{ item.icon }}</span>
-            <span class="nav-label">{{ item.label }}</span>
-        </a>
+        <ng-container *ngFor="let group of visibleGroups">
+            <div class="nav-group-title">{{ group.title }}</div>
+            <a *ngFor="let item of group.items" [routerLink]="item.route" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }" class="nav-item">
+                <span class="nav-icon">{{ item.icon }}</span>
+                <span class="nav-label">{{ item.label }}</span>
+            </a>
+        </ng-container>
     </nav>
 </aside>

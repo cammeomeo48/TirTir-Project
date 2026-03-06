@@ -29,7 +29,9 @@ export class RegisterComponent {
             password: ['', [Validators.required, Validators.minLength(6)]],
             confirmPassword: ['', [Validators.required]],
         }, {
-            validators: this.passwordMatchValidator
+            validators: this.passwordMatchValidator,
+            updateOn: 'blur'  // Fix: browser autofill doesn't fire 'change' events;
+                              // using 'blur' ensures the value is read when user leaves the field
         });
     }
 
@@ -45,6 +47,14 @@ export class RegisterComponent {
     }
 
     onSubmit(): void {
+        // Force all controls to update their value before validation
+        // This handles the case where browser autofill populates fields
+        // without triggering Angular's change detection
+        Object.keys(this.registerForm.controls).forEach(key => {
+            const control = this.registerForm.get(key);
+            if (control) control.updateValueAndValidity();
+        });
+
         if (this.registerForm.invalid) {
             this.registerForm.markAllAsTouched();
             return;

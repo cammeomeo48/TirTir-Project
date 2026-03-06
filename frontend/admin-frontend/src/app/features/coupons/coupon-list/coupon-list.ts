@@ -16,6 +16,7 @@ export class CouponListComponent implements OnInit {
     filteredCoupons: Coupon[] = [];
     loading = true;
     error: string | null = null;
+    actionError: string | null = null;
 
     // Coupon Stats
     stats: any = null;
@@ -29,6 +30,9 @@ export class CouponListComponent implements OnInit {
     // Filters
     searchQuery = '';
     selectedStatus = '';
+
+    // Inline delete confirm
+    pendingDeleteId: string | null = null;
 
     constructor(private couponService: CouponService) { }
 
@@ -103,18 +107,26 @@ export class CouponListComponent implements OnInit {
         }
     }
 
-    deleteCoupon(id: string): void {
-        if (confirm('Are you sure you want to delete this coupon? This action cannot be undone.')) {
-            this.couponService.deleteCoupon(id).subscribe({
-                next: () => {
-                    this.loadCoupons();
-                },
-                error: (err) => {
-                    console.error('Delete error:', err);
-                    alert('Failed to delete coupon');
-                }
-            });
-        }
+    requestDelete(id: string): void {
+        this.pendingDeleteId = id;
+        this.actionError = null;
+    }
+
+    cancelDelete(): void {
+        this.pendingDeleteId = null;
+    }
+
+    confirmDelete(id: string): void {
+        this.couponService.deleteCoupon(id).subscribe({
+            next: () => {
+                this.pendingDeleteId = null;
+                this.loadCoupons();
+            },
+            error: (err) => {
+                this.actionError = err.error?.message || 'Failed to delete coupon';
+                this.pendingDeleteId = null;
+            }
+        });
     }
 
     toggleStatus(coupon: Coupon): void {
@@ -124,8 +136,7 @@ export class CouponListComponent implements OnInit {
                 coupon.Status = updatedCoupon.Status;
             },
             error: (err) => {
-                console.error('Status update error:', err);
-                alert('Failed to update coupon status');
+                this.actionError = err.error?.message || 'Failed to update coupon status';
             }
         });
     }

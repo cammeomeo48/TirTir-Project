@@ -58,6 +58,11 @@ export class ProductListComponent implements OnInit {
     editingId: string | null = null;
     editDraft: QuickEditDraft = { Product_Name: '', Price: 0, stock: 0, status: 'active' };
     saving = false;
+    saveError: string | null = null;
+
+    // ─── Delete Confirm ─────────────────────────────────────────
+    pendingDeleteId: string | null = null;
+    deleteError: string | null = null;
 
     constructor(private productService: ProductService) { }
 
@@ -143,8 +148,8 @@ export class ProductListComponent implements OnInit {
     saveEdit(product: Product): void {
         if (!this.editDraft.Product_Name?.trim() || this.editDraft.Price < 0) return;
         this.saving = true;
+        this.saveError = null;
 
-        // Dùng PUT /admin/products/:id — cập nhật toàn bộ fields cần thiết
         const payload = {
             Product_Name: this.editDraft.Product_Name.trim(),
             Price: Number(this.editDraft.Price),
@@ -153,8 +158,7 @@ export class ProductListComponent implements OnInit {
         };
 
         this.productService.updateProduct(product._id, payload).subscribe({
-            next: (updated: any) => {
-                // Cập nhật local state ngay lập tức — không cần reload toàn bộ
+            next: () => {
                 const idx = this.products.findIndex(p => p._id === product._id);
                 if (idx !== -1) {
                     this.products[idx] = { ...this.products[idx], ...payload };
@@ -164,24 +168,34 @@ export class ProductListComponent implements OnInit {
                 this.editingId = null;
             },
             error: (err: any) => {
-                console.error('Quick edit error:', err);
-                alert('Failed to update product. Please try again.');
+                this.saveError = err.error?.message || 'Failed to update product. Please try again.';
                 this.saving = false;
             }
         });
     }
 
     // ─── Delete ──────────────────────────────────────────────────
-    deleteProduct(product: Product): void {
-        if (confirm(`Delete "${product.Product_Name}"? This cannot be undone.`)) {
-            this.productService.deleteProduct(product._id).subscribe({
-                next: () => this.loadProducts(),
-                error: (err: any) => {
-                    alert('Failed to delete product');
-                    console.error('Delete error:', err);
-                }
-            });
-        }
+    requestDelete(product: Product): void {
+        this.pendingDeleteId = product._id;
+        this.deleteError = null;
+    }
+
+    cancelDelete(): void {
+        this.pendingDeleteId = null;
+    }
+
+    confirmDelete(product: Product): void {
+        this.deleteError = null;
+        this.productService.deleteProduct(product._id).subscribe({
+            next: () => {
+                this.pendingDeleteId = null;
+                this.loadProducts();
+            },
+            error: (err: any) => {
+                this.deleteError = err.error?.message || 'Failed to delete product';
+                this.pendingDeleteId = null;
+            }
+        });
     }
 
     // ─── Helpers ─────────────────────────────────────────────────

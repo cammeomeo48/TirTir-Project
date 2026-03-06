@@ -37,8 +37,8 @@ const { checkoutLimiter } = require('../middlewares/rateLimit');
  *                   city: { type: string, example: "Ho Chi Minh" }
  *               paymentMethod:
  *                 type: string
- *                 enum: [VNPAY, MOMO, COD, CARD]
- *                 example: COD
+ *                 enum: [VNPAY, MOMO, CARD]
+ *                 example: VNPAY
  *     responses:
  *       201:
  *         description: Đặt hàng thành công

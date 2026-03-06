@@ -65,7 +65,24 @@ export class AuthService {
 
     isAuthenticated(): boolean {
         const token = this.getToken();
-        return !!token;
+        if (!token) return false;
+
+        // Decode JWT payload and check expiry
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const isExpired = payload.exp && (Date.now() / 1000) > payload.exp;
+            if (isExpired) {
+                // Auto-clear expired session
+                this.logout();
+                return false;
+            }
+        } catch {
+            // Malformed token — treat as invalid
+            this.logout();
+            return false;
+        }
+
+        return true;
     }
 
     isAdmin(): boolean {

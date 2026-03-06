@@ -29,6 +29,7 @@ uploads/
 Thumbs.db
 .vscode/
 .idea/
+*.lnk
 
 # Python
 __pycache__/
@@ -36,3 +37,11 @@ __pycache__/
 *$py.class
 *.so
 .Python
+.venv/
+venv/
+*.pyc
+
+# Generated dump/debug files
+*_tree.txt
+test_cod.js
+check_momo_orders.js

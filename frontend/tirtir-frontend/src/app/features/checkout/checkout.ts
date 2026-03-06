@@ -85,8 +85,6 @@ export class CheckoutComponent implements OnInit {
                 // 2. CHUYỂN HƯỚNG THANH TOÁN LUÔN (KHÔNG CÒN CASE COD)
                 if (paymentMethod === 'VNPAY' || paymentMethod === 'CARD') {
                     this.createVnPayUrl(response.orderId, this.getTotal(), paymentMethod);
-                } else if (paymentMethod === 'COD') {
-                    this.router.navigate(['/order-confirmation', response.orderId]);
                 }
             },
             error: (err) => {

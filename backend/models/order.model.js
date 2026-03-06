@@ -15,9 +15,9 @@ const OrderSchema = new mongoose.Schema({
                 ref: 'Product',
                 required: true
             },
-            name: String,       
+            name: String,
             quantity: Number,
-            price: Number,      
+            price: Number,
             shade: String,
             image: String
         }
@@ -30,16 +30,29 @@ const OrderSchema = new mongoose.Schema({
     },
     paymentMethod: {
         type: String,
-        // Tự động nhận:  'VNPAY', 'MOMO', 'CARD' từ file constants
-        enum: Object.values(PAYMENT_METHOD), 
-        default: PAYMENT_METHOD.VNPAY,
+        enum: ['MOMO', 'VNPAY'],
         required: true
     },
-    paymentStatus: { // THÊM TRƯỜNG NÀY ĐỂ TRACKING
+    status: {
         type: String,
-        enum: Object.values(PAYMENT_STATUS),
-        default: PAYMENT_STATUS.PENDING
+        enum: Object.values(ORDER_STATUS),
+        default: ORDER_STATUS.PENDING
     },
+    // ─── GHN Shipping Integration ────────────────────────────────────────────
+    ghnOrderCode: {
+        type: String,
+        default: null  // Populated when Admin marks order as Shipped
+    },
+    ghnProcessedEvents: {
+        type: [String],
+        default: []    // Stores processed GHN event UUIDs for idempotency
+    },
+    orderStatus: {
+        type: String,
+        enum: ['PROCESSING', 'SHIPPING', 'DELIVERED', 'CANCELLED'],
+        default: 'PROCESSING'
+    },
+    paymentTranId: { type: String }, // Lưu mã giao dịch của Momo/VNPay để dùng khi Refund
     paymentInfo: { // Lưu dữ liệu trả về từ VNPay/Momo để đối soát
         type: Object,
         default: {}
@@ -48,11 +61,7 @@ const OrderSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
-    status: {
-        type: String,
-        enum: Object.values(ORDER_STATUS),
-        default: ORDER_STATUS.PENDING
-    }
-}, { timestamps: true });
+},
+    { timestamps: true });
 
 module.exports = mongoose.model('Order', OrderSchema);

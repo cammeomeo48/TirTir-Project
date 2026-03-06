@@ -10,6 +10,11 @@ interface NavItem {
     roles?: string[];
 }
 
+interface MenuGroup {
+    title: string;
+    items: NavItem[];
+}
+
 @Component({
     selector: 'app-sidebar',
     standalone: true,
@@ -19,18 +24,30 @@ interface NavItem {
 })
 export class SidebarComponent implements OnInit {
 
-    navItems: NavItem[] = [
-        { label: 'Dashboard', icon: '🏠', route: '/dashboard' },
-        { label: 'Products', icon: '📦', route: '/products', roles: ['admin'] },
-        { label: 'Orders', icon: '📑', route: '/orders' },
-        { label: 'Users', icon: '👤', route: '/users', roles: ['admin'] },
-        { label: 'Marketing', icon: '🎯', route: '/marketing', roles: ['admin'] },
-        { label: 'Analytics', icon: '📊', route: '/analytics', roles: ['admin'] },
-        { label: 'Inventory', icon: '🗂️', route: '/inventory', roles: ['admin', 'inventory_staff'] },
-        { label: 'Settings', icon: '⚙️', route: '/settings', roles: ['admin'] },
+    allMenuGroups: MenuGroup[] = [
+        {
+            title: 'GENERAL',
+            items: [
+                { label: 'Dashboard', icon: '📊', route: '/dashboard' },
+                { label: 'Products', icon: '🛍️', route: '/products', roles: ['admin'] },
+                { label: 'Inventory', icon: '📦', route: '/inventory', roles: ['admin', 'inventory_staff'] },
+                { label: 'Orders', icon: '📄', route: '/orders', roles: ['admin', 'customer_service'] },
+                { label: 'GHN Simulator', icon: '🚚', route: '/shipping-simulator', roles: ['admin'] },
+                { label: 'Customers', icon: '👥', route: '/customers', roles: ['admin', 'customer_service'] },
+                { label: 'Coupons', icon: '🎟️', route: '/coupons', roles: ['admin'] },
+                { label: 'Reviews', icon: '⭐', route: '/reviews', roles: ['admin', 'customer_service'] },
+            ]
+        },
+        {
+            title: 'SYSTEM',
+            items: [
+                { label: 'Staff Users', icon: '🛡️', route: '/users', roles: ['admin'] },
+                { label: 'Settings', icon: '⚙️', route: '/settings', roles: ['admin'] },
+            ]
+        }
     ];
 
-    visibleItems: NavItem[] = [];
+    visibleGroups: MenuGroup[] = [];
 
     constructor(private authService: AuthService) { }
 
@@ -41,10 +58,11 @@ export class SidebarComponent implements OnInit {
 
     filterItems(): void {
         const user = this.authService.getCurrentUser();
-        if (!user) { this.visibleItems = []; return; }
+        if (!user) { this.visibleGroups = []; return; }
         const role = user.role;
-        this.visibleItems = this.navItems.filter(item =>
-            !item.roles || item.roles.includes(role)
-        );
+        this.visibleGroups = this.allMenuGroups.map(group => ({
+            ...group,
+            items: group.items.filter(item => !item.roles || item.roles.includes(role))
+        })).filter(group => group.items.length > 0);
     }
 }

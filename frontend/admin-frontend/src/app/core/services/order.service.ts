@@ -29,12 +29,13 @@ export interface Order {
         email: string;
     };
     Order_Items?: OrderItem[];
-    items?: any[];
+    items?: OrderItem[];
     totalAmount?: number;
     Total_Price?: number;
     status: string;
     paymentMethod?: string;
     paymentStatus?: string;
+    ghnOrderCode?: string;
     shippingAddress: {
         fullName: string;
         phone: string;
@@ -84,9 +85,7 @@ export class OrderService {
      * Status enum: Pending | Processing | Shipped | Delivered | Cancelled
      */
     updateOrderStatus(orderId: string, status: string, note?: string): Observable<any> {
-        const body: any = { orderId, status };
-        if (note) body.note = note;
-        return this.http.put<any>(`${this.ordersUrl}/update-status`, body);
+        return this.http.put<any>(`${environment.apiUrl}/orders/update-status`, { orderId, status, note });
     }
 
     /** GET /api/v1/orders/:id/tracking */

@@ -15,6 +15,8 @@ export class OrderDetailComponent implements OnInit {
     order: Order | null = null;
     loading = true;
     error: string | null = null;
+    updateError: string | null = null;
+    updateSuccess = false;
     selectedStatus = '';
     statusNote = '';
     updating = false;
@@ -63,6 +65,8 @@ export class OrderDetailComponent implements OnInit {
         }
 
         this.updating = true;
+        this.updateError = null;
+        this.updateSuccess = false;
 
         this.orderService.updateOrderStatus(
             this.order._id,
@@ -72,15 +76,15 @@ export class OrderDetailComponent implements OnInit {
             next: (updatedOrder: any) => {
                 if (this.order) {
                     this.order.status = updatedOrder.status;
-                    // Note: status_history might not be on the interface yet, let's ignore or add it
                 }
                 this.statusNote = '';
                 this.updating = false;
+                this.updateSuccess = true;
+                setTimeout(() => this.updateSuccess = false, 3000);
             },
             error: (err: any) => {
-                console.error('Status update error:', err);
+                this.updateError = err.error?.message || 'Failed to update order status. Please try again.';
                 this.updating = false;
-                alert('Failed to update order status');
             }
         });
     }

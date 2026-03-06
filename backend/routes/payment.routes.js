@@ -1,11 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const paymentController = require('../controllers/payment.controller');
+const { protect } = require('../middlewares/auth.js');
 
 // const { protect } = require('../middlewares/auth'); // Uncomment nếu cần bảo vệ
 
 // POST /api/payments/create-url
-router.post('/create-url', paymentController.createPaymentUrl);
+router.post('/create-url', protect, paymentController.createPaymentUrl);
+
+// Hủy đơn & Tự động hoàn tiền
+router.post('/cancel_refund/:orderId', protect, paymentController.cancelAndRefundOrder);
 
 // GET /api/payments/vnpay-return (Callback từ VNPay)
 router.get('/vnpay-return', paymentController.vnpayReturn);

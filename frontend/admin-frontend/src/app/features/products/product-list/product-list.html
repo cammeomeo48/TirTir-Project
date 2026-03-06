@@ -46,6 +46,12 @@
         <button class="btn btn-primary" (click)="loadProducts()">Retry</button>
     </div>
 
+    <!-- Delete Error Banner -->
+    <div *ngIf="deleteError" class="action-error-banner">
+        {{ deleteError }}
+        <button (click)="deleteError = null">✕</button>
+    </div>
+
     <!-- Products Table -->
     <div *ngIf="!loading && !error" class="table-container">
         <table class="products-table">
@@ -89,9 +95,17 @@
                                 title="Full Edit">
                                 Full Edit
                             </button>
-                            <button class="btn btn-sm btn-danger" (click)="deleteProduct(product)" title="Delete">
-                                Delete
-                            </button>
+                            <!-- Inline delete confirm -->
+                            <ng-container *ngIf="pendingDeleteId !== product._id">
+                                <button class="btn btn-sm btn-danger" (click)="requestDelete(product)" title="Delete">
+                                    Delete
+                                </button>
+                            </ng-container>
+                            <ng-container *ngIf="pendingDeleteId === product._id">
+                                <span style="font-size:12px;color:#b71c1c;font-weight:600;">Sure?</span>
+                                <button class="btn btn-sm btn-danger" (click)="confirmDelete(product)">Yes</button>
+                                <button class="btn btn-sm btn-outline" (click)="cancelDelete()">No</button>
+                            </ng-container>
                         </td>
                     </ng-container>
 
@@ -126,6 +140,7 @@
                             <button class="btn btn-sm btn-outline" (click)="cancelEdit()" [disabled]="saving">
                                 Cancel
                             </button>
+                            <div *ngIf="saveError" style="font-size:12px;color:#b71c1c;margin-top:4px;">{{ saveError }}</div>
                         </td>
                     </ng-container>
                 </tr>

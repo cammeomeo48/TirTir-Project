@@ -1,9 +1,11 @@
 const winston = require('winston');
 const path = require('path');
+const fs = require('fs');
 require('winston-daily-rotate-file');
 
-// Define log directory
+// Define log directory and ensure it exists (important when Docker volume overwrites /app)
 const logDir = 'logs';
+fs.mkdirSync(logDir, { recursive: true });
 
 // Define custom log format
 const logFormat = winston.format.combine(
