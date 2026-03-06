@@ -41,9 +41,9 @@ export class ShippingSimulatorComponent implements OnInit, OnDestroy {
     // Fix #2: removed manual HttpHeaders — authInterceptor handles this globally
 
     ghnStatusOptions = [
-        { label: '✅ Delivered', value: 'delivered', cls: 'btn-delivered' },
-        { label: '↩ Return', value: 'return', cls: 'btn-return' },
-        { label: '❌ Cancel', value: 'cancel', cls: 'btn-cancel' },
+        { label: 'Delivered', value: 'delivered', cls: 'btn-delivered' },
+        { label: 'Return', value: 'return', cls: 'btn-return' },
+        { label: 'Cancel', value: 'cancel', cls: 'btn-cancel' },
     ];
 
     constructor(private http: HttpClient) { }
