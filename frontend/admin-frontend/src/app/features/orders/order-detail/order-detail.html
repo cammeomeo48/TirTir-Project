@@ -132,7 +132,7 @@
             <div class="order-total">
                 <div class="total-row">
                     <span>Total:</span>
-                    <span class="total-amount">{{ formatPrice(order.totalAmount) }}</span>
+                    <span class="total-amount">{{ formatPrice(order.totalAmount ?? order.Total_Price ?? 0) }}</span>
                 </div>
             </div>
         </div>

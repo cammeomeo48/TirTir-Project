@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ProductService } from '../../../core/services/product.service';
 import { InventoryService } from '../../../core/services/inventory.service';
-import { NotificationService } from 'd:/TirTir-Project/frontend/tirtir-frontend/src/app/core/services/notification.service';
 
 interface Product {
     _id: string;

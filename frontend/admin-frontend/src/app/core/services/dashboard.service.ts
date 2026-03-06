@@ -39,14 +39,20 @@ export interface RevenuePoint {
 }
 
 export interface TopProduct {
+    product?: {
+        _id?: string;
+        name?: string;
+        sku?: string;
+        mainImage?: string;
+    };
+    salesCount?: number;
+    revenue?: number;
+    // Flat fallback fields (for backward compat)
     _id?: string;
     Name?: string;
     Product_Name?: string;
     Thumbnail_Images?: string | string[];
     totalSold?: number;
-    totalRevenue?: number;
-    salesCount?: number;
-    revenue?: number;
 }
 
 @Injectable({ providedIn: 'root' })

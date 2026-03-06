@@ -62,7 +62,7 @@
                     </td>
                     <td>{{ formatDate(order.createdAt) }}</td>
                     <td class="text-center">{{ order.items?.length || 0 }}</td>
-                    <td class="price">{{ formatPrice(order.totalAmount) }}</td>
+                    <td class="price">{{ formatPrice(order.totalAmount ?? 0) }}</td>
                     <td>
                         <span class="status-badge" [ngClass]="getStatusClass(order.status)">
                             {{ order.status }}
