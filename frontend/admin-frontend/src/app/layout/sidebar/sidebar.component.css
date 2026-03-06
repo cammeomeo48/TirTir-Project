@@ -4,10 +4,9 @@
    Width: 240px fixed
    ========================================= */
 
+/* No :host width — sidebar is position:fixed, no flex placeholder needed */
 :host {
-    display: block;
-    width: 240px;
-    flex-shrink: 0;
+    display: contents;
 }
 
 .sidebar {
@@ -31,6 +30,13 @@
     padding: 20px 20px 16px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     flex-shrink: 0;
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+}
+
+.sidebar-brand:hover {
+    background: rgba(255, 255, 255, 0.04);
 }
 
 .brand-mark {
@@ -56,10 +62,42 @@
     white-space: nowrap;
 }
 
+/* Logout popup */
+.logout-popup {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 12px;
+    background: #222;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 4px;
+    z-index: 200;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    min-width: 140px;
+}
+
+.logout-btn {
+    width: 100%;
+    padding: 10px 16px;
+    background: transparent;
+    border: none;
+    color: #ff5555;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.15s;
+}
+
+.logout-btn:hover {
+    background: rgba(217, 45, 45, 0.15);
+}
+
 /* Navigation */
 .sidebar-nav {
     flex: 1;
-    padding: 12px 12px;
+    padding: 8px 12px;
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -80,11 +118,24 @@
     border-radius: 2px;
 }
 
+/* Group title */
+.nav-group-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.3);
+    padding: 14px 14px 4px;
+    text-transform: uppercase;
+}
+
+.nav-group-title:first-child {
+    padding-top: 6px;
+}
+
 /* Nav Item */
 .nav-item {
     display: flex;
     align-items: center;
-    gap: 12px;
     padding: 11px 14px;
     border-radius: 8px;
     cursor: pointer;
@@ -112,18 +163,22 @@
     background: #C02626;
 }
 
-/* Icon */
-.nav-icon {
-    font-size: 18px;
-    width: 22px;
-    text-align: center;
-    flex-shrink: 0;
-    line-height: 1;
-}
-
 /* Label */
 .nav-label {
     font-size: 14px;
     font-weight: 500;
     letter-spacing: 0.1px;
+}
+
+/* Responsive — mobile: sidebar is hidden (layout shifts) */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 200px;
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
 }

@@ -47,6 +47,7 @@ export interface TopProduct {
     };
     salesCount?: number;
     revenue?: number;
+    totalRevenue?: number;
     // Flat fallback fields (for backward compat)
     _id?: string;
     Name?: string;

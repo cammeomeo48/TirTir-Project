@@ -1,11 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 
 interface NavItem {
     label: string;
-    icon: string;
     route: string;
     roles?: string[];
 }
@@ -24,32 +23,34 @@ interface MenuGroup {
 })
 export class SidebarComponent implements OnInit {
 
+    showLogout = false;
+
     allMenuGroups: MenuGroup[] = [
         {
             title: 'GENERAL',
             items: [
-                { label: 'Dashboard', icon: '📊', route: '/dashboard' },
-                { label: 'Products', icon: '🛍️', route: '/products', roles: ['admin'] },
-                { label: 'Inventory', icon: '📦', route: '/inventory', roles: ['admin', 'inventory_staff'] },
-                { label: 'Orders', icon: '📄', route: '/orders', roles: ['admin', 'customer_service'] },
-                { label: 'GHN Simulator', icon: '🚚', route: '/shipping-simulator', roles: ['admin'] },
-                { label: 'Customers', icon: '👥', route: '/customers', roles: ['admin', 'customer_service'] },
-                { label: 'Coupons', icon: '🎟️', route: '/coupons', roles: ['admin'] },
-                { label: 'Reviews', icon: '⭐', route: '/reviews', roles: ['admin', 'customer_service'] },
+                { label: 'Dashboard', route: '/dashboard' },
+                { label: 'Products', route: '/products', roles: ['admin'] },
+                { label: 'Inventory', route: '/inventory', roles: ['admin', 'inventory_staff'] },
+                { label: 'Orders', route: '/orders', roles: ['admin', 'customer_service'] },
+                { label: 'GHN Simulator', route: '/shipping-simulator', roles: ['admin'] },
+                { label: 'Customers', route: '/customers', roles: ['admin', 'customer_service'] },
+                { label: 'Coupons', route: '/coupons', roles: ['admin'] },
+                { label: 'Reviews', route: '/reviews', roles: ['admin', 'customer_service'] },
             ]
         },
         {
             title: 'SYSTEM',
             items: [
-                { label: 'Staff Users', icon: '🛡️', route: '/users', roles: ['admin'] },
-                { label: 'Settings', icon: '⚙️', route: '/settings', roles: ['admin'] },
+                { label: 'Staff Users', route: '/users', roles: ['admin'] },
+                { label: 'Settings', route: '/settings', roles: ['admin'] },
             ]
         }
     ];
 
     visibleGroups: MenuGroup[] = [];
 
-    constructor(private authService: AuthService) { }
+    constructor(private authService: AuthService, private router: Router) { }
 
     ngOnInit(): void {
         this.filterItems();
@@ -64,5 +65,23 @@ export class SidebarComponent implements OnInit {
             ...group,
             items: group.items.filter(item => !item.roles || item.roles.includes(role))
         })).filter(group => group.items.length > 0);
+    }
+
+    toggleLogout(): void {
+        this.showLogout = !this.showLogout;
+    }
+
+    logout(): void {
+        this.showLogout = false;
+        this.authService.logout();
+        this.router.navigate(['/login']);
+    }
+
+    @HostListener('document:click', ['$event'])
+    onDocumentClick(event: Event): void {
+        const target = event.target as HTMLElement;
+        if (!target.closest('.sidebar-brand')) {
+            this.showLogout = false;
+        }
     }
 }
