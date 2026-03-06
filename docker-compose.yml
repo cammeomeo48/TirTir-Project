@@ -45,6 +45,8 @@ services:
     volumes:
       - ./backend:/app # Hot-reload Node files
       - /app/node_modules # Prevent host node_modules from overwriting container's
+      - backend_logs:/app/logs # Named volume: isolate logs from Windows FS (prevents EACCES)
+      - backend_uploads:/app/uploads
       - ./frontend/tirtir-frontend/public/assets:/frontend/tirtir-frontend/public/assets
     depends_on:
       - ai-service
@@ -60,3 +62,10 @@ services:
   #     - "4200:80"
   #   depends_on:
   #     - backend
+
+  # ─── Named Volumes ───────────────────────────────────
+  # Isolate logs/ and uploads/ from Windows host mount to avoid EACCES
+  # (non-root Docker user can't create dirs on WSL2-bridged Windows FS)
+volumes:
+  backend_logs:
+  backend_uploads:

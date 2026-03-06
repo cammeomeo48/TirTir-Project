@@ -97,7 +97,13 @@ const updateOrderStatusInternal = async (orderId, newStatus, performedById = nul
 
     const notif = notifMap[newStatus];
     if (notif && order.user) {
-        await createNotification(order.user.toString(), notif.title, notif.message, 'order', orderId.toString());
+        await createNotification(
+            order.user.toString(),
+            'order',           // type
+            notif.title,       // title
+            notif.message,     // message
+            `/account/orders`  // link
+        );
     }
 
     logger.info(`[Shipping] Order ${shortId}: ${oldStatus} → ${newStatus} (source: ${eventSource})`);
