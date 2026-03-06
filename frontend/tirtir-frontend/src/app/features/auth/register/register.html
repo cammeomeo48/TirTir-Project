@@ -29,7 +29,9 @@
             <!-- Name Field -->
             <div class="form-field">
                 <label for="name" class="field-label">Full Name</label>
-                <input id="name" type="text" formControlName="name" placeholder="Enter your full name"
+                <input id="name" type="text" formControlName="name"
+                    autocomplete="name"
+                    placeholder="Enter your full name"
                     class="field-input" [class.input-error]="getFieldError('name')" />
                 <span *ngIf="getFieldError('name')" class="field-error">
                     {{ getFieldError('name') }}
@@ -39,8 +41,11 @@
             <!-- Email Field -->
             <div class="form-field">
                 <label for="email" class="field-label">Email Address</label>
-                <input id="email" type="email" formControlName="email" placeholder="your@email.com" class="field-input"
-                    [class.input-error]="getFieldError('email')" />
+                <input id="email" type="email" formControlName="email"
+                    autocomplete="email"
+                    placeholder="your@email.com" class="field-input"
+                    [class.input-error]="getFieldError('email')"
+                    (blur)="registerForm.get('email')!.updateValueAndValidity()" />
                 <span *ngIf="getFieldError('email')" class="field-error">
                     {{ getFieldError('email') }}
                 </span>
@@ -49,7 +54,9 @@
             <!-- Password Field -->
             <div class="form-field">
                 <label for="password" class="field-label">Password</label>
-                <input id="password" type="password" formControlName="password" placeholder="At least 6 characters"
+                <input id="password" type="password" formControlName="password"
+                    autocomplete="new-password"
+                    placeholder="At least 6 characters"
                     class="field-input" [class.input-error]="getFieldError('password')" />
                 <span *ngIf="getFieldError('password')" class="field-error">
                     {{ getFieldError('password') }}
@@ -60,6 +67,7 @@
             <div class="form-field">
                 <label for="confirmPassword" class="field-label">Confirm Password</label>
                 <input id="confirmPassword" type="password" formControlName="confirmPassword"
+                    autocomplete="new-password"
                     placeholder="Confirm your password" class="field-input"
                     [class.input-error]="getFieldError('confirmPassword')" />
                 <span *ngIf="getFieldError('confirmPassword')" class="field-error">
