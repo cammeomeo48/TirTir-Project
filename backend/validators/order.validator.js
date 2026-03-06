@@ -13,8 +13,8 @@ exports.createOrderValidator = [
         .withMessage('Số điện thoại không đúng định dạng'),
     check('shippingAddress.address', 'Địa chỉ cụ thể là bắt buộc').notEmpty().trim(),
     check('shippingAddress.city', 'Thành phố / tỉnh là bắt buộc').notEmpty().trim(),
-    check('paymentMethod', 'Phương thức thanh toán không hợp lệ')
-        .isIn(['VNPAY', 'MOMO', 'CARD', 'COD']),
+    body('paymentMethod').notEmpty().withMessage('Payment method is required')
+        .isIn(['VNPAY', 'MOMO', 'CARD']),
 ];
 
 /**

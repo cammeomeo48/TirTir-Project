@@ -43,11 +43,11 @@
                         <div class="form-field full">
                             <label>PAYMENT METHOD</label>
                             <div class="payment-selection">
-                                <select formControlName="paymentMethod" class="field-input">
-                                    <option value="VNPAY">VNPAY (E-Wallet)</option>
-                                    <option value="MOMO">MOMO</option>
-                                    <option value="CARD">CREDIT / DEBIT CARD</option>
-                                    <option value="COD">CASH ON DELIVERY (COD)</option>
+                                <select id="paymentMethod" formControlName="paymentMethod"
+                                    class="form-select payment-select">
+                                    <option value="VNPAY">VNPAY - Thanh toán qua VNPAY</option>
+                                    <option value="MOMO">MoMo - Thanh toán qua ví Điện tử MoMo</option>
+                                    <option value="CARD">Thẻ ATM/Visa/Master/JCB/Khác</option>
                                 </select>
                             </div>
                         </div>
