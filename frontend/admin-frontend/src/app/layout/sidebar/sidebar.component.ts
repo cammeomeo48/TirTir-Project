@@ -36,7 +36,7 @@ export class SidebarComponent implements OnInit {
                 { label: '🚚 GHN Simulator', icon: '🚚', route: '/shipping-simulator', roles: ['admin'] },
                 { label: 'Customers', icon: '👥', route: '/customers', roles: ['admin', 'customer_service'] },
                 { label: 'Coupons', icon: '🎟️', route: '/coupons', roles: ['admin'] },
-                { label: 'Reviews', icon: '⭐', route: '/reviews', badge: '02', badgeColor: '#00e396', roles: ['admin', 'customer_service'] },
+                { label: 'Reviews', icon: '⭐', route: '/reviews', roles: ['admin', 'customer_service'] },
             ]
         },
         {

@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 
 interface ShippedOrder {
@@ -36,9 +36,9 @@ export class ShippingSimulatorComponent implements OnInit, OnDestroy {
     private searchTimeout: any;
     private pollTimers: { [orderId: string]: any } = {};
 
+    // Fix #1: was `'token'` — auth service stores as `'admin_token'`
     private readonly apiUrl = `${environment.apiUrl}/shipping`;
-    private readonly token = localStorage.getItem('token') || '';
-    private readonly headers = new HttpHeaders({ 'Authorization': `Bearer ${this.token}` });
+    // Fix #2: removed manual HttpHeaders — authInterceptor handles this globally
 
     ghnStatusOptions = [
         { label: '✅ Delivered', value: 'delivered', cls: 'btn-delivered' },
@@ -55,15 +55,16 @@ export class ShippingSimulatorComponent implements OnInit, OnDestroy {
     ngOnDestroy(): void {
         // Clear all polling timers on destroy
         Object.values(this.pollTimers).forEach(t => clearTimeout(t));
+        if (this.searchTimeout) clearTimeout(this.searchTimeout);
     }
 
     loadOrders(): void {
         this.loading = true;
         this.error = null;
 
+        // Fix #2: no custom headers — authInterceptor attaches Bearer token automatically
         this.http.get<any>(
-            `${this.apiUrl}/shipped-orders?search=${encodeURIComponent(this.search)}&page=${this.page}&limit=${this.limit}`,
-            { headers: this.headers }
+            `${this.apiUrl}/shipped-orders?search=${encodeURIComponent(this.search)}&page=${this.page}&limit=${this.limit}`
         ).subscribe({
             next: (res) => {
                 this.orders = res.data || [];
@@ -79,7 +80,6 @@ export class ShippingSimulatorComponent implements OnInit, OnDestroy {
 
     onSearchChange(): void {
         clearTimeout(this.searchTimeout);
-        // Debounce 400ms
         this.searchTimeout = setTimeout(() => {
             this.page = 1;
             this.loadOrders();
@@ -93,16 +93,15 @@ export class ShippingSimulatorComponent implements OnInit, OnDestroy {
         order._result = `Simulating ${ghnStatus}...`;
         order._resultType = 'info';
 
+        // Fix #2: no custom headers — interceptor handles auth
         this.http.post<any>(
             `${this.apiUrl}/simulate-delivery`,
-            { orderId: order._id, ghnStatus },
-            { headers: this.headers }
+            { orderId: order._id, ghnStatus }
         ).subscribe({
             next: (res) => {
                 order._result = `✅ ${res.message}`;
                 order._resultType = 'success';
                 order._simulating = false;
-                // Poll order status for 10 seconds to confirm update
                 this.startPolling(order);
             },
             error: (err) => {
@@ -120,22 +119,21 @@ export class ShippingSimulatorComponent implements OnInit, OnDestroy {
 
         const poll = () => {
             if (attempts >= maxAttempts) {
-                // After polling, refresh the list (order should be gone from Shipped list)
                 this.loadOrders();
                 return;
             }
 
             attempts++;
             this.pollTimers[order._id] = setTimeout(() => {
-                this.http.get<any>(`${environment.apiUrl}/orders/${order._id}`, { headers: this.headers })
+                // Fix #2: no custom headers
+                this.http.get<any>(`${environment.apiUrl}/orders/${order._id}`)
                     .subscribe({
                         next: (updatedOrder) => {
                             if (updatedOrder.status !== 'Shipped') {
                                 order._result = `✅ Confirmed: Order is now "${updatedOrder.status}"`;
-                                // Remove from list after 2s
                                 setTimeout(() => this.loadOrders(), 2000);
                             } else {
-                                poll(); // Keep polling
+                                poll();
                             }
                         },
                         error: () => poll()

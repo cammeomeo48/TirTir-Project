@@ -2,7 +2,7 @@ import { Routes } from '@angular/router';
 import { LoginComponent } from './features/auth/login/login.component';
 import { MainLayoutComponent } from './layout/main-layout/main-layout.component';
 import { DashboardComponent } from './features/dashboard/dashboard.component';
-import { adminAuthGuard } from './core/guards/admin-auth.guard';
+import { adminAuthGuard, adminAuthChildGuard } from './core/guards/admin-auth.guard';
 
 export const routes: Routes = [
     {
@@ -13,6 +13,7 @@ export const routes: Routes = [
         path: '',
         component: MainLayoutComponent,
         canActivate: [adminAuthGuard],
+        canActivateChild: [adminAuthChildGuard],
         children: [
             {
                 path: 'dashboard',

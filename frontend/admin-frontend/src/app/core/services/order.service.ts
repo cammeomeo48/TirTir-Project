@@ -21,13 +21,14 @@ export interface Order {
         name: string;
         email: string;
     };
-    items: any[];
-    Order_Items: OrderItem[];
+    /** Canonical field — backend populates as `items` (array of OrderItem) */
+    items: OrderItem[];
+    /** Canonical total — backend returns `totalAmount` */
     totalAmount: number;
-    Total_Price: number;
     status: string;
     paymentMethod: string;
     paymentStatus?: string;
+    ghnOrderCode?: string;
     shippingAddress: {
         fullName: string;
         phone: string;
@@ -75,12 +76,8 @@ export class OrderService {
     }
 
     updateOrderStatus(orderId: string, status: string, note?: string): Observable<any> {
-        // Correct endpoint: /api/v1/orders/update-status (PUT)
-        // Correct payload: { orderId, status }
-        // Note: The backend route is /orders/update-status, NOT /admin/orders/...
-        // We need to use the base apiUrl but point to /orders
-        const baseUrl = this.apiUrl.replace('/admin/orders', '/orders');
-        return this.http.put(`${baseUrl}/update-status`, { orderId, status, note });
+        // Fix: use environment.apiUrl directly instead of fragile string replace
+        return this.http.put(`${environment.apiUrl}/orders/update-status`, { orderId, status, note });
     }
 
     getOrderTracking(id: string): Observable<any> {
