@@ -286,6 +286,15 @@ exports.getCart = async (req, res) => {
             return res.status(200).json({ items: [], totalPrice: 0 });
         }
 
+        // Clean up null products (e.g., deleted from database)
+        const originalLength = cart.items.length;
+        cart.items = cart.items.filter(item => item.product != null);
+
+        if (cart.items.length !== originalLength) {
+            cart.totalPrice = calculateTotal(cart);
+            await cart.save();
+        }
+
         res.status(200).json(cart);
 
     } catch (error) {

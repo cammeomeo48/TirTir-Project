@@ -126,7 +126,7 @@ export class CheckoutComponent implements OnInit {
 
     getSubtotal(): number {
         if (!this.cart || !this.cart.items) return 0;
-        return this.cart.items.reduce((sum, item) => sum + ((item.product.Price || 0) * item.quantity), 0);
+        return this.cart.items.reduce((sum, item) => sum + ((item.product?.Price || 0) * item.quantity), 0);
     }
 
     getTotal(): number {

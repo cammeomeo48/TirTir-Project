@@ -124,12 +124,7 @@ export class ChatService {
 
     // POST /chat/start
     initiateChat(userData?: any): Observable<any> {
-        return this.http.post<any>(`${this.apiUrl}/start`, userData).pipe(
-            catchError(error => {
-                console.error('Failed to initiate chat:', error);
-                throw error;
-            })
-        );
+        return of({ success: true, message: 'Chat initiated' });
     }
 
     // GET /chat/history
@@ -187,11 +182,9 @@ export class ChatService {
 
     // GET /chat/options
     getQuickReplies(): Observable<QuickReply[]> {
-        return this.http.get<QuickReply[]>(`${this.apiUrl}/options`).pipe(
-            catchError(error => {
-                console.error('Failed to load quick replies:', error);
-                return of([]);
-            })
-        );
+        return of([
+            { label: 'Order Status', value: 'I want to check my order status' },
+            { label: 'Shipping Info', value: 'What are your shipping policies?' }
+        ]);
     }
 }

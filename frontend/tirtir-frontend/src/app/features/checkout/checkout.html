@@ -80,15 +80,15 @@
                 <div *ngIf="cart" class="order-items">
                     <div *ngFor="let item of cart.items" class="summary-item">
                         <div class="summary-item-img">
-                            <img [src]="getImageUrl(item.product.Thumbnail_Images)" [alt]="item.product.Name"
+                            <img [src]="getImageUrl(item.product?.Thumbnail_Images || '')" [alt]="item.product?.Name || ''"
                                 (error)="onImageError($event)" />
                         </div>
                         <div class="summary-item-info">
-                            <p class="summary-name">{{ item.product.Name }}</p>
+                            <p class="summary-name">{{ item.product?.Name || 'Unknown Product' }}</p>
                             <p class="summary-meta">QTY: {{ item.quantity }} <span *ngIf="item.shade">/ {{ item.shade
                                     }}</span></p>
                         </div>
-                        <p class="summary-price">${{ (item.product.Price * item.quantity).toFixed(2) }}</p>
+                        <p class="summary-price">${{ ((item.product?.Price || 0) * item.quantity).toFixed(2) }}</p>
                     </div>
                 </div>
 
