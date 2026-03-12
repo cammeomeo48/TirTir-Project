@@ -4,9 +4,11 @@ Loaded ONCE at startup. Handles Vietnamese beauty queries.
 """
 
 import logging
+import numpy as np
 import pandas as pd
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.naive_bayes import MultinomialNB
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.svm import LinearSVC
+from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.pipeline import make_pipeline
 
 logger = logging.getLogger(__name__)
@@ -70,11 +72,26 @@ class ChatbotEngine:
                     "Description_Short", "Category", "Name"]:
             if col in self.df.columns:
                 self.df[col] = self.df[col].fillna("")
+            else:
+                self.df[col] = "" # Ensure column exists
+
+        # Prepare product content matrix for Cosine Similarity
+        self.df["combined_content"] = (
+            self.df["Name"] + " " +
+            self.df["Category"] + " " +
+            self.df["Skin_Type_Target"] + " " +
+            self.df["Main_Concern"] + " " +
+            self.df["Key_Ingredients"] + " " +
+            self.df["Description_Short"]
+        ).str.lower()
+        
+        self.product_vectorizer = TfidfVectorizer(ngram_range=(1, 2))
+        self.product_tfidf_matrix = self.product_vectorizer.fit_transform(self.df["combined_content"])
 
         # Train intent classifier
         self.model = make_pipeline(
-            CountVectorizer(ngram_range=(1, 2)),
-            MultinomialNB()
+            TfidfVectorizer(ngram_range=(1, 2)),
+            LinearSVC(random_state=42, dual='auto')
         )
         self.model.fit(
             [x[0] for x in TRAIN_DATA],
@@ -83,25 +100,42 @@ class ChatbotEngine:
         logger.info("✅ Chatbot NLP model ready.")
 
     def _smart_recommend(self, query: str):
-        """Score products by keyword matches. Returns (best_product_row | None, matched_tags)."""
-        df = self.df.copy()
-        df["score"] = 0
-        matched_tags = []
-
+        """Score products by TF-IDF Cosine Similarity combined with keyword rules."""
         q = query.lower()
+        
+        # 1. Content-based filtering (TF-IDF Cosine Similarity)
+        query_vec = self.product_vectorizer.transform([q])
+        cosine_scores = cosine_similarity(query_vec, self.product_tfidf_matrix).flatten()
+        
+        # 2. Rule-based scores
+        rule_scores = np.zeros(len(self.df))
+        matched_tags = []
+        
         for word, logic in KEYWORDS_MAP.items():
             if word in q:
                 matched_tags.append(word)
                 field = logic["field"]
                 tag = logic["tag"]
-                df.loc[df[field].str.contains(tag, case=False, na=False), "score"] += 10
-                df.loc[df["Description_Short"].str.contains(tag, case=False, na=False), "score"] += 2
+                
+                # Boost scores for rule matches
+                if field in self.df.columns:
+                    rule_match_mask = self.df[field].str.contains(tag, case=False, na=False)
+                    rule_scores = np.where(rule_match_mask, rule_scores + 0.5, rule_scores)
+                    
+                if "Description_Short" in self.df.columns:
+                    desc_match_mask = self.df["Description_Short"].str.contains(tag, case=False, na=False)
+                    rule_scores = np.where(desc_match_mask, rule_scores + 0.1, rule_scores)
 
-        if df["score"].max() == 0:
-            return None, []
+        # 3. Combine scores
+        final_scores = cosine_scores + rule_scores
+        
+        if final_scores.max() < 0.05: # Threshold limit
+            return None, matched_tags
 
-        best = df.sort_values("score", ascending=False).iloc[0]
-        return best, matched_tags
+        best_idx = final_scores.argmax()
+        best_product = self.df.iloc[best_idx]
+        
+        return best_product, matched_tags
 
     def process(self, message: str) -> dict:
         """Process a message and return a structured response dict."""
