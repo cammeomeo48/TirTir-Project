@@ -32,7 +32,7 @@
                         <div class="product-info">
                             <a [routerLink]="['/products', item.product.slug]">
                                 <img [src]="getImageUrl(item.product.Thumbnail_Images)" [alt]="item.product.Name"
-                                    class="product-image" />
+                                    class="product-image" (error)="onImageError($event)" />
                             </a>
                             <div class="product-details">
                                 <a [routerLink]="['/products', item.product.slug]"

@@ -1,4 +1,4 @@
-const axios = require('axios'); 
+const axios = require('axios');
 const moment = require('moment');
 const querystring = require('qs');
 const crypto = require('crypto');
@@ -26,12 +26,23 @@ function sortObject(obj) {
 
 exports.createPaymentUrl = async (req, res, next) => {
     try {
-        const { orderId, amount, paymentMethod, bankCode, language = 'vn' } = req.body;
+        const { orderId, paymentMethod, bankCode, language = 'vn' } = req.body;
 
-        if (!orderId || !amount) {
-            return res.status(400).json({ message: "Missing orderId or amount" });
+        if (!orderId) {
+            return res.status(400).json({ message: "Missing orderId" });
         }
-        const amountInVND = Math.round(amount * EXCHANGE_RATE);
+
+        const order = await Order.findById(orderId);
+        if (!order) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+
+        if (order.paymentStatus === 'PAID') {
+            return res.status(400).json({ message: "Order is already paid" });
+        }
+
+        // Single Source of Truth
+        const amount = order.totalAmount;
 
         let paymentUrl = '';
 
@@ -53,7 +64,7 @@ exports.createPaymentUrl = async (req, res, next) => {
 
     } catch (error) {
         console.error("Payment Controller Error:", error);
-        res.status(500).json({ 
+        res.status(500).json({
             message: error.message || "Lỗi tạo thanh toán",
             detail: error.response?.data || "No details"
         });
@@ -62,10 +73,11 @@ exports.createPaymentUrl = async (req, res, next) => {
 
 // --- LOGIC VNPAY ---
 function createVNPayUrl(req, orderId, amount, bankCode, language) {
+    const amountInVND = Math.round(amount * EXCHANGE_RATE);
     process.env.TZ = 'Asia/Ho_Chi_Minh';
     let date = new Date();
     let createDate = moment(date).format('YYYYMMDDHHmmss');
-    
+
     let ipAddr = req.headers['x-forwarded-for'] ||
         req.connection.remoteAddress ||
         req.socket.remoteAddress ||
@@ -98,9 +110,9 @@ function createVNPayUrl(req, orderId, amount, bankCode, language) {
 
     let signData = querystring.stringify(vnp_Params, { encode: false });
     let hmac = crypto.createHmac("sha512", secretKey);
-    let signed = hmac.update(new Buffer.from(signData, 'utf-8')).digest("hex"); 
+    let signed = hmac.update(new Buffer.from(signData, 'utf-8')).digest("hex");
     vnp_Params['vnp_SecureHash'] = signed;
-    
+
     vnpUrl += '?' + querystring.stringify(vnp_Params, { encode: false });
     return vnpUrl;
 }
@@ -127,21 +139,21 @@ exports.vnpayReturn = async (req, res, next) => {
         const orderId = vnp_Params['vnp_TxnRef'];
         const rspCode = vnp_Params['vnp_ResponseCode'];
         const vnp_TransactionNo = vnp_Params['vnp_TransactionNo']; //mã giao dịch
-        
+
         // Redirect về Frontend (Angular)
         if (rspCode === '00') {
-             // Cập nhật trạng thái đơn hàng = PAID tại đây hoặc trong IPN
-             await Order.findByIdAndUpdate(orderId, { 
-                 paymentStatus: 'PAID', 
-                 paymentMethod: 'VNPAY',
-                 paymentTranId: vnp_TransactionNo
-             });
-             
-             // Redirect về trang Success của Frontend
-             res.redirect(`http://localhost:4200/order-confirmation/${orderId}?status=success`);
+            // Cập nhật trạng thái đơn hàng = PAID tại đây hoặc trong IPN
+            await Order.findByIdAndUpdate(orderId, {
+                paymentStatus: 'PAID',
+                paymentMethod: 'VNPAY',
+                paymentTranId: vnp_TransactionNo
+            });
+
+            // Redirect về trang Success của Frontend
+            res.redirect(`http://localhost:4200/order-confirmation/${orderId}?status=success`);
         } else {
-             // Redirect về trang Failed/Checkout của Frontend
-             res.redirect(`http://localhost:4200/checkout?status=failed&orderId=${orderId}`);
+            // Redirect về trang Failed/Checkout của Frontend
+            res.redirect(`http://localhost:4200/checkout?status=failed&orderId=${orderId}`);
         }
     } else {
         res.redirect(`http://localhost:4200/checkout?status=error_signature`);
@@ -204,10 +216,10 @@ exports.checkPaymentStatus = async (req, res, next) => {
     try {
         const order = await Order.findById(req.params.id);
         if (!order) return res.status(404).json({ message: "Order not found" });
-        
-        res.json({ 
-            status: order.paymentStatus, 
-            method: order.paymentMethod 
+
+        res.json({
+            status: order.paymentStatus,
+            method: order.paymentMethod
         });
     } catch (err) {
         next(err);
@@ -220,7 +232,7 @@ async function createMomoUrl(orderId, amount) {
     const accessKey = "F8BBA842ECF85";
     const secretKey = "K951B6PE1waDMi640xX08PD3vg6EkVlz";
     const endpoint = "https://test-payment.momo.vn/v2/gateway/api/create";
-    
+
     // Redirect về Frontend
     //const returnUrl = "http://localhost:4200/order-confirmation/" + orderId;
     const returnUrl = "http://localhost:5001/api/v1/payments/momo-return";
@@ -230,10 +242,10 @@ async function createMomoUrl(orderId, amount) {
     const orderInfo = "Thanh toan don hang " + orderId;
     const requestType = "captureWallet";
     const extraData = "";
-    
+
     // FIX QUAN TRỌNG: Chuyển amount sang VND + convert sang string
     const amountInVND = Math.round(amount * EXCHANGE_RATE);
-    const amountStr = amountInVND.toString(); 
+    const amountStr = amountInVND.toString();
 
     // Tạo chữ ký
     const rawSignature = `accessKey=${accessKey}&amount=${amountStr}&extraData=${extraData}&ipnUrl=${ipnUrl}&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&redirectUrl=${returnUrl}&requestId=${requestId}&requestType=${requestType}`;
@@ -270,17 +282,17 @@ exports.momoReturn = async (req, res, next) => {
     try {
         const { resultCode, orderId, transId } = req.query;
         // resultCode = 0 là thành công
-        
+
         if (resultCode == '0') {
-             // Cập nhật DB
-             await Order.findByIdAndUpdate(orderId, { 
-                 paymentStatus: 'PAID', 
-                 paymentMethod: 'MOMO' ,
-                 paymentTranId: transId
-             });
-             res.redirect(`http://localhost:4200/order-confirmation/${orderId}?status=success`);
+            // Cập nhật DB
+            await Order.findByIdAndUpdate(orderId, {
+                paymentStatus: 'PAID',
+                paymentMethod: 'MOMO',
+                paymentTranId: transId
+            });
+            res.redirect(`http://localhost:4200/order-confirmation/${orderId}?status=success`);
         } else {
-             res.redirect(`http://localhost:4200/checkout?status=failed&orderId=${orderId}`);
+            res.redirect(`http://localhost:4200/checkout?status=failed&orderId=${orderId}`);
         }
     } catch (error) {
         next(error);
@@ -292,12 +304,12 @@ exports.momoIPN = async (req, res, next) => {
     // MoMo gọi vào đây để báo kết quả (Server-to-Server)
     try {
         const { resultCode, orderId, transId } = req.body; // MoMo gửi body JSON
-        
+
         if (resultCode == '0') {
-            await Order.findByIdAndUpdate(orderId, { 
-                 paymentStatus: 'PAID',
-                 paymentTranId: transId,
-                 paymentInfo: req.body 
+            await Order.findByIdAndUpdate(orderId, {
+                paymentStatus: 'PAID',
+                paymentTranId: transId,
+                paymentInfo: req.body
             });
         }
         res.status(204).send(); // Trả về 204 No Content để MoMo biết đã nhận
