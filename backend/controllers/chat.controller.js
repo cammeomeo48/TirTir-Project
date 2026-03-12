@@ -65,3 +65,21 @@ exports.chatWithBot = async (req, res) => {
         return res.status(500).json({ success: false, message: 'Lỗi hệ thống AI.' });
     }
 };
+
+exports.handleChat = async (req, res) => {
+    try {
+        const { message } = req.body;
+        
+        // Gọi sang Python AI Service
+        const aiResponse = await axios.post('http://ai-service:8000/ai/chat', {
+            message: message
+        });
+
+        res.status(200).json({
+            success: true,
+            data: aiResponse.data
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Chatbot service down" });
+    }
+};

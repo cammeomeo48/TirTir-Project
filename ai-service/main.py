@@ -20,7 +20,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from skin_analyzer import SkinAnalyzer
-from chatbot_engine import ChatbotEngine
+from chatbot_engine import ChatbotEngine, TirTirChatbot
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -231,6 +231,12 @@ async def chat(request: ChatRequest, req: Request):
         processing_time_ms=round(elapsed_ms, 2)
     )
 
+@app.post("/ai/chat")
+async def chat_endpoint(request: Request):
+    data = await request.json()
+    user_msg = data.get("message")
+    response = chatbot.get_response(user_msg)
+    return response
 
 if __name__ == "__main__":
     import uvicorn
