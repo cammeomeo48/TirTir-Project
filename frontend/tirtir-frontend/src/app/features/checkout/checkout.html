@@ -80,7 +80,8 @@
                 <div *ngIf="cart" class="order-items">
                     <div *ngFor="let item of cart.items" class="summary-item">
                         <div class="summary-item-img">
-                            <img [src]="getImageUrl(item.product.Thumbnail_Images)" [alt]="item.product.Name" />
+                            <img [src]="getImageUrl(item.product.Thumbnail_Images)" [alt]="item.product.Name"
+                                (error)="onImageError($event)" />
                         </div>
                         <div class="summary-item-info">
                             <p class="summary-name">{{ item.product.Name }}</p>
@@ -94,7 +95,7 @@
                 <div class="summary-totals">
                     <div class="total-row">
                         <span>Subtotal</span>
-                        <span>${{ getTotal().toFixed(2) }}</span>
+                        <span>${{ getSubtotal().toFixed(2) }}</span>
                     </div>
                     <div class="total-row">
                         <span>Shipping</span>

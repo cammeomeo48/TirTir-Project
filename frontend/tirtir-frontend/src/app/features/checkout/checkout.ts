@@ -86,7 +86,7 @@ export class CheckoutComponent implements OnInit {
             next: (response: any) => {
                 // 2. CHUYỂN HƯỚNG THANH TOÁN LUÔN (KHÔNG CÒN CASE COD)
                 if (paymentMethod === 'VNPAY' || paymentMethod === 'CARD') {
-                    this.createVnPayUrl(response.orderId, this.getTotal(), paymentMethod);
+                    this.createVnPayUrl(response.orderId, paymentMethod);
                 }
             },
             error: (err) => {
@@ -97,11 +97,10 @@ export class CheckoutComponent implements OnInit {
         });
     }
 
-    // Hàm createVnPayUrl giữ nguyên như cũ
-    createVnPayUrl(orderId: string, amount: number, method: string): void {
+    // Hàm createVnPayUrl KHÔNG truyền amount từ UI nữa
+    createVnPayUrl(orderId: string, method: string): void {
         const body = {
             orderId: orderId,
-            amount: amount,
             paymentMethod: method === 'CARD' ? 'CARD' : 'VNPAY',
             bankCode: ''
         };
@@ -121,8 +120,19 @@ export class CheckoutComponent implements OnInit {
         return `${backendBase}/${url.startsWith('/') ? url.substring(1) : url}`;
     }
 
+    onImageError(event: any): void {
+        event.target.src = 'assets/placeholder-product.png';
+    }
+
+    getSubtotal(): number {
+        if (!this.cart || !this.cart.items) return 0;
+        return this.cart.items.reduce((sum, item) => sum + ((item.product.Price || 0) * item.quantity), 0);
+    }
+
     getTotal(): number {
-        return this.cart?.totalPrice || 0;
+        const subtotal = this.getSubtotal();
+        const discountAmount = this.cart?.discountAmount || 0;
+        return subtotal - discountAmount;
     }
 
     getFieldError(fieldName: string): string {

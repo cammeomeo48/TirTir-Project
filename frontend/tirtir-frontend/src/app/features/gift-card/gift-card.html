@@ -1,5 +1,5 @@
 <div class="gift-card-container">
-    <div class="gift-card-content" *ngIf="giftCardProduct">
+    <div class="gift-card-content" *ngIf="!loading && giftCardProduct">
         <!-- Left: Image -->
         <div class="gift-card-image">
             <img src="/assets/images/additional/giftcard/GifCardMain.jpeg" alt="TIRTIR Gift Card">
@@ -33,6 +33,12 @@
         </div>
     </div>
     <div class="loading-state" *ngIf="loading && !giftCardProduct">
-        Loading...
+        <app-loading-spinner></app-loading-spinner>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="!loading && !giftCardProduct" style="text-align: center; padding: 60px 20px;">
+        <h2>🎁 Gift Cards are updating!</h2>
+        <p style="margin-top: 10px; color: #666;">Please check back later for exciting new options.</p>
     </div>
 </div>

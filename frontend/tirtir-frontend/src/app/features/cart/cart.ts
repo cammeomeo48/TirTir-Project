@@ -142,9 +142,13 @@ export class CartComponent implements OnInit {
         return `http://localhost:5001/${cleanUrl}`;
     }
 
+    onImageError(event: any): void {
+        event.target.src = 'assets/placeholder-product.png';
+    }
+
     getSubtotal(): number {
-        if (!this.cart) return 0;
-        return this.cart.totalPrice || 0;
+        if (!this.cart || !this.cart.items) return 0;
+        return this.cart.items.reduce((sum, item) => sum + ((item.product.Price || 0) * item.quantity), 0);
     }
 
     getShipping(): number {
