@@ -3,53 +3,13 @@ Chatbot Engine — NLP-based product recommendation chatbot.
 Loaded ONCE at startup. Handles Vietnamese beauty queries.
 """
 
-import os
-import json
 import logging
 import pandas as pd
-from sentence_transformers import SentenceTransformer, util
-import torch
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import make_pipeline
 
 logger = logging.getLogger(__name__)
-
-class TirTirChatbot:
-    def __init__(self, csv_path):
-        # Sử dụng model nhỏ gọn, chạy tốt trên CPU
-        self.model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
-        self.df = pd.read_csv(csv_path)
-        # Pre-compute embeddings cho bộ câu hỏi trong CSV
-        self.questions = self.df['question'].tolist()
-        self.question_embeddings = self.model.encode(self.questions, convert_to_tensor=True)
-
-    def get_response(self, user_query):
-        # Encode câu hỏi của user
-        query_embedding = self.model.encode(user_query, convert_to_tensor=True)
-        
-        # Tính toán độ tương đồng Cosine
-        cosine_scores = util.cosine_similarity(query_embedding, self.question_embeddings)[0]
-        
-        # Tìm index có điểm cao nhất
-        best_match_idx = torch.argmax(cosine_scores).item()
-        max_score = cosine_scores[best_match_idx].item()
-
-        # Ngưỡng tin cậy (Confidence threshold)
-        if max_score > 0.6:
-            return {
-                "answer": self.df.iloc[best_match_idx]['answer'],
-                "confidence": max_score,
-                "product_suggest": self.df.iloc[best_match_idx].get('product_id', None)
-            }
-        else:
-            return {
-                "answer": "Xin lỗi, tôi chưa hiểu ý bạn. Bạn có thể hỏi về sản phẩm Cushion hoặc Skincare của TirTir không?",
-                "confidence": max_score
-            }
-
-# Khởi tạo instance
-chatbot = TirTirChatbot('chatbot_products.csv')
 
 # ─── Training Data ────────────────────────────────────────────────────────────
 TRAIN_DATA = [
