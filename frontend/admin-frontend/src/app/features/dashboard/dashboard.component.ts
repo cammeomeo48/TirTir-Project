@@ -33,6 +33,10 @@ export class DashboardComponent implements OnInit {
     lowStockItems: any[] = [];
     lowStockLoading = true;
 
+    // Cart recovery stats
+    recoveryStats: any = null;
+    recoveryLoading = true;
+
     constructor(private dashboardService: DashboardService) { }
 
     ngOnInit(): void {
@@ -41,6 +45,7 @@ export class DashboardComponent implements OnInit {
         this.loadTopProducts();
         this.loadRecentOrders();
         this.loadLowStock();
+        this.loadRecoveryStats();
     }
 
     loadStats(): void {
@@ -98,6 +103,17 @@ export class DashboardComponent implements OnInit {
                 this.lowStockLoading = false;
             },
             error: () => { this.lowStockLoading = false; }
+        });
+    }
+
+    loadRecoveryStats(): void {
+        this.recoveryLoading = true;
+        this.dashboardService.getCartRecoveryStats().subscribe({
+            next: (data) => {
+                this.recoveryStats = data;
+                this.recoveryLoading = false;
+            },
+            error: () => { this.recoveryLoading = false; }
         });
     }
 

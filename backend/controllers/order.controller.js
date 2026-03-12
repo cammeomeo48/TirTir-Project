@@ -106,9 +106,15 @@ async function _createOrderLogic(req, session) {
         calculatedTotal += item.product.Price * item.quantity;
     }
 
+    let recoveredFrom;
+    if (cart.recoveryStatus && ['email_1_sent', 'email_2_sent', 'email_3_sent'].includes(cart.recoveryStatus)) {
+        recoveredFrom = cart.recoveryStatus.replace('_sent', ''); // Map to 'email_1', 'email_2', 'email_3'
+    }
+
     const newOrder = new Order({
         user: userId, items: orderItems, shippingAddress, paymentMethod,
-        totalAmount: calculatedTotal, status: ORDER_STATUS.PENDING
+        totalAmount: calculatedTotal, status: ORDER_STATUS.PENDING,
+        ...(recoveredFrom && { recoveredFrom })
     });
 
     const savedOrder = session ? await newOrder.save({ session }) : await newOrder.save();

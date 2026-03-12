@@ -8,5 +8,6 @@ router.get('/conversion', protect, authorize('admin'), statsController.getConver
 router.get('/top-products', protect, authorize('admin'), statsController.getTopProducts);
 router.get('/inventory', protect, authorize('admin'), statsController.getInventoryForecast);
 router.get('/ai-insights', protect, authorize('admin'), statsController.getAiInsights);
+router.get('/cart-recovery', protect, authorize('admin'), statsController.getCartRecoveryStats);
 
 module.exports = router;

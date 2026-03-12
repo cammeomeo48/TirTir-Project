@@ -92,4 +92,9 @@ export class DashboardService {
         const params = new HttpParams().set('threshold', threshold.toString());
         return this.http.get<any>(`${environment.apiUrl}/inventory/alerts`, { params });
     }
+
+    /** GET /api/v1/admin/cart-recovery */
+    getCartRecoveryStats(): Observable<any> {
+        return this.http.get<any>(`${this.adminUrl}/cart-recovery`);
+    }
 }

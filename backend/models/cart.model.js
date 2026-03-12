@@ -35,10 +35,22 @@ const CartSchema = new mongoose.Schema({
         required: true,
         default: 0
     },
-    abandonedEmailSent: {
-        type: Boolean,
-        default: false
+    recoveryStatus: {
+        type: String,
+        enum: ['pending', 'email_1_sent', 'email_2_sent', 'email_3_sent', 'recovered', 'abandoned_final'],
+        default: 'pending'
+    },
+    lastAbandonedAt: {
+        type: Date
+    },
+    recoveryMetrics: {
+        email1SentAt: Date,
+        email2SentAt: Date,
+        email3SentAt: Date
     }
 }, { timestamps: true });
+
+// Optimize query for abandoned carts cron
+CartSchema.index({ recoveryStatus: 1, lastAbandonedAt: -1 });
 
 module.exports = mongoose.model('Cart', CartSchema);

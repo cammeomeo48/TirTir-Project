@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { CartService } from '../../core/services/cart.service';
 import { ProductService } from '../../core/services/product.service';
 import { ProductData } from '../../core/constants/products.data';
+import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner';
 
 @Component({
     selector: 'app-gift-card',
     standalone: true,
-    imports: [CommonModule],
+    imports: [CommonModule, LoadingSpinnerComponent],
     templateUrl: './gift-card.html',
     styleUrl: './gift-card.css',
     changeDetection: ChangeDetectionStrategy.OnPush

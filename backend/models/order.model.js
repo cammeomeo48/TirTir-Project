@@ -63,6 +63,10 @@ const OrderSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
+    recoveredFrom: {
+        type: String,
+        enum: ['email_1', 'email_2', 'email_3', 'manual']
+    }
 },
     { timestamps: true });
 

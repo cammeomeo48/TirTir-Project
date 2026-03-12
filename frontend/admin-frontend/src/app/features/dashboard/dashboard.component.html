@@ -158,6 +158,50 @@
         </table>
     </div>
 
+    <!-- ── Cart Recovery Metrics ────────────────────────────────────── -->
+    <div class="section-card">
+        <div class="section-title">🛒 Cart Recovery Metrics</div>
+        <div *ngIf="recoveryLoading" class="loading-text">Loading...</div>
+        
+        <div class="stats-grid" *ngIf="!recoveryLoading && recoveryStats" style="margin-bottom: 0;">
+            <!-- Abandoned -->
+            <div class="stat-card">
+                <div class="stat-icon">🛒</div>
+                <div class="stat-body">
+                    <div class="stat-value">{{ recoveryStats.totalAbandoned }}</div>
+                    <div class="stat-label">Abandoned Carts</div>
+                </div>
+            </div>
+
+            <!-- Recovered Count -->
+            <div class="stat-card">
+                <div class="stat-icon">🔄</div>
+                <div class="stat-body">
+                    <div class="stat-value">{{ recoveryStats.recoveredCount }}</div>
+                    <div class="stat-label">Recovered Orders</div>
+                </div>
+            </div>
+
+            <!-- Recovered Revenue -->
+            <div class="stat-card">
+                <div class="stat-icon">💵</div>
+                <div class="stat-body">
+                    <div class="stat-value">{{ formatCurrency(recoveryStats.recoveredRevenue) }}</div>
+                    <div class="stat-label">Recovered Revenue</div>
+                </div>
+            </div>
+
+            <!-- Conversion Rate -->
+            <div class="stat-card">
+                <div class="stat-icon">📈</div>
+                <div class="stat-body">
+                    <div class="stat-value">{{ recoveryStats.conversionRate }}%</div>
+                    <div class="stat-label">Conversion Rate</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ── Low Stock Alert ────────────────────────────────────── -->
     <div class="section-card" *ngIf="!lowStockLoading && lowStockItems.length > 0">
         <div class="section-header-row">

@@ -105,7 +105,8 @@ exports.addToCart = async (req, res) => {
             total += (item.price || 0) * item.quantity;
         });
         cart.totalPrice = total;
-        cart.abandonedEmailSent = false; // Reset abandoned cart flag
+        cart.recoveryStatus = 'pending';
+        cart.lastAbandonedAt = new Date(); // Reset timestamp when cart is updated
         console.log("   Total Price:", total);
 
         await cart.save();
@@ -190,7 +191,8 @@ exports.updateCartItem = async (req, res) => {
         }
 
         cart.totalPrice = calculateTotal(cart);
-        cart.abandonedEmailSent = false; // Reset abandoned cart flag
+        cart.recoveryStatus = 'pending';
+        cart.lastAbandonedAt = new Date();
         await cart.save();
 
         const populatedCart = await Cart.findById(cart._id).populate({
@@ -234,7 +236,8 @@ exports.removeFromCart = async (req, res) => {
         }
 
         cart.totalPrice = calculateTotal(cart);
-        cart.abandonedEmailSent = false; // Reset abandoned cart flag
+        cart.recoveryStatus = 'pending';
+        cart.lastAbandonedAt = new Date();
         await cart.save();
 
         const populatedCart = await Cart.findById(cart._id).populate({

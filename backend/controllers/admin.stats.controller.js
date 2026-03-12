@@ -4,6 +4,7 @@ const DailyStats = require('../models/daily.stats.model');
 const ChatLog = require('../models/chat.log.model');
 const mongoose = require('mongoose');
 const User = require('../models/user.model');
+const Cart = require('../models/cart.model');
 
 // GET /api/admin/stats/inventory
 exports.getInventoryForecast = async (req, res) => {
@@ -219,5 +220,51 @@ exports.getTopProducts = async (req, res) => {
         res.json({ topSelling, topViewed });
     } catch (error) {
         res.status(500).json({ message: error.message });
+    }
+};
+
+// GET /api/v1/admin/stats/cart-recovery
+exports.getCartRecoveryStats = async (req, res) => {
+    try {
+        // 1. Total Abandoned (pending, email_*_sent)
+        const totalAbandoned = await Cart.countDocuments({
+            recoveryStatus: { $nin: ['recovered', 'abandoned_final'] }
+        });
+
+        // 2. Recovery Stats from Orders
+        const recoveryStats = await Order.aggregate([
+            {
+                $match: {
+                    status: { $ne: 'Cancelled' },
+                    recoveredFrom: { $in: ['email_1', 'email_2', 'email_3', 'manual'] }
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    recoveredCount: { $sum: 1 },
+                    recoveredRevenue: { $sum: "$totalAmount" }
+                }
+            }
+        ]);
+
+        const recoveredCount = recoveryStats[0]?.recoveredCount || 0;
+        const recoveredRevenue = recoveryStats[0]?.recoveredRevenue || 0;
+        
+        // 3. Conversion Rate
+        const totalSentOrPending = totalAbandoned + recoveredCount;
+        const conversionRate = totalSentOrPending > 0 
+            ? ((recoveredCount / totalSentOrPending) * 100).toFixed(2) 
+            : 0;
+
+        res.json({
+            totalAbandoned,
+            recoveredCount,
+            recoveredRevenue,
+            conversionRate: Number(conversionRate)
+        });
+    } catch (error) {
+        console.error("Cart Recovery Stats Error:", error);
+        res.status(500).json({ message: "Unable to calculate cart recovery stats" });
     }
 };
