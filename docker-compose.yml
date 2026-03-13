@@ -1,4 +1,4 @@
-version: '3.8'
+
 
 services:
   # ─── Redis Cache ────────────────────────────────────
@@ -30,6 +30,23 @@ services:
       retries: 5
       start_period: 30s # Give model time to load on first startup
 
+  # ─── FastAPI Chatbot Microservice ────────────────────────
+  chatbot:
+    build: ./backend/chatbot
+    ports:
+      - "8001:8001"
+    environment:
+      - AI_SERVICE_API_KEY=${AI_SERVICE_API_KEY:-}
+    volumes:
+      - ./backend/chatbot:/app # Hot-reload Python files
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s # Give model time to load on first startup
+
   # ─── Node.js Backend ────────────────────────────────
   backend:
     build: ./backend
@@ -40,6 +57,7 @@ services:
     environment:
       # Override service URLs to use Docker internal network names
       - AI_SERVICE_URL=http://ai-service:8000
+      - CHATBOT_SERVICE_URL=http://chatbot:8001
       - REDIS_URL=redis://redis:6379
       - AI_SERVICE_API_KEY=${AI_SERVICE_API_KEY:-}
     volumes:
@@ -50,6 +68,7 @@ services:
       - ./frontend/tirtir-frontend/public/assets:/frontend/tirtir-frontend/public/assets
     depends_on:
       - ai-service
+      - chatbot
       - redis
     restart: unless-stopped
   # ─── Frontend: Chạy NGOÀI Docker (ng serve) ────────

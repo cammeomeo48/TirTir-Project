@@ -1,7 +1,6 @@
 """
-TirTir AI Microservice — FastAPI
-Models are loaded ONCE at startup via lifespan event:
-  - SkinAnalyzer (MediaPipe FaceLandmarker)
+TirTir Chatbot Microservice — FastAPI
+Runs on port 8001
 """
 
 import os
@@ -18,7 +17,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
-from skin_analyzer import SkinAnalyzer
+from chatbot_engine import ChatbotEngine
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -36,7 +35,6 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
     Validate API key from X-API-Key header.
     If AI_SERVICE_API_KEY env var is not set, skip auth (dev mode).
     """
-    # No key configured → skip auth (backward compatible for dev)
     if not AI_API_KEY:
         return True
     if api_key and api_key == AI_API_KEY:
@@ -48,19 +46,25 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
 
 
 # ─── Global references — set during lifespan startup ──────────────────────────
-analyzer: SkinAnalyzer | None = None
+chatbot: ChatbotEngine | None = None
+
+# Path to the product CSV 
+_CHATBOT_CSV = os.path.join(os.path.dirname(__file__), "chatbot_products.csv")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Load all AI models once at startup, clean up on shutdown."""
-    global analyzer, chatbot
+    """Load model once at startup, clean up on shutdown."""
+    global chatbot
 
-    logger.info("🚀 Starting AI Microservice — Loading models...")
+    logger.info("🚀 Starting Chatbot Microservice — Loading model...")
     start = time.time()
 
-    analyzer = SkinAnalyzer()
-    logger.info("✅ SkinAnalyzer loaded.")
+    if os.path.exists(_CHATBOT_CSV):
+        chatbot = ChatbotEngine(_CHATBOT_CSV)
+        logger.info("✅ ChatbotEngine loaded.")
+    else:
+        logger.warning(f"⚠️  Chatbot CSV not found at {_CHATBOT_CSV}. /chat endpoint will be unavailable.")
 
     if AI_API_KEY:
         logger.info("🔑 API Key authentication is ENABLED.")
@@ -68,17 +72,17 @@ async def lifespan(app: FastAPI):
         logger.warning("⚠️  AI_SERVICE_API_KEY not set — authentication disabled (dev mode).")
 
     elapsed = time.time() - start
-    logger.info(f"✅ All models loaded in {elapsed:.2f}s. Ready to serve.")
+    logger.info(f"✅ Chatbot model loaded in {elapsed:.2f}s. Ready to serve.")
     yield
 
     # Cleanup
-    logger.info("🛑 Shutting down AI Microservice.")
-    analyzer = None
+    logger.info("🛑 Shutting down Chatbot Microservice.")
+    chatbot = None
 
 
 app = FastAPI(
-    title="TirTir AI Service",
-    version="2.1.0",
+    title="TirTir Chatbot Service",
+    version="1.0.0",
     lifespan=lifespan
 )
 
@@ -108,13 +112,13 @@ app.add_middleware(
 
 # ─── Request / Response Models ─────────────────────────────────────────────────
 
-class AnalyzeRequest(BaseModel):
-    image_base64: str
+class ChatRequest(BaseModel):
+    message: str
 
 
-class AnalyzeResponse(BaseModel):
+class ChatResponse(BaseModel):
     success: bool
-    data: dict | None = None
+    data: dict | None = None   # contains: intent, message, type, product data
     error: str | None = None
     processing_time_ms: float | None = None
 
@@ -126,48 +130,37 @@ async def health_check():
     """Health check — no auth, no rate limit."""
     return {
         "status": "ok",
-        "skin_analyzer_loaded": analyzer is not None,
-        "service": "TirTir AI Service v2.1",
+        "chatbot_loaded": chatbot is not None,
+        "service": "TirTir Chatbot Service v1.0",
         "auth_enabled": bool(AI_API_KEY),
     }
 
+@app.post("/chat", response_model=ChatResponse, dependencies=[Depends(verify_api_key)])
+@limiter.limit("30/minute")
+async def chat(request: ChatRequest, req: Request):
+    """
+    Process a Vietnamese beauty query and return a structured bot response.
+    Model is loaded at startup — sub-millisecond inference, no spawn overhead.
+    Rate limit: 30 requests/minute per IP.
+    """
+    if chatbot is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Chatbot model not available. Ensure chatbot_products.csv exists in the backend/chatbot directory."
+        )
 
-@app.post("/analyze", response_model=AnalyzeResponse, dependencies=[Depends(verify_api_key)])
-@limiter.limit("10/minute")
-async def analyze_skin(request: AnalyzeRequest, req: Request):
-    """
-    Analyze skin from a base64-encoded image.
-    Returns skin tone, undertone, concerns, and confidence.
-    Rate limit: 10 requests/minute per IP.
-    """
-    if analyzer is None:
-        raise HTTPException(status_code=503, detail="AI model not loaded yet")
+    if not request.message or not request.message.strip():
+        raise HTTPException(status_code=400, detail="message field is required and cannot be empty")
 
     start = time.time()
-
-    image = analyzer.decode_base64_image(request.image_base64)
-    if image is None:
-        return AnalyzeResponse(
-            success=False,
-            error="Failed to decode image. Please send a valid base64 JPEG/PNG."
-        )
-
     try:
-        result = analyzer.analyze(image)
+        result = chatbot.process(request.message.strip())
     except Exception as e:
-        logger.exception("Skin analysis failed")
-        return AnalyzeResponse(success=False, error=str(e))
+        logger.exception("Chatbot processing failed")
+        return ChatResponse(success=False, error=str(e))
 
     elapsed_ms = (time.time() - start) * 1000
-
-    if "error" in result:
-        return AnalyzeResponse(
-            success=False,
-            error=result["error"],
-            processing_time_ms=round(elapsed_ms, 2)
-        )
-
-    return AnalyzeResponse(
+    return ChatResponse(
         success=True,
         data=result,
         processing_time_ms=round(elapsed_ms, 2)
@@ -176,4 +169,4 @@ async def analyze_skin(request: AnalyzeRequest, req: Request):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8001, reload=True)

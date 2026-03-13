@@ -97,7 +97,7 @@ class ChatbotEngine:
             [x[0] for x in TRAIN_DATA],
             [x[1] for x in TRAIN_DATA]
         )
-        logger.info("✅ Chatbot NLP model ready.")
+        logger.info("✅ Chatbot ready.")
 
     def _smart_recommend(self, query: str):
         """Score products by TF-IDF Cosine Similarity combined with keyword rules."""

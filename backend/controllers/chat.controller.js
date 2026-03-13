@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+const CHATBOT_SERVICE_URL = process.env.CHATBOT_SERVICE_URL || 'http://localhost:8001';
 const AI_SERVICE_API_KEY = process.env.AI_SERVICE_API_KEY || '';
 
 /**
@@ -18,7 +18,7 @@ exports.chatWithBot = async (req, res) => {
 
     try {
         const response = await axios.post(
-            `${AI_SERVICE_URL}/chat`,
+            `${CHATBOT_SERVICE_URL}/chat`,
             { message: message.trim() },
             {
                 timeout: 5000,
@@ -39,12 +39,7 @@ exports.chatWithBot = async (req, res) => {
         });
 
     } catch (error) {
-        // FastAPI server not running
-        if (error.code === 'ECONNREFUSED') {
-            return res.status(503).json({
-                success: false,
-                message: 'AI Chatbot Service chưa chạy. Vui lòng khởi động ai-service.',
-            });
+                message: 'AI Chatbot Service chưa chạy. Vui lòng khởi động chatbot service (port 8001).',
         }
         // Request timed out
         if (error.code === 'ECONNABORTED') {
@@ -70,8 +65,8 @@ exports.handleChat = async (req, res) => {
     try {
         const { message } = req.body;
         
-        // Gọi sang Python AI Service
-        const aiResponse = await axios.post('http://ai-service:8000/ai/chat', {
+        // Gọi sang Python Chatbot Service
+        const aiResponse = await axios.post('http://chatbot:8001/chat', {
             message: message
         });
 

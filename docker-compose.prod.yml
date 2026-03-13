@@ -47,6 +47,25 @@ services:
       retries: 5
       start_period: 30s
 
+  # ─── FastAPI Chatbot Microservice ────────────────────────
+  chatbot:
+    build: ./backend/chatbot
+    ports:
+      - "8001:8001"
+    environment:
+      - AI_SERVICE_API_KEY=${AI_SERVICE_API_KEY}
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
   # ─── Node.js Backend ────────────────────────────────────
   backend:
     build: ./backend
@@ -57,10 +76,13 @@ services:
     environment:
       - NODE_ENV=production
       - AI_SERVICE_URL=http://ai-service:8000
+      - CHATBOT_SERVICE_URL=http://chatbot:8001
       - REDIS_URL=redis://redis:6379
       - AI_SERVICE_API_KEY=${AI_SERVICE_API_KEY}
     depends_on:
       ai-service:
+        condition: service_healthy
+      chatbot:
         condition: service_healthy
       redis:
         condition: service_healthy
