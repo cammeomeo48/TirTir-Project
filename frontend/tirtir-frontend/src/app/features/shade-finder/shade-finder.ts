@@ -37,7 +37,7 @@ interface SkinProfile {
   skinTone: string;
   undertone: string;
   skinType: string;
-  concerns: string[];
+  concerns?: string[];
   confidence: number;
 }
 

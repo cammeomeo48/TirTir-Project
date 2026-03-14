@@ -5,8 +5,13 @@ const StockHistory = require('../models/stock.history.model');
 const mongoose = require('mongoose');
 const { ORDER_STATUS } = require('../constants');
 const { createNotification } = require('./notification.controller');
+const { emitToAdmins } = require('../services/socket.service');
 // Lazy-load to avoid circular dep: shipping.controller → order.model ← order.controller
 const getShippingController = () => require('./shipping.controller');
+
+// Currency formatter for socket event messages
+const formatCurrency = (n) =>
+    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n);
 
 // ─── Helper: check if sessions are supported (Replica Set / Atlas only) ────────
 let _sessionSupported = null; // null = not yet checked, true/false = cached result
@@ -133,6 +138,14 @@ async function _createOrderLogic(req, session) {
     const cartDeleteQuery = Cart.findOneAndDelete({ user: userId });
     session ? await cartDeleteQuery.session(session) : await cartDeleteQuery;
 
+    // ── Real-time: notify admins of new order ─────────────────────────────────
+    emitToAdmins('new_order', {
+        type: 'new_order',
+        title: 'New Order',
+        message: `Order #${savedOrder._id.toString().slice(-6).toUpperCase()} — ${formatCurrency(savedOrder.totalAmount)}`,
+        orderId: savedOrder._id
+    });
+
     return savedOrder._id;
 }
 
@@ -222,6 +235,11 @@ exports.updateOrderStatus = async (req, res) => {
             }
         }
 
+        // STOCK STATE MACHINE:
+        // Order PENDING   → Stock_Reserved++, Stock_Quantity--  (reserved on order create)
+        // Order CONFIRMED → Stock_Reserved--,  Stock_Quantity unchanged  (stock already deducted)
+        // Order CANCELLED → Stock_Reserved-- (release), Stock_Quantity++  (return to available)
+
         // 2. Pending -> Cancelled: RELEASE Stock (Reserved -> Available)
         if (status === 'Cancelled' && oldStatus === 'Pending') {
             for (const item of order.items) {
@@ -247,10 +265,21 @@ exports.updateOrderStatus = async (req, res) => {
                     });
                 }
             }
+
+            // Guard: clamp Stock_Reserved to 0 — prevents negative drift from race conditions
+            await Product.updateMany(
+                { _id: { $in: order.items.map(i => i.product._id) }, Stock_Reserved: { $lt: 0 } },
+                { $set: { Stock_Reserved: 0 } }
+            );
         }
 
+        // STOCK STATE MACHINE:
+        // Order PENDING   → Stock_Reserved++, Stock_Quantity--  (reserved on order create)
+        // Order CONFIRMED → Stock_Reserved--,  Stock_Quantity unchanged  (stock already deducted)
+        // Order CANCELLED → Stock_Reserved-- (release), Stock_Quantity++  (return to available)
+
         // 3. Processing/Shipped -> Cancelled: RESTOCK (Refund)
-        // Stock was already fully deducted (Reserved cleared). Need to add back to Available.
+        // Stock was already fully deducted (Reserved cleared at Processing). Add back to Available only.
         if (status === 'Cancelled' && (oldStatus === 'Processing' || oldStatus === 'Shipped')) {
             for (const item of order.items) {
                 const product = await Product.findByIdAndUpdate(item.product._id, {
@@ -271,6 +300,12 @@ exports.updateOrderStatus = async (req, res) => {
                     });
                 }
             }
+
+            // Guard: clamp Stock_Reserved to 0 — safety net against any stale reservation
+            await Product.updateMany(
+                { _id: { $in: order.items.map(i => i.product._id) }, Stock_Reserved: { $lt: 0 } },
+                { $set: { Stock_Reserved: 0 } }
+            );
         }
 
         // --- END STOCK LOGIC ---
@@ -354,31 +389,42 @@ exports.cancelOrder = async (req, res) => {
         order.status = 'Cancelled';
         await order.save();
 
-        // FIX: Restock Logic (Release Reserved Stock)
-        for (const item of order.items) {
-            // Return to Stock: Increase Available, Decrease Reserved
-            const product = await Product.findByIdAndUpdate(item.product._id, {
-                $inc: {
-                    Stock_Quantity: item.quantity,
-                    Stock_Reserved: -item.quantity
-                }
-            }, { new: true });
+        // STOCK STATE MACHINE:
+        // Order PENDING   → Stock_Reserved++, Stock_Quantity--  (reserved on order create)
+        // Order CONFIRMED → Stock_Reserved--,  Stock_Quantity unchanged  (stock already deducted)
+        // Order CANCELLED → Stock_Reserved-- (release), Stock_Quantity++  (return to available)
 
-            if (product) {
-                // Log History
-                await StockHistory.create({
-                    product: product._id,
-                    action: 'Release',
-                    change_type: 'Increase',
-                    source_id: order._id.toString(),
-                    balance_before: product.Stock_Quantity - item.quantity,
-                    balance_after: product.Stock_Quantity,
-                    changeAmount: item.quantity,
-                    reason: 'Order Cancelled by User (Stock Returned)',
-                    performedBy: userId
-                });
-            }
-        }
+        // Release reserved stock for each item
+        await Promise.all(
+            order.items.map(async (item) => {
+                const product = await Product.findByIdAndUpdate(item.product, {
+                    $inc: {
+                        Stock_Quantity: item.quantity,
+                        Stock_Reserved: -item.quantity
+                    }
+                }, { new: true });
+
+                if (product) {
+                    await StockHistory.create({
+                        product: product._id,
+                        action: 'Release',
+                        change_type: 'Increase',
+                        source_id: order._id.toString(),
+                        balance_before: product.Stock_Quantity - item.quantity,
+                        balance_after: product.Stock_Quantity,
+                        changeAmount: item.quantity,
+                        reason: 'Order Cancelled by User (Stock Returned)',
+                        performedBy: userId
+                    });
+                }
+            })
+        );
+
+        // Guard: clamp Stock_Reserved to 0 — prevents negative drift from race conditions
+        await Product.updateMany(
+            { _id: { $in: order.items.map(i => i.product) }, Stock_Reserved: { $lt: 0 } },
+            { $set: { Stock_Reserved: 0 } }
+        );
 
         res.json({ message: "Đã hủy đơn hàng thành công", order });
 

@@ -1,9 +1,9 @@
 import { Injectable, inject, PLATFORM_ID } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, timer, Subscription } from 'rxjs';
-import { switchMap, tap, retry, shareReplay, takeWhile } from 'rxjs/operators';
+import { BehaviorSubject, Observable, timer, Subscription, of } from 'rxjs';
+import { switchMap, tap, retry, shareReplay, takeWhile, catchError } from 'rxjs/operators';
 import { isPlatformBrowser } from '@angular/common';
-import { environment } from '../../../environments/environment'; // Adjust if needed
+import { environment } from '../../../environments/environment';
 import { INotification } from '../models/notification.model';
 
 @Injectable({
@@ -24,6 +24,7 @@ export class NotificationService {
     public unreadCount$ = this.unreadCountSubject.asObservable();
 
     private pollingSubscription?: Subscription;
+    private isPolling = false;
 
     constructor() {
         // Only start polling in browser environment
@@ -35,12 +36,35 @@ export class NotificationService {
     /**
      * Start polling every 60 seconds
      */
-    private startPolling() {
+    public startPolling() {
+        if (this.isPolling) return;
+        this.isPolling = true;
+
         this.pollingSubscription = timer(0, 60000)
             .pipe(
-                switchMap(() => this.fetchNotifications())
+                switchMap(() => this.fetchNotifications()),
+                // Stop polling if we explicitly get an error that wasn't caught/handled
+                takeWhile(() => this.isPolling)
             )
-            .subscribe();
+            .subscribe({
+                error: (err) => {
+                    // Stop polling strictly on 401 Unauthorized
+                    if (err.status === 401) {
+                        this.stopPolling();
+                    }
+                }
+            });
+    }
+
+    /**
+     * Stop the polling completely
+     */
+    public stopPolling() {
+        this.isPolling = false;
+        if (this.pollingSubscription) {
+            this.pollingSubscription.unsubscribe();
+            this.pollingSubscription = undefined;
+        }
     }
 
     /**
@@ -54,7 +78,13 @@ export class NotificationService {
                         this.updateState(response.data);
                     }
                 }),
-                retry(2) // Retry twice on failure
+                retry(1), // Retry once on failure
+                catchError(err => {
+                    if (err.status === 401) {
+                        this.stopPolling(); // immediately stop on UNAUTHORIZED
+                    }
+                    return of({ success: false, data: [] }); // gracefully return empty
+                })
             );
     }
 

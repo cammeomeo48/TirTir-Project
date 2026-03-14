@@ -39,7 +39,12 @@ exports.chatWithBot = async (req, res) => {
         });
 
     } catch (error) {
+        // AI Service unreachable
+        if (error.code === 'ECONNREFUSED') {
+            return res.status(503).json({
+                success: false,
                 message: 'AI Chatbot Service chưa chạy. Vui lòng khởi động chatbot service (port 8001).',
+            });
         }
         // Request timed out
         if (error.code === 'ECONNABORTED') {

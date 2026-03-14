@@ -200,9 +200,10 @@
                         <span class="profile-icon">💧</span>
                         <span>Loại da: <strong>{{ skinProfile()!.skinType }}</strong></span>
                     </div>
-                    <div class="profile-tag" *ngIf="skinProfile()!.concerns?.length && skinProfile()!.concerns[0] !== 'None'">
+                    <!-- concerns is guaranteed to exist due to previous check, but strict templates needs explicit handling -->
+                    <div class="profile-tag" *ngIf="skinProfile()!.concerns?.length && skinProfile()!.concerns?.[0] !== 'None'">
                         <span class="profile-icon">🔍</span>
-                        <span>Vấn đề: <strong>{{ skinProfile()!.concerns.join(', ') }}</strong></span>
+                        <span>Vấn đề: <strong>{{ skinProfile()!.concerns?.join(', ') }}</strong></span>
                     </div>
                 </div>
 

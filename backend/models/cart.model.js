@@ -37,8 +37,16 @@ const CartSchema = new mongoose.Schema({
     },
     recoveryStatus: {
         type: String,
-        enum: ['pending', 'email_1_sent', 'email_2_sent', 'email_3_sent', 'recovered', 'abandoned_final'],
+        enum: ['pending', 'email_1_sent', 'email_2_sent', 'email_3_sent', 'recovered', 'abandoned_final', 'unsubscribed'],
         default: 'pending'
+    },
+    unsubscribedAt: {
+        type: Date,
+        default: null
+    },
+    isProcessing: {
+        type: Boolean,
+        default: false
     },
     lastAbandonedAt: {
         type: Date

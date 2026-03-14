@@ -1,7 +1,8 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { NotificationService } from './notification.service';
 
 export interface AuthResponse {
     success: boolean;
@@ -23,7 +24,10 @@ export class AuthService {
     private currentUserSubject = new BehaviorSubject<any>(null);
     public currentUser$ = this.currentUserSubject.asObservable();
 
-    constructor(private http: HttpClient) {
+    constructor(
+        private http: HttpClient,
+        private notificationService: NotificationService
+    ) {
         // Check if user is already logged in
         const token = localStorage.getItem('admin_token');
         const user = localStorage.getItem('admin_user');
@@ -57,6 +61,8 @@ export class AuthService {
         localStorage.removeItem('admin_token');
         localStorage.removeItem('admin_user');
         this.currentUserSubject.next(null);
+        // Disconnect socket
+        this.notificationService.disconnect();
     }
 
     getToken(): string | null {

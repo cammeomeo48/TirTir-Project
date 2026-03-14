@@ -1,8 +1,10 @@
 const cron = require('node-cron');
+const jwt = require('jsonwebtoken');
 const Cart = require('../models/cart.model');
 const sendEmail = require('../utils/sendEmail');
 const logger = require('../utils/logger');
 const Sentry = require('@sentry/node');
+const { emitToAdmins } = require('../services/socket.service');
 
 // Note: Bull/Redis queue is recommended here for scalability > 50 emails. 
 // For now, using sequential processing with error catching.
@@ -49,13 +51,23 @@ const abandonedCartJob = cron.schedule('0 * * * *', async () => {
             }
         ];
 
+        // Release carts stuck processing for > 2 hours (guards against crashed mid-run)
+        await Cart.updateMany(
+            { isProcessing: true, updatedAt: { $lt: new Date(Date.now() - 2 * 60 * 60 * 1000) } },
+            { $set: { isProcessing: false } }
+        );
+
         let totalSent = 0;
 
         for (const stage of stages) {
             const cartsToProcess = await Cart.find({
-                recoveryStatus: stage.targetStatus,
+                $and: [
+                    { recoveryStatus: stage.targetStatus },
+                    { recoveryStatus: { $ne: 'unsubscribed' } }
+                ],
                 lastAbandonedAt: stage.timeTarget,
-                'items.0': { $exists: true }
+                'items.0': { $exists: true },
+                isProcessing: { $ne: true }
             }).populate('user', 'email name').populate('items.product', 'Name Price');
 
             if (cartsToProcess.length > 0) {
@@ -77,6 +89,13 @@ const abandonedCartJob = cron.schedule('0 * * * *', async () => {
                     const recoveryToken = Buffer.from(cart.user.email).toString('base64');
                     const recoveryUrl = `${process.env.FRONTEND_URL || 'http://localhost:4200'}/cart?recover=${recoveryToken}`;
 
+                    const unsubscribeToken = jwt.sign(
+                        { userId: cart.user._id, cartId: cart._id },
+                        process.env.JWT_SECRET,
+                        { expiresIn: '7d' }
+                    );
+                    const unsubscribeUrl = `${process.env.BACKEND_URL}/api/cart/unsubscribe?token=${unsubscribeToken}`;
+
                     const emailOptions = {
                         email: cart.user.email,
                         subject: stage.subject,
@@ -89,9 +108,21 @@ const abandonedCartJob = cron.schedule('0 * * * *', async () => {
                                 ${productsHtml}
                                 <br>
                                 <a href="${recoveryUrl}" style="background-color: #ff4d4f; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Return to Cart</a>
+                                <p style="text-align:center;font-size:11px;color:#999;margin-top:32px">Don't want reminders? <a href="${unsubscribeUrl}" style="color:#999;text-decoration:underline">Unsubscribe</a></p>
                             </div>
                         `
                     };
+
+                    // Atomically claim the cart — prevents duplicate sends on concurrent/restarted runs
+                    const claimed = await Cart.findOneAndUpdate(
+                        { _id: cart._id, isProcessing: { $ne: true } },
+                        { $set: { isProcessing: true } },
+                        { new: true }
+                    );
+                    if (!claimed) {
+                        logger.warn(`Cart ${cart._id} skipped — already being processed`);
+                        continue;
+                    }
 
                     try {
                         await sendEmail(emailOptions);
@@ -101,11 +132,21 @@ const abandonedCartJob = cron.schedule('0 * * * *', async () => {
                         if (!cart.recoveryMetrics) cart.recoveryMetrics = {};
                         cart.recoveryMetrics[stage.metricField] = new Date();
                         await cart.save();
-                        
+
                         totalSent++;
                         logger.info(`Recovery email (${stage.newStatus}) sent to ${cart.user.email}`);
+
+                        // ── Real-time: notify admins a cart recovery email was sent ──
+                        emitToAdmins('cart_recovered', {
+                            type: 'cart_recovered',
+                            title: 'Cart Recovered',
+                            message: `A cart was emailed for recovery via ${stage.newStatus}`,
+                            cartId: cart._id
+                        });
                     } catch (emailError) {
                         logger.error(`Failed to send email to ${cart.user.email}: ${emailError.message}`);
+                    } finally {
+                        await Cart.findByIdAndUpdate(cart._id, { $set: { isProcessing: false } });
                     }
                 }
             }

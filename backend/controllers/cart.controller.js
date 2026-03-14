@@ -1,5 +1,6 @@
 const Cart = require('../models/cart.model');
 const Product = require('../models/product.model');
+const jwt = require('jsonwebtoken');
 
 // Helper to recalculate total price
 const calculateTotal = (cart) => {
@@ -319,5 +320,42 @@ exports.getCartCount = async (req, res) => {
     } catch (error) {
         console.error("Get Cart Count Error:", error);
         res.status(500).json({ message: "Server error" });
+    }
+};
+
+// 7. UNSUBSCRIBE FROM CART RECOVERY EMAILS
+exports.unsubscribeRecovery = async (req, res) => {
+    const successHtml = `<html><body style="font-family:sans-serif;text-align:center;padding:60px"><h2>You've been unsubscribed</h2><p>You won't receive any more cart reminders.</p></body></html>`;
+    const errorHtml = `<html><body style="font-family:sans-serif;text-align:center;padding:60px"><h2>Invalid or expired link</h2><p>This unsubscribe link is no longer valid. Please check your email for an updated link.</p></body></html>`;
+
+    try {
+        const { token } = req.query;
+        if (!token) {
+            return res.status(400).send(errorHtml);
+        }
+
+        let decoded;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET);
+        } catch (err) {
+            return res.status(400).send(errorHtml);
+        }
+
+        const { userId, cartId } = decoded;
+
+        const cart = await Cart.findOne({ _id: cartId, user: userId });
+        if (!cart) {
+            return res.status(400).send(errorHtml);
+        }
+
+        cart.recoveryStatus = 'unsubscribed';
+        cart.unsubscribedAt = Date.now();
+        await cart.save();
+
+        return res.send(successHtml);
+
+    } catch (error) {
+        console.error("Unsubscribe Recovery Error:", error);
+        return res.status(400).send(errorHtml);
     }
 };

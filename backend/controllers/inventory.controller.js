@@ -2,6 +2,7 @@ const Product = require('../models/product.model');
 const StockHistory = require('../models/stock.history.model');
 const Order = require('../models/order.model');
 const mongoose = require('mongoose');
+const { emitToAdmins } = require('../services/socket.service');
 
 // 1. GET ALERTS (Sắp hết hàng & Bán chậm)
 exports.getInventoryAlerts = async (req, res) => {
@@ -109,6 +110,17 @@ exports.adjustStock = async (req, res) => {
         });
 
         res.json({ message: "Stock adjusted successfully", product });
+        
+        // ── Real-time: alert admins if stock is now low ───────────────────────
+        const available = product.Stock_Quantity - (product.Stock_Reserved || 0);
+        if (available < 10) {
+            emitToAdmins('low_stock', {
+                type: 'low_stock',
+                title: 'Low Stock Alert',
+                message: `${product.Name} — only ${available} left`,
+                productId: product._id
+            });
+        }
 
     } catch (err) {
         res.status(500).json({ message: err.message });

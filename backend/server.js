@@ -1,6 +1,7 @@
 require("dotenv").config();
 require("./instrument"); // Initialize Sentry
 
+const http = require('http');
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
@@ -15,6 +16,7 @@ const Sentry = require("@sentry/node");
 const errorHandler = require('./middlewares/error');
 const logger = require('./utils/logger');
 require('./cron/abandonedCart.cron'); // Initialize Cron Jobs
+const socketService = require('./services/socket.service');
 
 const { apiLimiter } = require('./middlewares/rateLimit');
 
@@ -45,6 +47,8 @@ const swaggerSpec = swaggerJsdoc(swaggerOptions);
 // ─────────────────────────────────────────────────────────────────────────────
 
 const app = express();
+const server = http.createServer(app);
+socketService.init(server);
 
 // 1. Performance Monitoring (Response Time)
 app.use(responseTime((req, res, time) => {
@@ -149,6 +153,8 @@ app.use(helmet({
         isDev ? "http://localhost:4201" : null,
         isDev ? "ws://localhost:4200" : null, // WebSocket HMR
         isDev ? "ws://localhost:4201" : null,
+        isDev ? "ws://localhost:5001" : null, // Socket.io admin notifications
+        isDev ? "http://localhost:5001" : null,
       ].filter(Boolean),
       mediaSrc: ["'self'", "blob:"],
       objectSrc: ["'none'"],
@@ -294,7 +300,7 @@ async function start() {
     const { startGHNPollingJob } = require('./jobs/checkGHNStatus');
     startGHNPollingJob();
 
-    app.listen(PORT, () => console.log(`Server running: http://localhost:${PORT}`));
+    server.listen(PORT, () => console.log(`Server running: http://localhost:${PORT}`));
   } catch (err) {
     console.error("Startup error:", err.message);
     process.exit(1);

@@ -6,11 +6,15 @@ const {
     updateCartItem,
     removeFromCart,
     clearCart,
-    getCartCount
+    getCartCount,
+    unsubscribeRecovery
 } = require('../controllers/cart.controller');
 const { protect } = require('../middlewares/auth');
 
-// Apply protection to all cart routes
+// Public route — no auth needed (linked from email)
+router.get('/unsubscribe', unsubscribeRecovery);
+
+// Apply protection to all remaining cart routes
 router.use(protect);
 
 router.post('/add', addToCart);
