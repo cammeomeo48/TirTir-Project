@@ -308,7 +308,7 @@ exports.healthCheck = async (req, res) => {
     let aiServiceStatus = 'unknown';
     try {
         const aiHealth = await axios.get(`${AI_SERVICE_URL}/health`, { timeout: 3000 });
-        aiServiceStatus = aiHealth.data.model_loaded ? 'ready' : 'loading';
+        aiServiceStatus = aiHealth.data.skin_analyzer_loaded ? 'ready' : 'loading';
     } catch {
         aiServiceStatus = 'offline';
     }

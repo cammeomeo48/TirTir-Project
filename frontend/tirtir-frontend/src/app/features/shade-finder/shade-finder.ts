@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
-import { take } from 'rxjs';
+import { forkJoin, of, take } from 'rxjs';
+import { catchError, switchMap } from 'rxjs/operators';
 import { FaceTrackerService } from '../../core/services/face-tracker.service';
 import { CartService } from '../../core/services/cart.service';
 import { environment } from '../../../environments/environment';
@@ -16,9 +17,9 @@ interface ShadeMatch {
   Shade_Name: string;
   Shade_Code: string;
   Hex_Code: string;
-  Image_URL: string;        // relative (assets/shades/…) or absolute URL
+  Image_URL: string;
   Shade_Image: string;
-  matchScore: number;        // lower = better
+  matchScore: number;
   deltaE: number;
   predictedUndertone: string;
   adjustmentNote: string;
@@ -29,6 +30,36 @@ interface ShadeMatch {
   Coverage_Profile: string;
   Finish_Type: string;
   Oxidation_Risk_Level: string;
+}
+
+/** Response from POST /api/ai/analyze-face */
+interface SkinProfile {
+  skinTone: string;
+  undertone: string;
+  skinType: string;
+  concerns: string[];
+  confidence: number;
+}
+
+/** Single routine step from Gemini */
+interface RoutineStep {
+  step: string;
+  product_id: string;
+  reason: string;
+  product?: {
+    Name: string;
+    Category: string;
+    Price: number;
+    Thumbnail_Images: string;
+    slug?: string;
+    _id: string;
+  } | null;
+}
+
+/** Response from POST /api/ai/recommend-routine */
+interface RoutineData {
+  routine: RoutineStep[];
+  advice: string;
 }
 
 @Component({
@@ -50,18 +81,26 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
 
   selectedSkinType = 'Normal';
 
-  // Result data from backend
+  // Shade match results
   matchResults: ShadeMatch[] = [];
   bestMatch: ShadeMatch | null = null;
   userUndertone = '';
 
+  // AI Routine results
+  skinProfile = signal<SkinProfile | null>(null);
+  routine = signal<RoutineData | null>(null);
+  isLoadingRoutine = signal(false);
+  routineError = signal<string | null>(null);
+
   // UI
   showResultModal = signal(false);
+  activeTab = signal<'shade' | 'routine'>('shade');
   toastMessage = signal<string | null>(null);
   private toastTimer: any = null;
 
-  // Backend base URL (without /api/v1)
   private readonly backendBase = environment.apiUrl.replace('/api/v1', '');
+  private readonly apiBase = environment.apiUrl; // /api/v1
+  private readonly aiBase = environment.apiUrl.replace('/v1', ''); // /api
 
   // Lighting & Validation
   lightingStatus = signal<{ isValid: boolean, message: string, type: 'success' | 'warning' | 'error' }>({
@@ -164,6 +203,22 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
     );
   }
 
+  /**
+   * Capture a JPEG base64 snapshot from the video stream.
+   * Reuses the existing hidden canvas element.
+   */
+  private captureBase64(): string | null {
+    const video = this.videoElement?.nativeElement;
+    const canvas = this.canvasElement?.nativeElement;
+    if (!video || !canvas) return null;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.85);
+  }
+
   scanShade() {
     if (this.isProcessing) return;
     if (!this.faceTracker.isFaceDetected() || !this.lightingStatus().isValid) {
@@ -177,7 +232,12 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
 
     this.isProcessing = true;
     this.error = null;
+    this.routine.set(null);
+    this.skinProfile.set(null);
+    this.routineError.set(null);
+    this.activeTab.set('shade');
 
+    // ── 1. Average colour from history ─────────────────────────────────────
     const sum = this.colorHistory.reduce((a, c) => ({ r: a.r + c.r, g: a.g + c.g, b: a.b + c.b }), { r: 0, g: 0, b: 0 });
     const color = {
       r: Math.round(sum.r / this.colorHistory.length),
@@ -185,22 +245,72 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
       b: Math.round(sum.b / this.colorHistory.length)
     };
 
-    this.http.post<ShadeMatch[]>(`${environment.apiUrl}/shades/match`, {
+    // ── 2. Capture base64 once, reuse for AI ───────────────────────────────
+    const imageData = this.captureBase64();
+
+    // ── 3. Shade match (RGB) ────────────────────────────────────────────────
+    const shade$ = this.http.post<ShadeMatch[]>(`${this.apiBase}/shades/match`, {
       ...color,
       skinType: this.selectedSkinType
-    }).pipe(take(1)).subscribe({
-      next: (results) => {
-        this.matchResults = results;
-        this.bestMatch = results.length > 0 ? results[0] : null;
-        this.userUndertone = this.bestMatch?.predictedUndertone || '';
-        this.showResultModal.set(true);
-        this.isProcessing = false;
-      },
-      error: () => {
-        this.error = 'Không thể kết nối server. Vui lòng thử lại.';
-        this.isProcessing = false;
-      }
-    });
+    }).pipe(catchError(() => of([])));
+
+    // ── 4. AI face analyze → recommend-routine (chained) ──────────────────
+    const routine$ = imageData
+      ? this.http.post<{ success: boolean; data: SkinProfile }>(
+          `${this.aiBase}/ai/analyze-face`,
+          { imageData }
+        ).pipe(
+          catchError(() => of(null)),
+          switchMap(res => {
+            if (!res?.success || !res.data) {
+              return of(null);
+            }
+            const profile = res.data;
+            this.skinProfile.set(profile);
+
+            return this.http.post<{ success: boolean; data: RoutineData }>(
+              `${this.aiBase}/ai/recommend-routine`,
+              {
+                skinType:  profile.skinType  || this.selectedSkinType,
+                skinTone:  profile.skinTone,
+                undertone: profile.undertone,
+                concerns:  profile.concerns
+              }
+            ).pipe(catchError(() => of(null)));
+          })
+        )
+      : of(null);
+
+    // ── 5. Fire both in parallel ────────────────────────────────────────────
+    this.isLoadingRoutine.set(true);
+
+    forkJoin({ shade: shade$, routine: routine$ })
+      .pipe(take(1))
+      .subscribe({
+        next: ({ shade, routine }) => {
+          // Shade results
+          const shadeResults = shade as ShadeMatch[];
+          this.matchResults = shadeResults;
+          this.bestMatch = shadeResults.length > 0 ? shadeResults[0] : null;
+          this.userUndertone = this.bestMatch?.predictedUndertone || '';
+
+          // Routine results
+          if (routine && (routine as any).success && (routine as any).data) {
+            this.routine.set((routine as any).data as RoutineData);
+          } else {
+            this.routineError.set('AI Routine không khả dụng lúc này. Vui lòng thử lại sau.');
+          }
+
+          this.isLoadingRoutine.set(false);
+          this.isProcessing = false;
+          this.showResultModal.set(true);
+        },
+        error: () => {
+          this.error = 'Không thể kết nối server. Vui lòng thử lại.';
+          this.isProcessing = false;
+          this.isLoadingRoutine.set(false);
+        }
+      });
   }
 
   /** Resolve image path: relative → full URL, absolute → as-is */
@@ -210,10 +320,8 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
     return `${this.backendBase}/${path.startsWith('/') ? path.slice(1) : path}`;
   }
 
-  /** Compute match percentage from matchScore (lower score = higher %) */
+  /** Compute match percentage from matchScore */
   matchPercent(score: number): number {
-    // DeltaE < 5 = excellent, 5-10 = good, 10-20 = fair, >20 = poor
-    // Cap at 100, floor at 0
     return Math.max(0, Math.min(100, Math.round(100 - score * 3)));
   }
 
@@ -225,6 +333,17 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
       shade: match.Shade_Name
     }).subscribe({
       next: () => this.showToast(`✅ Đã thêm ${match.Product_Name} - ${match.Shade_Name} vào giỏ!`),
+      error: () => this.showToast('❌ Không thể thêm. Vui lòng thử lại.')
+    });
+  }
+
+  addRoutineProductToCart(step: RoutineStep) {
+    if (!step.product?._id) return;
+    this.cartService.addToCart({
+      productId: step.product._id,
+      quantity: 1
+    }).subscribe({
+      next: () => this.showToast(`✅ Đã thêm ${step.product?.Name} vào giỏ!`),
       error: () => this.showToast('❌ Không thể thêm. Vui lòng thử lại.')
     });
   }

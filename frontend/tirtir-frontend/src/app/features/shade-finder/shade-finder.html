@@ -82,7 +82,7 @@
             <div class="action-row">
                 <button class="btn-scan" [disabled]="!isCameraActive || !lightingStatus().isValid || isProcessing"
                     (click)="scanShade()">
-                    <span>✨</span> {{ isProcessing ? 'Đang quét...' : 'Quét Shade' }}
+                    <span>✨</span> {{ isProcessing ? 'Đang quét...' : 'Quét Shade & AI Routine' }}
                 </button>
             </div>
             <p class="error-msg" *ngIf="error">{{ error }}</p>
@@ -94,79 +94,166 @@
     </div>
 
     <!-- =============================================
-       RESULT MODAL — PRODUCT RECOMMENDATION
+       RESULT MODAL
        ============================================= -->
     <div class="modal-backdrop" *ngIf="showResultModal()" (click)="closeModal()">
         <div class="result-modal" (click)="$event.stopPropagation()">
 
             <!-- Header -->
             <div class="modal-top">
-                <h3>✨ Shade phù hợp nhất cho bạn</h3>
+                <h3>✨ Kết quả phân tích da</h3>
                 <button class="close-x" (click)="closeModal()">✕</button>
             </div>
 
-            <!-- BEST MATCH — Hero section -->
-            <div class="best-match-hero" *ngIf="bestMatch">
-                <div class="hero-left">
-                    <img [src]="resolveImage(bestMatch.Image_URL || bestMatch.Shade_Image)"
-                        [alt]="bestMatch.Product_Name" class="hero-img"
-                        (error)="$any($event.target).src='https://placehold.co/300x300/f5f5f5/999?text=TirTir'" />
-                </div>
-                <div class="hero-right">
-                    <span class="best-badge">🏆 Best Match</span>
-                    <h4 class="product-title">{{ bestMatch.Product_Name }}</h4>
-                    <div class="shade-row">
-                        <span class="shade-swatch" [style.background]="bestMatch.Hex_Code"></span>
-                        <span class="shade-label">{{ bestMatch.Shade_Name }}</span>
-                        <span class="shade-code-tag">{{ bestMatch.Shade_Code }}</span>
-                    </div>
-                    <div class="match-bar-wrap">
-                        <div class="match-bar" [style.width.%]="matchPercent(bestMatch.matchScore)"></div>
-                    </div>
-                    <span class="match-text">{{ matchPercent(bestMatch.matchScore) }}% phù hợp</span>
-                    <div class="meta-chips">
-                        <span class="chip" *ngIf="bestMatch.predictedUndertone">
-                            Undertone: <strong>{{ bestMatch.predictedUndertone }}</strong>
-                        </span>
-                        <span class="chip" *ngIf="bestMatch.Coverage_Profile">
-                            {{ bestMatch.Coverage_Profile }}
-                        </span>
-                        <span class="chip" *ngIf="bestMatch.Finish_Type">
-                            {{ bestMatch.Finish_Type }}
-                        </span>
-                    </div>
-                    <p class="adjust-note" *ngIf="bestMatch.adjustmentNote">{{ bestMatch.adjustmentNote }}</p>
-                    <button class="btn-buy" (click)="addToCart(bestMatch)">🛒 Thêm vào giỏ hàng</button>
-                </div>
+            <!-- Tab Bar -->
+            <div class="modal-tabs">
+                <button class="modal-tab" [class.active]="activeTab() === 'shade'" (click)="activeTab.set('shade')">
+                    🎨 Shade Finder
+                </button>
+                <button class="modal-tab" [class.active]="activeTab() === 'routine'" (click)="activeTab.set('routine')">
+                    🧴 AI Skincare Routine
+                    <span class="tab-badge" *ngIf="isLoadingRoutine()">⏳</span>
+                    <span class="tab-badge new" *ngIf="routine() && !isLoadingRoutine()">✓</span>
+                </button>
             </div>
 
-            <!-- OTHER MATCHES -->
-            <div class="other-section" *ngIf="matchResults.length > 1">
-                <h4>Các shade khác có thể phù hợp</h4>
-                <div class="other-list">
-                    <div class="other-card" *ngFor="let shade of matchResults.slice(1)">
-                        <img [src]="resolveImage(shade.Image_URL || shade.Shade_Image)" [alt]="shade.Product_Name"
-                            class="other-img"
-                            (error)="$any($event.target).src='https://placehold.co/100x100/f5f5f5/999?text=TirTir'" />
-                        <div class="other-info">
-                            <span class="other-product-name">{{ shade.Product_Name }}</span>
-                            <div class="other-shade-row">
-                                <span class="shade-swatch small" [style.background]="shade.Hex_Code"></span>
-                                <span>{{ shade.Shade_Name }}</span>
-                                <span class="shade-code-tag small">{{ shade.Shade_Code }}</span>
+            <!-- ── TAB 1: SHADE MATCH ── -->
+            <div *ngIf="activeTab() === 'shade'">
+                <!-- BEST MATCH — Hero section -->
+                <div class="best-match-hero" *ngIf="bestMatch">
+                    <div class="hero-left">
+                        <img [src]="resolveImage(bestMatch.Image_URL || bestMatch.Shade_Image)"
+                            [alt]="bestMatch.Product_Name" class="hero-img"
+                            (error)="$any($event.target).src='https://placehold.co/300x300/f5f5f5/999?text=TirTir'" />
+                    </div>
+                    <div class="hero-right">
+                        <span class="best-badge">🏆 Best Match</span>
+                        <h4 class="product-title">{{ bestMatch.Product_Name }}</h4>
+                        <div class="shade-row">
+                            <span class="shade-swatch" [style.background]="bestMatch.Hex_Code"></span>
+                            <span class="shade-label">{{ bestMatch.Shade_Name }}</span>
+                            <span class="shade-code-tag">{{ bestMatch.Shade_Code }}</span>
+                        </div>
+                        <div class="match-bar-wrap">
+                            <div class="match-bar" [style.width.%]="matchPercent(bestMatch.matchScore)"></div>
+                        </div>
+                        <span class="match-text">{{ matchPercent(bestMatch.matchScore) }}% phù hợp</span>
+                        <div class="meta-chips">
+                            <span class="chip" *ngIf="bestMatch.predictedUndertone">
+                                Undertone: <strong>{{ bestMatch.predictedUndertone }}</strong>
+                            </span>
+                            <span class="chip" *ngIf="bestMatch.Coverage_Profile">
+                                {{ bestMatch.Coverage_Profile }}
+                            </span>
+                            <span class="chip" *ngIf="bestMatch.Finish_Type">
+                                {{ bestMatch.Finish_Type }}
+                            </span>
+                        </div>
+                        <p class="adjust-note" *ngIf="bestMatch.adjustmentNote">{{ bestMatch.adjustmentNote }}</p>
+                        <button class="btn-buy" (click)="addToCart(bestMatch)">🛒 Thêm vào giỏ hàng</button>
+                    </div>
+                </div>
+
+                <!-- OTHER MATCHES -->
+                <div class="other-section" *ngIf="matchResults.length > 1">
+                    <h4>Các shade khác có thể phù hợp</h4>
+                    <div class="other-list">
+                        <div class="other-card" *ngFor="let shade of matchResults.slice(1)">
+                            <img [src]="resolveImage(shade.Image_URL || shade.Shade_Image)" [alt]="shade.Product_Name"
+                                class="other-img"
+                                (error)="$any($event.target).src='https://placehold.co/100x100/f5f5f5/999?text=TirTir'" />
+                            <div class="other-info">
+                                <span class="other-product-name">{{ shade.Product_Name }}</span>
+                                <div class="other-shade-row">
+                                    <span class="shade-swatch small" [style.background]="shade.Hex_Code"></span>
+                                    <span>{{ shade.Shade_Name }}</span>
+                                    <span class="shade-code-tag small">{{ shade.Shade_Code }}</span>
+                                </div>
+                            </div>
+                            <div class="other-right">
+                                <span class="match-pct">{{ matchPercent(shade.matchScore) }}%</span>
+                                <button class="btn-add-sm" (click)="addToCart(shade)">Thêm</button>
                             </div>
                         </div>
-                        <div class="other-right">
-                            <span class="match-pct">{{ matchPercent(shade.matchScore) }}%</span>
-                            <button class="btn-add-sm" (click)="addToCart(shade)">Thêm</button>
+                    </div>
+                </div>
+
+                <div class="modal-bottom">
+                    <button class="btn-retry" (click)="closeModal()">🔄 Quét lại</button>
+                </div>
+            </div>
+
+            <!-- ── TAB 2: AI ROUTINE ── -->
+            <div *ngIf="activeTab() === 'routine'" class="routine-tab">
+
+                <!-- Skin Profile Summary -->
+                <div class="skin-profile-bar" *ngIf="skinProfile()">
+                    <div class="profile-tag">
+                        <span class="profile-icon">🌈</span>
+                        <span>Tông: <strong>{{ skinProfile()!.skinTone }}</strong></span>
+                    </div>
+                    <div class="profile-tag">
+                        <span class="profile-icon">🎨</span>
+                        <span>Undertone: <strong>{{ skinProfile()!.undertone }}</strong></span>
+                    </div>
+                    <div class="profile-tag">
+                        <span class="profile-icon">💧</span>
+                        <span>Loại da: <strong>{{ skinProfile()!.skinType }}</strong></span>
+                    </div>
+                    <div class="profile-tag" *ngIf="skinProfile()!.concerns?.length && skinProfile()!.concerns[0] !== 'None'">
+                        <span class="profile-icon">🔍</span>
+                        <span>Vấn đề: <strong>{{ skinProfile()!.concerns.join(', ') }}</strong></span>
+                    </div>
+                </div>
+
+                <!-- Loading state -->
+                <div class="routine-loading" *ngIf="isLoadingRoutine()">
+                    <div class="routine-skeleton" *ngFor="let i of [1, 2, 3]"></div>
+                    <p class="loading-text">✨ Gemini AI đang tạo routine cá nhân hóa...</p>
+                </div>
+
+                <!-- Error state -->
+                <div class="routine-error" *ngIf="!isLoadingRoutine() && routineError()">
+                    <span>⚠️</span>
+                    <p>{{ routineError() }}</p>
+                </div>
+
+                <!-- Routine Steps -->
+                <div class="routine-steps" *ngIf="!isLoadingRoutine() && routine()">
+                    <div class="routine-step-card" *ngFor="let step of routine()!.routine; let i = index">
+                        <div class="step-num">{{ i + 1 }}</div>
+                        <div class="step-img-wrap" *ngIf="step.product?.Thumbnail_Images">
+                            <img [src]="resolveImage(step.product!.Thumbnail_Images)"
+                                [alt]="step.product?.Name || step.step" class="step-product-img"
+                                (error)="$any($event.target).src='https://placehold.co/80x80/fdf0f3/c94c74?text=TirTir'" />
                         </div>
+                        <div class="step-info">
+                            <span class="step-label">{{ step.step }}</span>
+                            <span class="step-product-name">{{ step.product?.Name || '—' }}</span>
+                            <p class="step-reason">{{ step.reason }}</p>
+                        </div>
+                        <button class="btn-step-add" *ngIf="step.product"
+                            (click)="addRoutineProductToCart(step)">
+                            🛒
+                        </button>
+                    </div>
+
+                    <!-- Expert Advice -->
+                    <div class="expert-advice" *ngIf="routine()!.advice">
+                        <span class="advice-icon">👩‍⚕️</span>
+                        <div>
+                            <strong>Lời khuyên từ chuyên gia</strong>
+                            <p>{{ routine()!.advice }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Add all to cart -->
+                    <div class="routine-action-row">
+                        <button class="btn-retry" (click)="closeModal()">🔄 Quét lại</button>
                     </div>
                 </div>
             </div>
 
-            <div class="modal-bottom">
-                <button class="btn-retry" (click)="closeModal()">🔄 Quét lại</button>
-            </div>
         </div>
     </div>
 
