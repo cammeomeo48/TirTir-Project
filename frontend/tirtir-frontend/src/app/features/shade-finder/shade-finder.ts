@@ -98,9 +98,9 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
   toastMessage = signal<string | null>(null);
   private toastTimer: any = null;
 
-  private readonly backendBase = environment.apiUrl.replace('/api/v1', '');
+  private readonly backendBase = environment.apiUrl.replace('/api/v1', ''); // http://localhost:5001
   private readonly apiBase = environment.apiUrl; // /api/v1
-  private readonly aiBase = environment.apiUrl.replace('/v1', ''); // /api
+  private readonly aiBase = environment.apiUrl; // /api/v1 — AI routes mounted at /api/v1/ai
 
   // Lighting & Validation
   lightingStatus = signal<{ isValid: boolean, message: string, type: 'success' | 'warning' | 'error' }>({
