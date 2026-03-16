@@ -15,12 +15,21 @@ logger = logging.getLogger(__name__)
 
 # ─── Training Data ────────────────────────────────────────────────────────────
 TRAIN_DATA = [
-    # Tư vấn sản phẩm
-    ("da dầu dùng gì", "consultation"),   ("tư vấn giúp mình", "consultation"),
+    # Tư vấn sản phẩm Cushion & Makeup
+    ("da dầu dùng gì", "consultation"), ("tư vấn giúp mình", "consultation"),
     ("loại nào tốt cho da khô", "consultation"), ("da mụn", "consultation"),
     ("tìm sản phẩm căng bóng", "consultation"), ("cushion nào che phủ tốt", "consultation"),
     ("da nhạy cảm dùng được không", "consultation"), ("da hỗn hợp", "consultation"),
     ("tư vấn màu", "consultation"), ("chọn tone", "consultation"),
+    ("tư vấn phấn nước", "consultation"), ("kem nền che khuyết điểm", "consultation"),
+    ("cushion tirtir màu đỏ", "consultation"), ("phấn nước", "consultation"),
+    ("son tint mọng nước", "consultation"), ("son bóng", "consultation"),
+    ("makeup đi tiệc", "consultation"), ("trang điểm", "consultation"),
+    # Tư vấn Skincare / Dưỡng da
+    ("dưỡng da", "consultation"), ("skincare cho da mụn", "consultation"),
+    ("sản phẩm phục hồi da", "consultation"), ("toner dưỡng ẩm", "consultation"),
+    ("kem dưỡng ẩm sâu", "consultation"), ("tẩy trang", "consultation"),
+    ("sữa rửa mặt", "consultation"), ("chống nắng", "consultation"),
     # Giá
     ("giá bao nhiêu", "price"), ("cái này bao tiền", "price"),
     ("mắc không", "price"), ("báo giá", "price"), ("đang sale không", "price"),
@@ -40,21 +49,41 @@ TRAIN_DATA = [
 
 # ─── Keyword Scoring Map ──────────────────────────────────────────────────────
 KEYWORDS_MAP = {
+    # Skin types
     "dầu":      {"tag": "oily",      "field": "Skin_Type_Target"},
     "nhờn":     {"tag": "oily",      "field": "Skin_Type_Target"},
     "khô":      {"tag": "dry",       "field": "Skin_Type_Target"},
     "mụn":      {"tag": "acne",      "field": "Main_Concern"},
     "nhạy cảm": {"tag": "sensitive", "field": "Skin_Type_Target"},
+    # Concerns
     "che phủ":  {"tag": "coverage",  "field": "Main_Concern"},
+    "khuyết điểm": {"tag": "coverage",  "field": "Main_Concern"},
     "căng bóng":{"tag": "glow",      "field": "Main_Concern"},
     "lì":       {"tag": "matte",     "field": "Main_Concern"},
     "tự nhiên": {"tag": "natural",   "field": "Main_Concern"},
-    "nắng":     {"tag": "sun",       "field": "Category"},
+    "phục hồi": {"tag": "barrier",   "field": "Main_Concern"},
+    "dưỡng ẩm": {"tag": "hydration", "field": "Main_Concern"},
     "trắng":    {"tag": "brightening","field": "Main_Concern"},
+    "chống nắng": {"tag": "uv",      "field": "Main_Concern"},
+    # Categories
+    "cushion":  {"tag": "cushion",   "field": "Category_Slug"},
+    "phấn nước": {"tag": "cushion",  "field": "Category_Slug"},
+    "kem nền":  {"tag": "cushion",   "field": "Category_Slug"},
+    "toner":    {"tag": "toner",     "field": "Category_Slug"},
+    "kem dưỡng": {"tag": "cream",    "field": "Category_Slug"},
+    "tẩy trang": {"tag": "cleanser", "field": "Category_Slug"},
+    "sữa rửa mặt": {"tag": "cleanser", "field": "Category_Slug"},
+    "son":      {"tag": "tint",      "field": "Category"},
+    "skincare": {"tag": "TRUE",      "field": "Is_Skincare"},
+    "dưỡng da": {"tag": "TRUE",      "field": "Is_Skincare"},
+    "makeup":   {"tag": "FALSE",     "field": "Is_Skincare"},
+    # Specific products/colors
     "đỏ":       {"tag": "red",       "field": "Name"},
     "hồng":     {"tag": "all-cover", "field": "Name"},
     "đen":      {"tag": "mask fit",  "field": "Name"},
     "bạc":      {"tag": "aura",      "field": "Name"},
+    "matcha":   {"tag": "matcha",    "field": "Name"},
+    "sữa":      {"tag": "milk",      "field": "Name"}
 }
 
 
@@ -143,7 +172,7 @@ class ChatbotEngine:
         result = {"intent": intent, "message": "", "data": None, "type": "text"}
 
         if intent == "greeting":
-            result["message"] = "👋 Chào bạn! Mình là TirTir AI Assistant. Mình có thể giúp bạn tìm cushion phù hợp với loại da, báo giá, hoặc hướng dẫn sử dụng."
+            result["message"] = "👋 Chào bạn! Mình là TirTir AI Assistant. Mình có thể giúp bạn tìm sản phẩm dưỡng da, mỹ phẩm, hoặc hướng dẫn sử dụng nhé."
 
         elif intent == "shipping":
             result["message"] = "📦 Bên mình freeship cho đơn từ 500k. Giao nội thành 1-2 ngày, ngoại thành 3-4 ngày."
@@ -152,13 +181,13 @@ class ChatbotEngine:
             result["message"] = "Sản phẩm được đổi trả trong 7 ngày nếu có lỗi sản xuất hoặc kích ứng (cần video mở hộp)."
 
         elif intent == "info":
-            result["message"] = "Các sản phẩm TirTir nổi tiếng với chiết xuất thiên nhiên, đặc biệt dòng Mask Fit Cushion bền màu 72h."
+            result["message"] = "Các sản phẩm TirTir đều chú trọng thành phần an toàn, ví dụ như dòng Mask Fit luôn có độ che phủ siêu tốt nhưng vẫn mỏng nhẹ."
 
         elif intent in ("consultation", "price"):
             product, tags = self._smart_recommend(message)
             if product is not None:
                 result["type"] = "product"
-                result["message"] = f"Dựa trên từ khóa '{', '.join(tags)}', mình đề xuất:"
+                result["message"] = f"Dựa trên yêu cầu của bạn ({', '.join(tags)}), TirTir xin gợi ý sản phẩm này:"
                 result["data"] = {
                     "id":    str(product.get("Product_ID", "")),
                     "name":  product.get("Name", ""),
@@ -168,11 +197,11 @@ class ChatbotEngine:
                     "slug":  product.get("Product_Slug", ""),
                 }
                 if intent == "price":
-                    result["message"] = f"Sản phẩm {result['data']['name']} có giá {result['data']['price']:,.0f} VND."
+                    result["message"] = f"Sản phẩm {result['data']['name']} có giá {result['data']['price']:,.0f} đ."
             else:
-                result["message"] = "🤔 Bạn có thể nói rõ hơn về loại da không? (da dầu, da khô, da mụn...)"
+                result["message"] = "🤔 Bạn có thể mô tả chi tiết hơn về tình trạng da hoặc sản phẩm bạn muốn tìm không? (vd: da dầu trị mụn, son tint rực rỡ...)"
 
         else:
-            result["message"] = "Mình chưa hiểu rõ lắm. Bạn thử hỏi: 'Da dầu dùng cushion nào?' nhé!"
+            result["message"] = "Mình chưa hiểu rõ lắm. Bạn thử hỏi: 'Da dầu dùng cushion nào?' hay 'Có toner nào dịu nhẹ không?' nhé!"
 
         return result

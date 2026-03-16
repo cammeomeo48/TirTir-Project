@@ -3,6 +3,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ChatService, ChatMessage, QuickReply } from '../../../core/services/chat.service';
+import { CartService } from '../../../core/services/cart.service';
+import { ToastService } from '../../../core/services/toast.service';
 
 @Component({
     selector: 'app-chat-conversation',
@@ -22,7 +24,11 @@ export class ChatConversationComponent implements OnInit, AfterViewChecked {
 
     private destroyRef = inject(DestroyRef);
 
-    constructor(private chatService: ChatService) { }
+    constructor(
+        private chatService: ChatService,
+        private cartService: CartService,
+        private toastService: ToastService
+    ) { }
 
     ngOnInit() {
         // FE-03: takeUntilDestroyed() prevents the memory leak when the component is destroyed
@@ -87,5 +93,21 @@ export class ChatConversationComponent implements OnInit, AfterViewChecked {
     sendQuickReply(reply: QuickReply) {
         this.newMessage = reply.label;
         this.sendMessage();
+    }
+
+    addToCart(productData: any) {
+        if (!productData || !productData.id) return;
+
+        this.cartService.addToCart({
+            productId: productData.id,
+            quantity: 1
+        }).subscribe({
+            next: () => {
+                this.toastService.success(`Đã thêm ${productData.name} vào giỏ hàng!`);
+            },
+            error: (err) => {
+                this.toastService.error(err.message || 'Không thể thêm vào giỏ hàng');
+            }
+        });
     }
 }
