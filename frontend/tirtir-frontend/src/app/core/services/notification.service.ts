@@ -5,6 +5,7 @@ import { switchMap, tap, retry, shareReplay, takeWhile, catchError } from 'rxjs/
 import { isPlatformBrowser } from '@angular/common';
 import { environment } from '../../../environments/environment';
 import { INotification } from '../models/notification.model';
+import { AuthService } from './auth.service';
 
 @Injectable({
     providedIn: 'root'
@@ -12,6 +13,7 @@ import { INotification } from '../models/notification.model';
 export class NotificationService {
     private http = inject(HttpClient);
     private platformId = inject(PLATFORM_ID);
+    private authService = inject(AuthService);
 
     // Use explicit URL or environment variable
     private apiUrl = 'http://localhost:5001/api/v1/notifications';
@@ -24,12 +26,25 @@ export class NotificationService {
     public unreadCount$ = this.unreadCountSubject.asObservable();
 
     private pollingSubscription?: Subscription;
+    private authSubscription?: Subscription;
     private isPolling = false;
 
     constructor() {
         // Only start polling in browser environment
         if (isPlatformBrowser(this.platformId)) {
-            this.startPolling();
+            // Listen to auth state changes to start/stop polling
+            this.authSubscription = this.authService.currentUser$.subscribe((user) => {
+                if (user && this.authService.getToken()) {
+                    // User logged in, start polling
+                    this.startPolling();
+                } else {
+                    // User logged out, stop polling
+                    this.stopPolling();
+                    // Clear notifications when logged out
+                    this.notificationsSubject.next([]);
+                    this.unreadCountSubject.next(0);
+                }
+            });
         }
     }
 

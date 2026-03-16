@@ -21,7 +21,22 @@
                 <span>T/R</span>
             </div>
             <div class="bubble">
-                {{ msg.text }}
+                <p>{{ msg.text }}</p>
+                
+                <!-- Product Recommendation Card -->
+                <ng-container *ngIf="msg.productData">
+                    <div class="product-card">
+                        <img [src]="msg.productData.image" [alt]="msg.productData.name" class="product-img">
+                        <div class="product-info">
+                            <h4>{{ msg.productData.name }}</h4>
+                            <p class="price">₫{{ (msg.productData.price || 0) | number:'1.0-0' }}</p>
+                            <p class="description">{{ msg.productData.desc }}</p>
+                            <a [href]="'/products/' + msg.productData.slug" class="view-product-btn">
+                                View Product →
+                            </a>
+                        </div>
+                    </div>
+                </ng-container>
             </div>
             <div class="time">{{ msg.timestamp | date:'shortTime' }}</div>
         </div>
