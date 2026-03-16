@@ -32,13 +32,29 @@ TRAIN_DATA = [
     ("sữa rửa mặt", "consultation"), ("chống nắng", "consultation"),
     # Giá
     ("giá bao nhiêu", "price"), ("cái này bao tiền", "price"),
-    ("mắc không", "price"), ("báo giá", "price"), ("đang sale không", "price"),
+    ("mắc không", "price"), ("báo giá", "price"),
+    # Khuyến mãi / Mã giảm giá
+    ("đang sale không", "discount"), ("có mã giảm giá không", "discount"), 
+    ("xin mã giảm giá", "discount"), ("khuyến mãi", "discount"), 
+    ("có sale không", "discount"), ("voucher giảm giá", "discount"), 
+    ("chương trình ưu đãi", "discount"),
+    # Đơn hàng
+    ("đơn hàng của mình", "order"), ("khi nào nhận được hàng", "order"),
+    ("kiểm tra đơn", "order"), ("tình trạng đơn hàng", "order"),
+    ("chưa nhận được hàng", "order"), ("tra cứu đơn", "order"),
+    # Điạ chỉ / Liên hệ
+    ("địa chỉ shop", "contact"), ("cửa hàng ở đâu", "contact"),
+    ("số điện thoại", "contact"), ("mua trực tiếp ở đâu", "contact"),
+    ("chi nhánh tirtir", "contact"),
     # Chào hỏi
     ("hi", "greeting"), ("hello", "greeting"), ("chào shop", "greeting"),
     ("bạn ơi", "greeting"), ("có ai ở đó không", "greeting"),
-    # Thông tin / HDSD
+    # Thông tin / Thành phần
     ("thành phần là gì", "info"), ("công dụng", "info"),
-    ("cách dùng", "info"), ("xài sao", "info"), ("hạn sử dụng", "info"),
+    ("chứa chất gì", "info"), ("chi tiết sản phẩm", "info"), ("chiết xuất từ đâu", "info"),
+    # Cách sử dụng
+    ("cách dùng", "usage"), ("xài sao", "usage"), ("hướng dẫn sử dụng", "usage"),
+    ("dùng như thế nào", "usage"), ("bảo quản sao", "usage"),
     # Giao hàng
     ("ship bao lâu", "shipping"), ("có freeship không", "shipping"),
     ("phí ship thế nào", "shipping"), ("giao hàng nhanh không", "shipping"),
@@ -172,16 +188,54 @@ class ChatbotEngine:
         result = {"intent": intent, "message": "", "data": None, "type": "text"}
 
         if intent == "greeting":
-            result["message"] = "👋 Chào bạn! Mình là TirTir AI Assistant. Mình có thể giúp bạn tìm sản phẩm dưỡng da, mỹ phẩm, hoặc hướng dẫn sử dụng nhé."
+            result["message"] = "👋 Chào bạn! Mình là TirTir AI Assistant. Mình có thể giúp bạn tư vấn sản phẩm, cung cấp hướng dẫn sử dụng, tra cứu đơn hàng hoặc mã giảm giá nhé."
 
         elif intent == "shipping":
             result["message"] = "📦 Bên mình freeship cho đơn từ 500k. Giao nội thành 1-2 ngày, ngoại thành 3-4 ngày."
 
         elif intent == "return":
-            result["message"] = "Sản phẩm được đổi trả trong 7 ngày nếu có lỗi sản xuất hoặc kích ứng (cần video mở hộp)."
+            result["message"] = "Sản phẩm được đổi trả trong 7 ngày nếu có lỗi sản xuất hoặc kích ứng (cần video quay lúc mở hộp nhé)."
+
+        elif intent == "discount":
+            result["message"] = "🎁 TirTir thường xuyên có mã giảm giá trên trang chủ! Truy cập mục Khuyến Mãi hoặc lúc thanh toán sẽ có sẵn mã voucher 10% - 20% cho bạn chọn."
+
+        elif intent == "order":
+            result["message"] = "📦 Để thao tác với đơn hàng, bạn thao tác trên Menu > **Tài khoản > Lịch sử đơn hàng** trên website nhé. Trợ lý TirTir sẽ sớm có tính năng tự động tra mã đơn!"
+
+        elif intent == "contact":
+            result["message"] = "📍 TirTir luôn sẵn sàng hỗ trợ tiếp nhận mọi thắc mắc:\n- Hotline: 1900 xxxx\n- Facebook TIRTIR Global\n- Rất hân hạnh được phục vụ bạn."
 
         elif intent == "info":
-            result["message"] = "Các sản phẩm TirTir đều chú trọng thành phần an toàn, ví dụ như dòng Mask Fit luôn có độ che phủ siêu tốt nhưng vẫn mỏng nhẹ."
+            product, tags = self._smart_recommend(message)
+            if product is not None:
+                result["type"] = "product"
+                result["data"] = {
+                    "id":    str(product.get("Product_ID", "")),
+                    "name":  product.get("Name", ""),
+                    "price": float(product.get("Price", 0)),
+                    "image": product.get("Thumbnail_Images", ""),
+                    "desc":  product.get("Description_Short", ""),
+                    "slug":  product.get("Product_Slug", ""),
+                }
+                result["message"] = f"✨ **Thông tin sản phẩm {result['data']['name']}:**\n\n- **Thành phần nổi bật:** {product.get('Key_Ingredients', 'Chiết xuất thiên nhiên an toàn cho da.')}\n- **Công dụng:** {product.get('Description_Short', '')}\n\nSản phẩm này rất hợp với bạn nhé!"
+            else:
+                result["message"] = "Tư liệu sản phẩm TirTir đều chú trọng thành phần an toàn, ví dụ như dòng Mask Fit Cushion rất nổi tiếng. Bạn cần hỏi thành phần cụ thể của sản phẩm nào nhỉ?"
+                
+        elif intent == "usage":
+            product, tags = self._smart_recommend(message)
+            if product is not None:
+                result["type"] = "product"
+                result["data"] = {
+                    "id":    str(product.get("Product_ID", "")),
+                    "name":  product.get("Name", ""),
+                    "price": float(product.get("Price", 0)),
+                    "image": product.get("Thumbnail_Images", ""),
+                    "desc":  product.get("Description_Short", ""),
+                    "slug":  product.get("Product_Slug", ""),
+                }
+                result["message"] = f"Dưới đây là hướng dẫn sử dụng cho **{result['data']['name']}**:\n\n👉 **Cách dùng:** {product.get('How_To_Use', 'Thoa đều lên da và sử dụng hàng ngày.')}"
+            else:
+                result["message"] = "Bạn muốn hỏi cách sử dụng của sản phẩm nào nhỉ? (Vd: cách dùng cushion đỏ TirTir, cách dùng kem dưỡng...)"
 
         elif intent in ("consultation", "price"):
             product, tags = self._smart_recommend(message)

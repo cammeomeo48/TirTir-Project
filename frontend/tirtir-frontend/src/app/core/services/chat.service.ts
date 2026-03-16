@@ -200,11 +200,11 @@ export class ChatService {
         );
     }
 
-    // GET /chat/options
     getQuickReplies(): Observable<QuickReply[]> {
         return of([
-            { label: 'Order Status', value: 'I want to check my order status' },
-            { label: 'Shipping Info', value: 'What are your shipping policies?' }
+            { label: 'Tư vấn loại da', value: 'Tư vấn cushion cho da nhạy cảm' },
+            { label: 'Mã giảm giá', value: 'Có mã giảm giá nào không?' },
+            { label: 'Kiểm tra đơn', value: 'Làm sao để kiểm tra đơn hàng?' }
         ]);
     }
 }
