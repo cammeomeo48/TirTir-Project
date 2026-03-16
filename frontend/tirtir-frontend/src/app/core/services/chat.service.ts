@@ -8,6 +8,14 @@ export interface ChatMessage {
     text: string;
     sender: 'user' | 'bot'; // 'user' or 'bot'
     timestamp: Date;
+    productData?: {
+        id: string;
+        name: string;
+        price: number;
+        image: string;
+        desc: string;
+        slug: string;
+    };
 }
 
 export interface QuickReply {
@@ -152,26 +160,38 @@ export class ChatService {
         return this.http.post<any>(`${this.apiUrl}`, { message: text }).pipe(
             tap(response => {
                 if (response) {
-                    const botText = response.reply || response.response || response.message;
+                    // Response format from /api/v1/chat:
+                    // { intent, message, type, data }
+                    const botText = response.message;
+                    
                     if (botText) {
-                        this.handleIncomingMessage({
+                        const botMessage: ChatMessage = {
                             text: botText,
                             sender: 'bot',
                             timestamp: new Date()
-                        });
-                    } else if (typeof response === 'string') {
-                        this.handleIncomingMessage({
-                            text: response,
-                            sender: 'bot',
-                            timestamp: new Date()
-                        });
+                        };
+
+                        // If response contains product data, attach it
+                        if (response.type === 'product' && response.data) {
+                            botMessage.productData = response.data;
+                        }
+
+                        this.handleIncomingMessage(botMessage);
                     }
                 }
             }),
             catchError((error: any) => {
                 console.error('Backend API /chat failed:', error.message);
+                
+                // Handle specific error cases
+                let errorText = 'Sorry, I am currently unable to process your request. Please try again later.';
+                
+                if (error.status === 503) {
+                    errorText = '❌ Chatbot service is not available. Please try again in a moment.';
+                }
+                
                 this.handleIncomingMessage({
-                    text: 'Sorry, I am currently unable to process your request. Please try again later.',
+                    text: errorText,
                     sender: 'bot',
                     timestamp: new Date()
                 });

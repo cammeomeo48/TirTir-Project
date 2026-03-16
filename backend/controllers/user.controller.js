@@ -96,20 +96,23 @@ exports.updateProfile = async (req, res) => {
  */
 exports.changePassword = async (req, res) => {
     try {
-        const { oldPassword, newPassword } = req.body;
+        const { currentPassword, oldPassword, newPassword } = req.body;
+        const providedCurrent = typeof currentPassword === 'string' && currentPassword.length > 0
+            ? currentPassword
+            : oldPassword;
 
         // Validation
-        if (!oldPassword || !newPassword) {
+        if (!providedCurrent || !newPassword) {
             return res.status(400).json({
                 success: false,
-                message: 'Please provide both old and new passwords'
+                message: 'Vui lòng cung cấp mật khẩu hiện tại và mật khẩu mới'
             });
         }
 
         if (newPassword.length < 6) {
             return res.status(400).json({
                 success: false,
-                message: 'New password must be at least 6 characters'
+                message: 'Mật khẩu mới phải có ít nhất 6 ký tự'
             });
         }
 
@@ -124,12 +127,12 @@ exports.changePassword = async (req, res) => {
         }
 
         // Check if old password matches
-        const isMatch = await user.matchPassword(oldPassword);
+        const isMatch = await user.matchPassword(providedCurrent);
 
         if (!isMatch) {
             return res.status(401).json({
                 success: false,
-                message: 'Current password is incorrect'
+                message: 'Mật khẩu hiện tại không đúng'
             });
         }
 

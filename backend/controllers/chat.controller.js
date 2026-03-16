@@ -17,6 +17,8 @@ exports.chatWithBot = async (req, res) => {
     }
 
     try {
+        console.log(`[CHAT] Sending request to ${CHATBOT_SERVICE_URL}/chat with message: "${message.trim()}"`);
+        
         const response = await axios.post(
             `${CHATBOT_SERVICE_URL}/chat`,
             { message: message.trim() },
@@ -28,6 +30,8 @@ exports.chatWithBot = async (req, res) => {
                 }
             }
         );
+        
+        console.log(`[CHAT] FastAPI response received:`, response.status, response.data);
 
         if (response.data.success) {
             return res.json(response.data.data);
@@ -39,8 +43,8 @@ exports.chatWithBot = async (req, res) => {
         });
 
     } catch (error) {
-        // AI Service unreachable
-        if (error.code === 'ECONNREFUSED') {
+        // Network error → chatbot service down
+        if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
             return res.status(503).json({
                 success: false,
                 message: 'AI Chatbot Service chưa chạy. Vui lòng khởi động chatbot service (port 8001).',
@@ -69,7 +73,7 @@ exports.chatWithBot = async (req, res) => {
 exports.handleChat = async (req, res) => {
     try {
         const { message } = req.body;
-        
+
         // Gọi sang Python Chatbot Service
         const aiResponse = await axios.post('http://chatbot:8001/chat', {
             message: message
