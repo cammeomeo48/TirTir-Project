@@ -24,7 +24,7 @@ export class ChangePasswordComponent {
 
     constructor() {
         this.passwordForm = this.fb.group({
-            oldPassword: ['', [Validators.required, Validators.minLength(6)]],
+            currentPassword: ['', [Validators.required, Validators.minLength(6)]],
             newPassword: ['', [Validators.required, Validators.minLength(6)]],
             confirmPassword: ['', [Validators.required]]
         }, {
@@ -54,9 +54,9 @@ export class ChangePasswordComponent {
         this.successMessage = '';
         this.errorMessage = '';
 
-        const { oldPassword, newPassword } = this.passwordForm.value;
+        const { currentPassword, newPassword } = this.passwordForm.value;
 
-        this.userService.changePassword({ oldPassword, newPassword }).subscribe({
+        this.userService.changePassword({ currentPassword, newPassword }).subscribe({
             next: (response) => {
                 this.successMessage = response.message || 'Password changed successfully!';
                 this.loading = false;

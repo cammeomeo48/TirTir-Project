@@ -17,7 +17,9 @@ const {
 const { protect, authorize } = require('../middlewares/auth');
 const { authLimiter } = require('../middlewares/rateLimit');
 const { registerValidator, loginValidator } = require('../validators/auth.validator');
+const { changePasswordValidator } = require('../validators/user.validator');
 const { validate } = require('../middlewares/validate');
+const { changePassword } = require('../controllers/user.controller');
 
 /**
  * ===== AUTHENTICATION ROUTES =====
@@ -223,6 +225,12 @@ router.get('/me', protect, getMe);
  *         description: Đăng xuất thành công
  */
 router.get('/logout', protect, logout);
+
+/**
+ * Change password for authenticated user
+ * Mirrors /api/v1/users/change-password for FE consistency
+ */
+router.post('/change-password', protect, changePasswordValidator, validate, changePassword);
 
 // ===== FUTURE IMPLEMENTATION =====
 

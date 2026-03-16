@@ -17,6 +17,8 @@ exports.chatWithBot = async (req, res) => {
     }
 
     try {
+        console.log(`[CHAT] Sending request to ${CHATBOT_SERVICE_URL}/chat with message: "${message.trim()}"`);
+        
         const response = await axios.post(
             `${CHATBOT_SERVICE_URL}/chat`,
             { message: message.trim() },
@@ -28,6 +30,8 @@ exports.chatWithBot = async (req, res) => {
                 }
             }
         );
+        
+        console.log(`[CHAT] FastAPI response received:`, response.status, response.data);
 
         if (response.data.success) {
             return res.json(response.data.data);
