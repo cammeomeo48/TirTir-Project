@@ -148,6 +148,8 @@
                 <button class="skin-tab" [class.active]="selectedSkinType === 'Normal'" (click)="selectedSkinType = 'Normal'">Thường</button>
                 <button class="skin-tab" [class.active]="selectedSkinType === 'Oily'" (click)="selectedSkinType = 'Oily'">Dầu</button>
                 <button class="skin-tab" [class.active]="selectedSkinType === 'Dry'" (click)="selectedSkinType = 'Dry'">Khô</button>
+                <button class="skin-tab" [class.active]="selectedSkinType === 'Combination'" (click)="selectedSkinType = 'Combination'">Hỗn hợp</button>
+                <button class="skin-tab" [class.active]="selectedSkinType === 'Sensitive'" (click)="selectedSkinType = 'Sensitive'">Nhạy cảm</button>
               </div>
             </div>
             <button class="btn-scan" [disabled]="!isCameraActive || !lightingStatus().isValid || isProcessing" (click)="scanShade()">
@@ -167,24 +169,25 @@
 
           @if (liveMetrics()) {
             <div class="metrics-list">
+              <p class="metrics-estimate-label">⚡ Ước tính từ phân tích màu <span class="estimate-badge">Tham khảo</span></p>
               <div class="metric-row">
-                <div class="metric-label-row"><span>Moisture Level</span><span class="metric-val">{{ liveMetrics()!.moisture }}%</span></div>
+                <div class="metric-label-row"><span>Moisture Level</span><span class="metric-val">~{{ liveMetrics()!.moisture }}%</span></div>
                 <div class="metric-track"><div class="metric-fill moisture" [style.width.%]="liveMetrics()!.moisture"></div></div>
               </div>
               <div class="metric-row">
-                <div class="metric-label-row"><span>Pores Density</span><span class="metric-val">{{ liveMetrics()!.pores }}%</span></div>
+                <div class="metric-label-row"><span>Pores Density</span><span class="metric-val">~{{ liveMetrics()!.pores }}%</span></div>
                 <div class="metric-track"><div class="metric-fill pores" [style.width.%]="liveMetrics()!.pores * 2"></div></div>
               </div>
               <div class="metric-row">
-                <div class="metric-label-row"><span>Redness</span><span class="metric-val">{{ liveMetrics()!.redness }}%</span></div>
+                <div class="metric-label-row"><span>Redness</span><span class="metric-val">~{{ liveMetrics()!.redness }}%</span></div>
                 <div class="metric-track"><div class="metric-fill redness" [style.width.%]="liveMetrics()!.redness * 1.6"></div></div>
               </div>
               <div class="metric-row">
-                <div class="metric-label-row"><span>Evenness</span><span class="metric-val">{{ liveMetrics()!.evenness }}%</span></div>
+                <div class="metric-label-row"><span>Evenness</span><span class="metric-val">~{{ liveMetrics()!.evenness }}%</span></div>
                 <div class="metric-track"><div class="metric-fill evenness" [style.width.%]="liveMetrics()!.evenness"></div></div>
               </div>
             </div>
-            <p class="panel-note">Phân tích real-time · Kết quả thay đổi theo điều kiện ánh sáng</p>
+            <p class="panel-note">Số liệu ước tính từ phân tích RGB · Kết quả chính xác hơn sau khi quét</p>
           } @else {
             <div class="metrics-placeholder">
               <div class="placeholder-icon">
@@ -224,6 +227,21 @@
           </div>
           <button class="close-x" (click)="closeModal()">✕</button>
         </div>
+
+        <!-- F2: Low confidence warning -->
+        @if (lowConfidence()) {
+          <div class="confidence-warning">
+            <span class="warn-icon">⚠️</span>
+            <span>Độ tin cậy phân tích thấp (dưới 50%). Kết quả có thể chưa chính xác — hãy thử quét lại trong điều kiện ánh sáng tốt hơn.</span>
+          </div>
+        }
+
+        <!-- Heuristic note -->
+        @if (routine()?.isHeuristicGenerated) {
+          <div class="heuristic-note">
+            <span>🔬</span> Kết quả dựa trên phân tích thuật toán · Kết quả AI đầy đủ sẽ khả dụng sớm
+          </div>
+        }
 
         <!-- Tab Bar -->
         <div class="modal-tabs">
@@ -436,9 +454,10 @@
             </div>
 
             <!-- Step flow diagram -->
-            <div class="step-flow">
-              <div class="step-flow-item" *ngFor="let step of routine()!.routine; let i = index; let last = last">
-                <div class="step-flow-circle" [class.active]="i === 0">
+            <div class="step-flow" *ngIf="routine()!.routine.length > 0">
+              <div class="step-flow-item" *ngFor="let step of routine()!.routine; let i = index; let last = last"
+                   [class.skipped]="skippedSteps().has(step.step)">
+                <div class="step-flow-circle" [class.active]="i === 0" [class.skipped]="skippedSteps().has(step.step)">
                   <span>{{ i + 1 }}</span>
                 </div>
                 <div class="step-flow-label">STEP {{ i + 1 }}</div>
@@ -447,18 +466,40 @@
               </div>
             </div>
 
+            <!-- Empty routine state -->
+            <div class="routine-empty" *ngIf="routine()!.routine.length === 0">
+              <div class="routine-empty-icon">💆</div>
+              <p>Routine đang được tải. AI đang ghép sản phẩm phù hợp...</p>
+            </div>
+
             <!-- Product Cards Grid -->
-            <div class="product-grid">
-              <div class="product-card" *ngFor="let step of routine()!.routine">
+            <div class="product-grid" *ngIf="routine()!.routine.length > 0">
+              <div class="product-card" *ngFor="let step of routine()!.routine"
+                   [class.skipped]="skippedSteps().has(step.step)">
                 <div class="product-card-badge">{{ step.step }}</div>
+                <button class="btn-skip-step" (click)="toggleSkipStep(step.step)"
+                        [title]="skippedSteps().has(step.step) ? 'Khôi phục bước này' : 'Bỏ qua bước này'">
+                  {{ skippedSteps().has(step.step) ? '↩ Khôi phục' : '✕ Bỏ qua' }}
+                </button>
                 <div class="product-card-img-wrap">
-                  <img [src]="resolveImage(step.product?.Thumbnail_Images)" [alt]="step.product?.Name"
-                      (error)="$any($event.target).src='https://placehold.co/200x200/f5f5f5/999?text=TirTir'"/>
+                  <img
+                    *ngIf="step.product?.Thumbnail_Images"
+                    [src]="resolveImage(step.product?.Thumbnail_Images)"
+                    [alt]="step.product?.Name"
+                    (error)="$any($event.target).src='https://placehold.co/200x200/f5f5f5/E8111A?text=' + step.step"/>
+                  <div *ngIf="!step.product?.Thumbnail_Images" class="product-card-no-img">
+                    <span class="product-card-step-icon">{{ step.step[0] }}</span>
+                  </div>
                 </div>
                 <div class="product-card-body">
-                  <h5>{{ step.product?.Name || '—' }}</h5>
+                  <h5>{{ step.product?.Name || step.step }}</h5>
+                  <p class="product-card-price" *ngIf="step.product?.Price">${{ step.product!.Price | number:'1.2-2' }}</p>
                   <p class="product-card-reason">{{ step.reason }}</p>
-                  <button class="btn-card-add" (click)="addRoutineProductToCart(step)">Thêm vào giỏ hàng</button>
+                  <button
+                    class="btn-card-add"
+                    [disabled]="!step.product?.Product_ID || skippedSteps().has(step.step)"
+                    (click)="addRoutineProductToCart(step)"
+                  >{{ step.product ? 'Thêm vào giỏ hàng' : 'Đang cập nhật sản phẩm' }}</button>
                 </div>
               </div>
             </div>

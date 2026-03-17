@@ -8,6 +8,7 @@ import { catchError, switchMap } from 'rxjs/operators';
 import { FaceTrackerService } from '../../core/services/face-tracker.service';
 import { CartService } from '../../core/services/cart.service';
 import { AuthService } from '../../core/services/auth.service';
+import { ColorService } from '../../core/services/color.service';
 import { environment } from '../../../environments/environment';
 
 /** Response shape from POST /api/v1/shades/match */
@@ -55,6 +56,7 @@ interface RoutineStep {
     Thumbnail_Images: string;
     slug?: string;
     _id: string;
+    Product_ID: string;
   } | null;
 }
 
@@ -80,6 +82,14 @@ interface RoutineData {
   skinEvolution?: SkinEvolution;
   totalPrice?: number;
   skinType?: string;
+  isHeuristicGenerated?: boolean;
+}
+
+/** Full HTTP response wrapper */
+interface RoutineResponse {
+  success: boolean;
+  data: RoutineData;
+  fromCache?: boolean;
 }
 
 
@@ -101,6 +111,7 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
   animationFrameId: number | null = null;
 
   selectedSkinType = 'Normal';
+  skinTypeOptions = ['Normal', 'Dry', 'Oily', 'Combination', 'Sensitive'];
 
   // Instruction screen — shown before camera starts
   showInstructions = signal(true);
@@ -116,6 +127,7 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
   routine = signal<RoutineData | null>(null);
   isLoadingRoutine = signal(false);
   routineError = signal<string | null>(null);
+  lowConfidence = signal(false);  // F2: warn when AI confidence < 50%
 
   // UI
   showResultModal = signal(false);
@@ -150,7 +162,8 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
     public faceTracker: FaceTrackerService,
     private http: HttpClient,
     private cartService: CartService,
-    private authService: AuthService
+    private authService: AuthService,
+    private colorService: ColorService
   ) { }
 
   async ngOnInit() {
@@ -230,13 +243,10 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
     const points = this.faceTracker.facePoints();
     if (!points) return;
 
-    const rawColors = [
-      this.extractColor(points.forehead.x, points.forehead.y),
-      this.extractColor(points.nose.x, points.nose.y),
-      this.extractColor(points.leftCheek.x, points.leftCheek.y),
-      this.extractColor(points.rightCheek.x, points.rightCheek.y),
-      this.extractColor(points.chin.x, points.chin.y)
-    ].filter(c => c !== null) as { r: number, g: number, b: number }[];
+    // F3: Extract all 5 face points in one canvas draw
+    const rawColors = this.extractColors([
+      points.forehead, points.nose, points.leftCheek, points.rightCheek, points.chin
+    ]);
     if (rawColors.length === 0) return;
 
     const avg = rawColors.reduce((a, c) => ({ r: a.r + c.r, g: a.g + c.g, b: a.b + c.b }), { r: 0, g: 0, b: 0 });
@@ -322,56 +332,68 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
     const shade$ = this.http.post<ShadeMatch[]>(`${this.apiBase}/shades/match`, {
       ...color,
       skinType: this.selectedSkinType
-    }).pipe(catchError(() => of([])));
+    }).pipe(catchError(() => of([] as ShadeMatch[])));
 
-    // ── 4. AI face analyze → recommend-routine (chained) ──────────────────
-    const routine$ = imageData
+    // ── 4. AI face analyze (runs in parallel with shade match) ──────────────
+    const analyze$ = imageData
       ? this.http.post<{ success: boolean; data: SkinProfile; saved?: boolean }>(
           `${this.aiBase}/ai/analyze-face`,
           { imageData }
-        ).pipe(
-          catchError(() => of(null)),
-          switchMap(res => {
-            if (!res?.success || !res.data) {
-              return of(null);
-            }
-            const profile = res.data;
-            this.skinProfile.set(profile);
-
-            // Show save confirmation toast if backend confirmed it was saved
-            if (res.saved) {
-              this.showToast('✅ Kết quả đã được lưu vào hồ sơ của bạn');
-            }
-
-            return this.http.post<{ success: boolean; data: RoutineData }>(
-              `${this.aiBase}/ai/recommend-routine`,
-              {
-                skinType:  profile.skinType  || this.selectedSkinType,
-                skinTone:  profile.skinTone,
-                undertone: profile.undertone,
-                concerns:  profile.concerns
-              }
-            ).pipe(catchError(() => of(null)));
-          })
-        )
+        ).pipe(catchError(() => of(null)))
       : of(null);
 
-    // ── 5. Fire both in parallel ────────────────────────────────────────────
+    // ── 5. Run shade + analyze in parallel, THEN call routine with both results ──
     this.isLoadingRoutine.set(true);
 
-    forkJoin({ shade: shade$, routine: routine$ })
-      .pipe(take(1))
-      .subscribe({
-        next: ({ shade, routine }) => {
-          // Shade results
+    forkJoin({ shade: shade$, analyze: analyze$ })
+      .pipe(
+        take(1),
+        switchMap(({ shade, analyze }) => {
+          // Process shade results immediately
           const shadeResults = shade as ShadeMatch[];
           this.matchResults = shadeResults;
           this.bestMatch = shadeResults.length > 0 ? shadeResults[0] : null;
           this.userUndertone = this.bestMatch?.predictedUndertone || '';
 
-          // Routine results
-          if (routine && (routine as any).success && (routine as any).data) {
-            this.routine.set((routine as any).data as RoutineData);
+          // Process skin profile
+          if (analyze?.success && analyze.data) {
+            this.skinProfile.set(analyze.data);
+            // F2: Confidence threshold warning
+            this.lowConfidence.set((analyze.data.confidence || 0) < 50);
+
+            if (analyze.saved) {
+              this.showToast('✅ Kết quả đã được lưu vào hồ sơ của bạn');
+            }
+          }
+
+          const profile = this.skinProfile();
+
+          if (!profile) {
+            return of(null);
+          }
+
+          // ── Call recommend-routine WITH shade match data ──
+          return this.http.post<RoutineResponse>(
+            `${this.aiBase}/ai/recommend-routine`,
+            {
+              skinType:  profile.skinType  || this.selectedSkinType,
+              skinTone:  profile.skinTone,
+              undertone: profile.undertone,
+              concerns:  profile.concerns,
+              shadeMatchProduct: this.bestMatch ? {
+                Product_ID: this.bestMatch.Product_ID,
+                Product_Name: this.bestMatch.Product_Name,
+                Shade_Name: this.bestMatch.Shade_Name,
+                Shade_Code: this.bestMatch.Shade_Code
+              } : null
+            }
+          ).pipe(catchError(() => of(null)));
+        })
+      )
+      .subscribe({
+        next: (routine: RoutineResponse | null) => {
+          if (routine?.success && routine.data) {
+            this.routine.set(routine.data);
           } else {
             this.routineError.set('AI Routine không khả dụng lúc này. Vui lòng thử lại sau.');
           }
@@ -379,11 +401,6 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
           this.isLoadingRoutine.set(false);
           this.isProcessing = false;
           this.showResultModal.set(true);
-
-          // Toast nếu kết quả đã được lưu vào hồ sơ (user đang login)
-          if ((routine as any)?.saved || (shade as any)?.saved) {
-            setTimeout(() => this.showToast('💾 Kết quả đã được lưu vào hồ sơ da của bạn'), 600);
-          }
         },
         error: () => {
           this.error = 'Không thể kết nối server. Vui lòng thử lại.';
@@ -418,9 +435,9 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
   }
 
   addRoutineProductToCart(step: RoutineStep) {
-    if (!step.product?._id) return;
+    if (!step.product?.Product_ID) return;
     this.cartService.addToCart({
-      productId: step.product._id,
+      productId: step.product.Product_ID,
       quantity: 1
     }).subscribe({
       next: () => this.showToast(`Đã thêm ${step.product?.Name} vào giỏ!`),
@@ -430,14 +447,29 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
 
   addAllToCart() {
     const steps = this.routine()?.routine ?? [];
-    const adds = steps.filter(s => s.product?._id).map(s =>
-      this.cartService.addToCart({ productId: s.product!._id, quantity: 1 })
-    );
+    const adds = steps
+      .filter(s => s.product?.Product_ID && !this.skippedSteps().has(s.step))
+      .map(s =>
+        this.cartService.addToCart({ productId: s.product!.Product_ID, quantity: 1 })
+      );
     if (adds.length === 0) return;
     forkJoin(adds).subscribe({
       next: () => this.showToast(`Đã thêm ${adds.length} sản phẩm vào giỏ hàng!`),
       error: () => this.showToast('Có lỗi khi thêm vào giỏ.')
     });
+  }
+
+  /** Skip/unskip a routine step */
+  skippedSteps = signal<Set<string>>(new Set());
+
+  toggleSkipStep(stepName: string) {
+    const current = new Set(this.skippedSteps());
+    if (current.has(stepName)) {
+      current.delete(stepName);
+    } else {
+      current.add(stepName);
+    }
+    this.skippedSteps.set(current);
   }
 
   closeModal() {
@@ -477,25 +509,40 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
     return { L: 116 * f(Y) - 16, a: 500 * (f(X) - f(Y)), b: 200 * (f(Y) - f(Z)) };
   }
 
-  extractColor(x: number, y: number): { r: number, g: number, b: number } | null {
+  /**
+   * F3: Optimized — draw canvas ONCE, then sample all 5 points.
+   * Returns array of colors for all requested points.
+   */
+  extractColors(points: { x: number; y: number }[]): { r: number; g: number; b: number }[] {
     const video = this.videoElement.nativeElement;
     const canvas = this.canvasElement.nativeElement;
     const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
+    if (!ctx) return [];
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const px = Math.floor(x * canvas.width);
-    const py = Math.floor(y * canvas.height);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height); // Draw ONCE
+
+    const results: { r: number; g: number; b: number }[] = [];
     const sz = 10;
-    try {
-      const frame = ctx.getImageData(Math.max(0, px - sz / 2), Math.max(0, py - sz / 2), sz, sz);
-      let r = 0, g = 0, b = 0;
-      const n = frame.data.length / 4;
-      for (let i = 0; i < frame.data.length; i += 4) {
-        r += frame.data[i]; g += frame.data[i + 1]; b += frame.data[i + 2];
-      }
-      return { r: Math.round(r / n), g: Math.round(g / n), b: Math.round(b / n) };
-    } catch { return null; }
+    for (const pt of points) {
+      const px = Math.floor(pt.x * canvas.width);
+      const py = Math.floor(pt.y * canvas.height);
+      try {
+        const frame = ctx.getImageData(Math.max(0, px - sz / 2), Math.max(0, py - sz / 2), sz, sz);
+        let r = 0, g = 0, b = 0;
+        const n = frame.data.length / 4;
+        for (let i = 0; i < frame.data.length; i += 4) {
+          r += frame.data[i]; g += frame.data[i + 1]; b += frame.data[i + 2];
+        }
+        results.push({ r: Math.round(r / n), g: Math.round(g / n), b: Math.round(b / n) });
+      } catch { /* skip invalid point */ }
+    }
+    return results;
+  }
+
+  /** @deprecated Use extractColors() instead — kept for compatibility */
+  extractColor(x: number, y: number): { r: number, g: number, b: number } | null {
+    const results = this.extractColors([{ x, y }]);
+    return results.length > 0 ? results[0] : null;
   }
 }

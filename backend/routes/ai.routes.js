@@ -17,5 +17,6 @@ router.get('/history', protect, aiController.getHistory);
 // Legacy/Alternative
 router.post('/analyze-skin', aiScanLimiter, aiController.analyzeSkin);
 router.get('/health', aiController.healthCheck);
+router.post('/routine-feedback', protect, aiController.submitRoutineFeedback);
 
 module.exports = router;
