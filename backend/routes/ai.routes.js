@@ -10,7 +10,8 @@ const { aiScanLimiter } = require('../middlewares/rateLimit');
  * @access  Public (Optional Auth for history)
  */
 router.post('/analyze-face', aiScanLimiter, optionalProtect, aiController.analyzeFace);
-router.post('/recommend-routine', aiController.recommendRoutine);
+router.post('/recommend-routine', optionalProtect, aiController.recommendRoutine);
+router.get('/latest-profile', protect, aiController.getLatestProfile);
 router.get('/history', protect, aiController.getHistory);
 
 // Legacy/Alternative

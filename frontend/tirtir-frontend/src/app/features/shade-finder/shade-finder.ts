@@ -7,6 +7,7 @@ import { forkJoin, of, take } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import { FaceTrackerService } from '../../core/services/face-tracker.service';
 import { CartService } from '../../core/services/cart.service';
+import { AuthService } from '../../core/services/auth.service';
 import { environment } from '../../../environments/environment';
 
 /** Response shape from POST /api/v1/shades/match */
@@ -46,6 +47,7 @@ interface RoutineStep {
   step: string;
   product_id: string;
   reason: string;
+  application_tip?: string;
   product?: {
     Name: string;
     Category: string;
@@ -56,11 +58,30 @@ interface RoutineStep {
   } | null;
 }
 
+interface SkinMetrics {
+  hydration: number;
+  elasticity: number;
+  pigmentation: number;
+  texture: number;
+  sensitivity: number;
+}
+
+interface SkinEvolution {
+  current: { hydration: number; texture: number };
+  predicted: { hydration: number; texture: number };
+}
+
 /** Response from POST /api/ai/recommend-routine */
 interface RoutineData {
   routine: RoutineStep[];
   advice: string;
+  dermatologistNote?: string;
+  skinMetrics?: SkinMetrics;
+  skinEvolution?: SkinEvolution;
+  totalPrice?: number;
+  skinType?: string;
 }
+
 
 @Component({
   selector: 'app-shade-finder',
@@ -81,6 +102,10 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
 
   selectedSkinType = 'Normal';
 
+  // Instruction screen — shown before camera starts
+  showInstructions = signal(true);
+  isInitializingModel = signal(false);
+
   // Shade match results
   matchResults: ShadeMatch[] = [];
   bestMatch: ShadeMatch | null = null;
@@ -94,13 +119,13 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
 
   // UI
   showResultModal = signal(false);
-  activeTab = signal<'shade' | 'routine'>('shade');
+  activeTab = signal<'shade' | 'report' | 'routine'>('shade');
   toastMessage = signal<string | null>(null);
   private toastTimer: any = null;
 
   private readonly backendBase = environment.apiUrl.replace('/api/v1', ''); // http://localhost:5001
-  private readonly apiBase = environment.apiUrl; // /api/v1
-  private readonly aiBase = environment.apiUrl; // /api/v1 — AI routes mounted at /api/v1/ai
+  private readonly apiBase = environment.apiUrl;
+  private readonly aiBase = environment.apiUrl;
 
   // Lighting & Validation
   lightingStatus = signal<{ isValid: boolean, message: string, type: 'success' | 'warning' | 'error' }>({
@@ -109,17 +134,34 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
     type: 'warning'
   });
 
+  // Live AI metrics (derived from real-time colour analysis)
+  liveMetrics = signal<{ moisture: number; pores: number; redness: number; evenness: number } | null>(null);
+
+  // FPS tracking
+  fps = signal(0);
+  private fpsFrames = 0;
+  private fpsLastTime = performance.now();
+
   colorHistory: { r: number, g: number, b: number }[] = [];
   readonly HISTORY_SIZE = 15;
 
   constructor(
     public faceTracker: FaceTrackerService,
     private http: HttpClient,
-    private cartService: CartService
+    private cartService: CartService,
+    private authService: AuthService
   ) { }
 
   async ngOnInit() {
-    await this.faceTracker.initialize();
+    // Pre-load MediaPipe model in background while instructions are shown
+    this.faceTracker.initialize();
+  }
+
+  async startFromInstructions() {
+    this.isInitializingModel.set(true);
+    await this.faceTracker.initialize(); // await in case still loading
+    this.isInitializingModel.set(false);
+    this.showInstructions.set(false);
     await this.startCamera();
   }
 
@@ -157,6 +199,16 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
 
   detectLoop() {
     if (!this.isCameraActive || !this.videoElement?.nativeElement) return;
+
+    // FPS counter
+    this.fpsFrames++;
+    const now = performance.now();
+    if (now - this.fpsLastTime >= 1000) {
+      this.fps.set(this.fpsFrames);
+      this.fpsFrames = 0;
+      this.fpsLastTime = now;
+    }
+
     this.faceTracker.detectFace(this.videoElement.nativeElement);
 
     if (this.faceTracker.isFaceDetected()) {
@@ -168,6 +220,7 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
         type: 'warning'
       });
       this.colorHistory = [];
+      this.liveMetrics.set(null);
     }
     this.animationFrameId = requestAnimationFrame(() => this.detectLoop());
   }
@@ -198,9 +251,24 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
 
     const v = this.validateSkinColor(sm.r, sm.g, sm.b);
     this.lightingStatus.set(v.isValid
-      ? { isValid: true, message: 'Ánh sáng tốt — Sẵn sàng quét!', type: 'success' }
+      ? { isValid: true, message: 'Sẵn sàng quét', type: 'success' }
       : { isValid: false, message: v.reason || 'Ánh sáng không đạt.', type: 'error' }
     );
+
+    // Derive live metrics from colour analysis
+    if (v.isValid && this.colorHistory.length >= 5) {
+      const lum = 0.2126 * sm.r + 0.7152 * sm.g + 0.0722 * sm.b;
+      // Moisture: higher blue channel relative to lum = more hydrated appearance
+      const moisture = Math.min(99, Math.max(20, Math.round(40 + (sm.b / lum) * 35)));
+      // Redness: elevated red channel relative to green
+      const redness = Math.min(60, Math.max(5, Math.round(((sm.r - sm.g) / 255) * 120)));
+      // Pores: variance across face points (lower variance = smoother)
+      const variance = rawColors.reduce((acc, c) => acc + Math.abs(c.r - sm.r) + Math.abs(c.g - sm.g), 0) / rawColors.length;
+      const pores = Math.min(50, Math.max(5, Math.round(variance * 0.8)));
+      // Evenness: inverse of variance
+      const evenness = Math.min(99, Math.max(40, Math.round(99 - pores)));
+      this.liveMetrics.set({ moisture, redness, pores, evenness });
+    }
   }
 
   /**
@@ -256,7 +324,7 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
 
     // ── 4. AI face analyze → recommend-routine (chained) ──────────────────
     const routine$ = imageData
-      ? this.http.post<{ success: boolean; data: SkinProfile }>(
+      ? this.http.post<{ success: boolean; data: SkinProfile; saved?: boolean }>(
           `${this.aiBase}/ai/analyze-face`,
           { imageData }
         ).pipe(
@@ -267,6 +335,11 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
             }
             const profile = res.data;
             this.skinProfile.set(profile);
+
+            // Show save confirmation toast if backend confirmed it was saved
+            if (res.saved) {
+              this.showToast('✅ Kết quả đã được lưu vào hồ sơ của bạn');
+            }
 
             return this.http.post<{ success: boolean; data: RoutineData }>(
               `${this.aiBase}/ai/recommend-routine`,
@@ -304,6 +377,11 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
           this.isLoadingRoutine.set(false);
           this.isProcessing = false;
           this.showResultModal.set(true);
+
+          // Toast nếu kết quả đã được lưu vào hồ sơ (user đang login)
+          if ((routine as any)?.saved || (shade as any)?.saved) {
+            setTimeout(() => this.showToast('💾 Kết quả đã được lưu vào hồ sơ da của bạn'), 600);
+          }
         },
         error: () => {
           this.error = 'Không thể kết nối server. Vui lòng thử lại.';
@@ -343,8 +421,20 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
       productId: step.product._id,
       quantity: 1
     }).subscribe({
-      next: () => this.showToast(`✅ Đã thêm ${step.product?.Name} vào giỏ!`),
-      error: () => this.showToast('❌ Không thể thêm. Vui lòng thử lại.')
+      next: () => this.showToast(`Đã thêm ${step.product?.Name} vào giỏ!`),
+      error: () => this.showToast('Không thể thêm. Vui lòng thử lại.')
+    });
+  }
+
+  addAllToCart() {
+    const steps = this.routine()?.routine ?? [];
+    const adds = steps.filter(s => s.product?._id).map(s =>
+      this.cartService.addToCart({ productId: s.product!._id, quantity: 1 })
+    );
+    if (adds.length === 0) return;
+    forkJoin(adds).subscribe({
+      next: () => this.showToast(`Đã thêm ${adds.length} sản phẩm vào giỏ hàng!`),
+      error: () => this.showToast('Có lỗi khi thêm vào giỏ.')
     });
   }
 
@@ -362,9 +452,10 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
 
   validateSkinColor(r: number, g: number, b: number): { isValid: boolean, reason?: string } {
     const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    if (lum <= 30) return { isValid: false, reason: 'Ánh sáng quá yếu. Vui lòng bật thêm đèn.' };
+    if (lum <= 70) return { isValid: false, reason: 'Ánh sáng quá yếu. Vui lòng bật đèn hoặc ra chỗ sáng hơn.' };
+    if (lum > 230) return { isValid: false, reason: 'Ánh sáng quá chói. Vui lòng di chuyển ra xa nguồn sáng.' };
     const lab = this.rgbToLab(r, g, b);
-    if (lab.L < 25) return { isValid: false, reason: 'Da quá tối. Di chuyển ra nơi sáng hơn.' };
+    if (lab.L < 40) return { isValid: false, reason: 'Da quá tối. Di chuyển ra nơi sáng hơn.' };
     if (lab.a < 5 || lab.a > 45) return { isValid: false, reason: 'Màu da bị ám. Kiểm tra lại ánh sáng.' };
     if (lab.b < 5 || lab.b > 55) return { isValid: false, reason: 'Ánh sáng bị ám vàng/xanh. Kiểm tra lại.' };
     return { isValid: true };

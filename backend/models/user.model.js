@@ -103,6 +103,15 @@ const UserSchema = new mongoose.Schema({
             default: false
         }
     }],
+    // ===== SKIN PROFILE (Latest AI Analysis Snapshot) =====
+    skinProfile: {
+        skinTone:       { type: String, default: null },
+        undertone:      { type: String, default: null },
+        skinType:       { type: String, default: null },
+        concerns:       { type: [String], default: [] },
+        confidence:     { type: Number, default: null },
+        lastAnalyzedAt: { type: Date, default: null }
+    },
     // ===== WISHLIST (Product References) =====
     wishlist: [{
         type: mongoose.Schema.Types.ObjectId,

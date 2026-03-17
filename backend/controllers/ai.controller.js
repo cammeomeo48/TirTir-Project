@@ -1,6 +1,7 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const axios = require('axios');
 const AiAnalysis = require('../models/ai_analysis.model');
+const User = require('../models/user.model');
 const Product = require('../models/product.model');
 const { buildCacheKey, getCache, setCache } = require('../utils/redisCache');
 
@@ -142,18 +143,38 @@ exports.analyzeFace = async (req, res) => {
             });
         }
 
-        // 2. Save to History (if user logged in)
+        // 2. Save to History + Update skinProfile snapshot (if user logged in)
         if (req.user) {
+            // Save full analysis record
             await AiAnalysis.create({
                 user: req.user.id,
                 imageUrl: 'ai_analysis_result',
-                analysisResult: analysisResult
+                analysisResult: {
+                    skinTone:   analysisResult.skinTone,
+                    undertone:  analysisResult.undertone,
+                    skinType:   analysisResult.skinType,
+                    concerns:   analysisResult.concerns || [],
+                    confidence: analysisResult.confidence
+                }
+            });
+
+            // Update quick-access skinProfile snapshot on User doc
+            await User.findByIdAndUpdate(req.user.id, {
+                skinProfile: {
+                    skinTone:       analysisResult.skinTone,
+                    undertone:      analysisResult.undertone,
+                    skinType:       analysisResult.skinType,
+                    concerns:       analysisResult.concerns || [],
+                    confidence:     analysisResult.confidence,
+                    lastAnalyzedAt: new Date()
+                }
             });
         }
 
         res.json({
             success: true,
-            data: analysisResult
+            data: analysisResult,
+            saved: !!req.user // let frontend know if it was saved
         });
 
     } catch (error) {
@@ -169,11 +190,23 @@ exports.analyzeFace = async (req, res) => {
  */
 exports.recommendRoutine = async (req, res) => {
     try {
-        const { skinType, concerns, skinTone, undertone } = req.body;
+        let { skinType, concerns, skinTone, undertone } = req.body;
+
+        // Fallback: if no body data but user has saved profile → use it
+        if ((!skinType || !skinTone) && req.user) {
+            const user = await User.findById(req.user.id).select('skinProfile');
+            if (user?.skinProfile?.skinTone) {
+                skinTone  = user.skinProfile.skinTone;
+                skinType  = user.skinProfile.skinType || 'Normal';
+                undertone = user.skinProfile.undertone;
+                concerns  = user.skinProfile.concerns;
+                console.log(`[AI] Using saved skin profile for user ${req.user.id}`);
+            }
+        }
 
         // 1. Validate Input
         if (!skinType || !skinTone) {
-            return res.status(400).json({ success: false, message: 'Missing skin analysis data' });
+            return res.status(400).json({ success: false, message: 'Missing skin analysis data. Please scan first.' });
         }
 
         // === PHASE C: REDIS CACHE CHECK ===
@@ -200,38 +233,54 @@ exports.recommendRoutine = async (req, res) => {
         // We act as a Beauty Consultant. 
         // ROLE DEFINITION: Gemini acts as the "Dermatologist Brain", interpreting the raw scan data (from Python/MediaPipe) 
         // to prescribe a personalized routine.
+        // Build product list for prompt context (Gemini recommends steps, backend picks real products)
         const productListStr = products.map(p =>
-            `- ID: ${p._id}, Name: ${p.Name}, Category: ${p.Category}, For: ${p.Skin_Type_Target}, Treats: ${p.Main_Concern}`
+            `- Category: ${p.Category}, Name: ${p.Name}`
         ).join('\n');
 
         const prompt = `
-        You are a professional Dermatologist and Beauty Consultant for Tirtir (a Korean beauty brand).
-        
-        **User Profile (Detected by AI Scanner):**
-        - Skin Type: ${skinType}
-        - Skin Tone: ${skinTone}
-        - Undertone: ${undertone || 'Unknown'}
-        - Detected Concerns: ${concerns && concerns.length > 0 ? concerns.join(', ') : 'None visible'}
-        
-        **Task:**
-        Create a personalized "Glass Skin" Skincare Routine for this user using ONLY the available products below.
-        
-        **Available Products:**
-        ${productListStr}
-        
-        **Requirements:**
-        1. Select exactly 3-5 key products for a morning/night routine (Cleanser -> Toner -> Serum -> Cream -> Sunscreen/Cushion).
-        2. Explain WHY each product was chosen based on their specific skin analysis (e.g., "This serum helps with your detected redness...").
-        3. Provide a short, encouraging "Expert Advice" paragraph at the end.
-        4. Return the result in strict JSON format as follows:
-        {
-            "routine": [
-                { "step": "Step Name", "product_id": "Mongoose_ID_Here", "reason": "Explanation" }
-            ],
-            "expert_advice": "Your advice here..."
-        }
-        Do not use Markdown formatting (like \`\`\`json). Just the raw JSON string.
-        `;
+You are a professional licensed dermatologist and skincare advisor for TirTir — a premium Korean beauty brand.
+
+A customer's skin has been analyzed by our AI scanner. Create a personalized skincare routine for this customer.
+
+CUSTOMER SKIN PROFILE:
+- Skin Type: ${skinType}
+- Skin Tone: ${skinTone}
+- Undertone: ${undertone || 'Not detected'}
+- Detected Concerns: ${concerns && concerns.length > 0 ? concerns.join(', ') : 'None'}
+
+AVAILABLE PRODUCT CATEGORIES: Cleanser, Toner, Serum, Cream, Sunscreen, Cushion
+
+INSTRUCTIONS:
+1. Select 3 to 5 routine steps from the available categories.
+2. For each step, provide a clinical reason and an application tip for this specific skin type.
+3. Write a dermatologist_note: a 2-sentence clinical assessment.
+4. Write expert_advice: a 1-2 sentence routine summary.
+5. Estimate current skin metrics (0-100) and predict after 28 days of use.
+6. Return ONLY a raw JSON object — no Markdown, no code blocks:
+
+{
+  "routine": [
+    {
+      "step": "Category name exactly as listed above (e.g. Cleanser, Toner, Serum)",
+      "reason": "Clinical reason why this step suits this skin profile",
+      "application_tip": "How to apply correctly for this skin type"
+    }
+  ],
+  "expert_advice": "1-2 sentence summary",
+  "dermatologist_note": "2-sentence clinical assessment",
+  "skin_metrics": {
+    "hydration": 0,
+    "elasticity": 0,
+    "pigmentation": 0,
+    "texture": 0,
+    "sensitivity": 0
+  },
+  "skin_evolution": {
+    "current": { "hydration": 0, "texture": 0 },
+    "predicted": { "hydration": 0, "texture": 0 }
+  }
+}`;
 
         // 4. Call Gemini API
         let recommendationData;
@@ -255,37 +304,74 @@ exports.recommendRoutine = async (req, res) => {
 
         // 5. Fallback Logic (Heuristic) if AI is disabled or fails
         if (!recommendationData) {
-            console.log("Falling back to Heuristic Recommendation");
+            console.log('Falling back to Heuristic Recommendation');
             const routine = [];
             const findP = (cat) => products.find(p => p.Category === cat && (p.Skin_Type_Target?.includes(skinType) || p.Main_Concern?.includes(concerns?.[0])));
 
             const toner = findP('Toner');
-            if (toner) routine.push({ step: 'Toner', product_id: toner._id, reason: `Best toner for ${skinType}` });
-
+            if (toner) routine.push({ step: 'Toner', product_id: toner._id, reason: `Best toner for ${skinType} skin`, application_tip: 'Apply with cotton pad after cleansing.' });
             const serum = findP('Serum');
-            if (serum) routine.push({ step: 'Serum', product_id: serum._id, reason: `Treats ${concerns?.[0] || 'general skin health'}` });
-
+            if (serum) routine.push({ step: 'Serum', product_id: serum._id, reason: `Targets ${concerns?.[0] || 'general skin health'}`, application_tip: 'Press gently into skin, do not rub.' });
             const cream = findP('Cream');
-            if (cream) routine.push({ step: 'Cream', product_id: cream._id, reason: `Moisturizer for ${skinType}` });
+            if (cream) routine.push({ step: 'Cream', product_id: cream._id, reason: `Moisturizer suited for ${skinType} skin`, application_tip: 'Apply as the final step, seal in all layers.' });
 
+            const isSensitive = skinType === 'Dry' || concerns?.includes('Redness');
             recommendationData = {
-                routine: routine,
-                expert_advice: "We recommend this basic routine based on your skin type. (AI Service unavailable)"
+                routine,
+                expert_advice: 'We recommend this routine based on your detected skin profile. For best results, follow the steps consistently morning and night.',
+                dermatologist_note: `Your skin presents characteristics of ${skinType} type${ concerns?.length ? ` with notable ${concerns[0]}` : '' }. A gentle, consistent routine is the foundation of healthy skin.`,
+                skin_metrics: {
+                    hydration: skinType === 'Dry' ? 38 : skinType === 'Oily' ? 62 : 55,
+                    elasticity: 70,
+                    pigmentation: concerns?.includes('Pigmentation') ? 42 : 75,
+                    texture: concerns?.includes('Acne') ? 48 : 68,
+                    sensitivity: isSensitive ? 72 : 35
+                },
+                skin_evolution: {
+                    current: { hydration: skinType === 'Dry' ? 38 : 55, texture: 52 },
+                    predicted: { hydration: skinType === 'Dry' ? 60 : 72, texture: 75 }
+                }
             };
         }
 
-        // 6. Hydrate Product Details (Populate full product info based on IDs returned by AI)
-        const enrichedRoutine = await Promise.all(recommendationData.routine.map(async (step) => {
-            const product = products.find(p => p._id.toString() === step.product_id);
-            return {
-                ...step,
-                product: product || null // Return full product object
-            };
-        }));
+        // 6. Hydrate Product Details — match by category (Gemini returns category names, not product IDs)
+        //    For each step Gemini recommends, pick the best real product in that category from the DB.
+        const usedCategories = new Set();
+        const enrichedRoutine = recommendationData.routine.map((step) => {
+            const stepCat = (step.step || '').trim();
+
+            // Find best product for this category (prefer skin type target match, then any in category)
+            let product = products.find(p =>
+                p.Category === stepCat &&
+                !usedCategories.has(p._id.toString()) &&
+                (p.Skin_Type_Target?.toLowerCase().includes(skinType.toLowerCase()) ||
+                 p.Main_Concern?.toLowerCase().includes(concerns?.[0]?.toLowerCase() || ''))
+            );
+
+            // Fallback: any product in that category not yet used
+            if (!product) {
+                product = products.find(p =>
+                    p.Category === stepCat && !usedCategories.has(p._id.toString())
+                );
+            }
+
+            if (product) usedCategories.add(product._id.toString());
+
+            return { ...step, product: product || null };
+        });
+
+        // 7. Calculate total routine price
+        const routineProducts = enrichedRoutine.filter(r => r.product);
+        const totalPrice = routineProducts.reduce((sum, r) => sum + (r.product?.Price || 0), 0);
 
         const responseData = {
-            routine: enrichedRoutine.filter(r => r.product),
-            advice: recommendationData.expert_advice
+            routine: routineProducts,
+            advice: recommendationData.expert_advice,
+            dermatologistNote: recommendationData.dermatologist_note || null,
+            skinMetrics: recommendationData.skin_metrics || null,
+            skinEvolution: recommendationData.skin_evolution || null,
+            totalPrice,
+            skinType,
         };
 
         // === PHASE C: CACHE WRITE — 24h TTL ===
@@ -296,6 +382,37 @@ exports.recommendRoutine = async (req, res) => {
 
     } catch (error) {
         console.error('Recommend Routine Error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+/**
+ * @route   GET /api/v1/ai/latest-profile
+ * @desc    Get the user's latest skin analysis snapshot
+ * @access  Private
+ */
+exports.getLatestProfile = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('skinProfile');
+
+        if (!user?.skinProfile?.skinTone) {
+            return res.json({ success: true, data: null, message: 'No skin analysis found. Please scan first.' });
+        }
+
+        // Also fetch the last 5 history records
+        const history = await AiAnalysis.find({ user: req.user.id })
+            .sort({ createdAt: -1 })
+            .limit(5)
+            .select('analysisResult createdAt');
+
+        res.json({
+            success: true,
+            data: {
+                skinProfile: user.skinProfile,
+                history
+            }
+        });
+    } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 };
