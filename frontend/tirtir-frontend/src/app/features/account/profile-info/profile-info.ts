@@ -1,11 +1,14 @@
 import { Component, OnInit, OnDestroy, inject, HostListener, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { UserService } from '../../../core/services/user.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { User } from '../../../core/models';
+import { User, SkinProfile } from '../../../core/models';
 import { CanComponentDeactivate } from '../../../core/guards/can-deactivate.guard';
 import { Subject, takeUntil } from 'rxjs';
+import { environment } from '../../../../environments/environment';
 
 @Component({
     selector: 'app-profile-info',
@@ -20,12 +23,20 @@ export class ProfileInfoComponent implements OnInit, OnDestroy, CanComponentDeac
     private userService = inject(UserService);
     private authService = inject(AuthService);
     private fb = inject(FormBuilder);
+    private http = inject(HttpClient);
+    private router = inject(Router);
+    private readonly aiBase = environment.apiUrl;
 
     profileForm!: FormGroup;
     loading = false;
     successMessage = '';
     errorMessage = '';
     user: User | null = null;
+
+    // Skin profile
+    skinProfile: SkinProfile | null = null;
+    loadingSkinProfile = false;
+    skinProfileError = '';
 
     // Avatar upload state
     showUploadModal = false;
@@ -47,7 +58,8 @@ export class ProfileInfoComponent implements OnInit, OnDestroy, CanComponentDeac
     ngOnInit(): void {
         this.initForm();
         this.loadProfile();
-        this.trackFormChanges(); // Start tracking form changes
+        this.trackFormChanges();
+        this.loadSkinProfile();
     }
 
     initForm(): void {
@@ -392,5 +404,60 @@ export class ProfileInfoComponent implements OnInit, OnDestroy, CanComponentDeac
         const month = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
+    }
+
+    // ===== SKIN PROFILE METHODS =====
+
+    loadSkinProfile(): void {
+        if (!this.authService.isAuthenticated()) return;
+        this.loadingSkinProfile = true;
+        this.skinProfileError = '';
+        this.http.get<{ success: boolean; data: { skinProfile: SkinProfile } | null }>(
+            `${this.aiBase}/ai/latest-profile`
+        ).subscribe({
+            next: (res) => {
+                this.skinProfile = res.data?.skinProfile || null;
+                this.loadingSkinProfile = false;
+            },
+            error: () => {
+                this.skinProfileError = 'Không thể tải hồ sơ da.';
+                this.loadingSkinProfile = false;
+            }
+        });
+    }
+
+    navigateToShadeFinder(): void {
+        this.router.navigate(['/shade-finder']);
+    }
+
+    getSkinTypeLabel(type: string): string {
+        const map: Record<string, string> = {
+            'Oily': 'Da dầu',
+            'Dry': 'Da khô',
+            'Combination': 'Da hỗn hợp',
+            'Normal': 'Da thường',
+            'Sensitive': 'Da nhạy cảm'
+        };
+        return map[type] || type;
+    }
+
+    getSkinToneLabel(tone: string): string {
+        const map: Record<string, string> = {
+            'Fair': 'Trắng sứ',
+            'Light': 'Sáng',
+            'Medium': 'Trung bình',
+            'Tan': 'Nâu nhẹ',
+            'Dark': 'Ngăm',
+            'Deep': 'Sẫn tối'
+        };
+        return map[tone] || tone;
+    }
+
+    formatLastAnalyzed(date: Date | string): string {
+        if (!date) return '';
+        return new Date(date).toLocaleDateString('vi-VN', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
     }
 }

@@ -12,26 +12,36 @@ export interface FacePoints {
 @Injectable({ providedIn: 'root' })
 export class FaceTrackerService {
   private faceLandmarker: FaceLandmarker | undefined;
-  
+  private isInitialized = false;
+  private initPromise: Promise<void> | null = null;
+
   // Signals for UI state
   public isFaceDetected = signal(false);
-  // Changed to hold multiple points
   public facePoints = signal<FacePoints | null>(null);
 
   async initialize() {
-    const filesetResolver = await FilesetResolver.forVisionTasks(
-      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm'
-    );
-    
-    this.faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
-      baseOptions: {
-        modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
-        delegate: 'GPU'
-      },
-      outputFaceBlendshapes: true,
-      runningMode: 'VIDEO',
-      numFaces: 1
-    });
+    // Already initialized — skip (singleton, stays in memory for entire session)
+    if (this.isInitialized) return;
+    // If already loading (concurrent calls) — wait for the same promise
+    if (this.initPromise) return this.initPromise;
+
+    this.initPromise = (async () => {
+      const filesetResolver = await FilesetResolver.forVisionTasks(
+        'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm'
+      );
+      this.faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
+        baseOptions: {
+          modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
+          delegate: 'GPU'
+        },
+        outputFaceBlendshapes: true,
+        runningMode: 'VIDEO',
+        numFaces: 1
+      });
+      this.isInitialized = true;
+    })();
+
+    return this.initPromise;
   }
 
   detectFace(videoElement: HTMLVideoElement) {

@@ -134,7 +134,7 @@ async def health_check():
 
 @app.post("/analyze", response_model=AnalyzeResponse, dependencies=[Depends(verify_api_key)])
 @limiter.limit("10/minute")
-async def analyze_skin(request: AnalyzeRequest, req: Request):
+async def analyze_skin(request: Request, body: AnalyzeRequest):
     """
     Analyze skin from a base64-encoded image.
     Returns skin tone, undertone, concerns, and confidence.
@@ -145,7 +145,7 @@ async def analyze_skin(request: AnalyzeRequest, req: Request):
 
     start = time.time()
 
-    image = analyzer.decode_base64_image(request.image_base64)
+    image = analyzer.decode_base64_image(body.image_base64)
     if image is None:
         return AnalyzeResponse(
             success=False,

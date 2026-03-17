@@ -1,263 +1,545 @@
-<div class="shade-finder-container">
-    <div class="sf-header">
-        <h2>Virtual Shade Finder</h2>
-        <p class="sf-subtitle">Quét tông da và nhận gợi ý cushion TirTir phù hợp nhất với bạn</p>
-    </div>
+<div class="sf-page">
 
-    <!-- Camera -->
-    <div class="camera-wrap">
-        <div class="camera-container">
+  <!-- ═══════════════════════════════════════════════════
+       INSTRUCTION SCREEN
+       ═══════════════════════════════════════════════════ -->
+  @if (showInstructions()) {
+    <div class="instructions-screen">
+      <div class="instructions-card">
+        <button class="instr-close" (click)="showInstructions.set(false)">✕</button>
+        <div class="instr-brand">TirTir AI</div>
+        <h2 class="instr-title">Chuẩn bị trước khi quét</h2>
+        <p class="instr-sub">Để AI phân tích tông da chính xác nhất</p>
+
+        <div class="instr-steps">
+          <div class="instr-step">
+            <div class="instr-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+              </svg>
+            </div>
+            <div class="instr-text">
+              <strong>Bật đèn</strong>
+              <span>Đảm bảo ánh sáng tự nhiên hoặc đèn phòng chiếu đều lên mặt</span>
+            </div>
+          </div>
+          <div class="instr-step">
+            <div class="instr-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="12" cy="7" r="4"/><path d="M6 21v-1a6 6 0 0 1 12 0v1"/>
+              </svg>
+            </div>
+            <div class="instr-text">
+              <strong>Buộc tóc ra sau</strong>
+              <span>Để lộ rõ trán, gò má và cằm</span>
+            </div>
+          </div>
+          <div class="instr-step">
+            <div class="instr-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="2" y="6" width="20" height="14" rx="2"/><circle cx="12" cy="13" r="4"/>
+              </svg>
+            </div>
+            <div class="instr-text">
+              <strong>Nhìn thẳng vào camera</strong>
+              <span>Giữ khuôn mặt trong khung hình, không nghiêng đầu</span>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-start-now" (click)="startFromInstructions()" [disabled]="isInitializingModel()">
+          @if (isInitializingModel()) {
+            <span class="start-spinner"></span>Đang tải mô hình AI...
+          } @else {
+            Bắt đầu quét
+          }
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════
+       MAIN CAMERA SCREEN
+       ═══════════════════════════════════════════════════ -->
+  @if (!showInstructions()) {
+    <div class="sf-main">
+      <div class="sf-header">
+        <div class="sf-header-left">
+          <h1>Virtual Shade Finder</h1>
+          <p>AI phân tích tông da và gợi ý cushion phù hợp nhất</p>
+        </div>
+        <div class="sf-header-right">
+          <div class="live-badge" [class.active]="isCameraActive && faceTracker.isFaceDetected()">
+            <span class="live-dot"></span>LIVE ANALYSIS
+          </div>
+        </div>
+      </div>
+
+      <div class="sf-layout">
+        <!-- ─── CAMERA COLUMN ─── -->
+        <div class="camera-col">
+          <div class="camera-container">
             <video #videoElement autoplay playsinline></video>
             <canvas #canvasElement class="hidden"></canvas>
 
-            <!-- SVG face guide -->
-            <div class="face-guide-overlay" *ngIf="isCameraActive">
-                <svg class="face-guide-svg" viewBox="0 0 640 480" preserveAspectRatio="none">
-                    <defs>
-                        <mask id="ovalMask">
-                            <rect width="640" height="480" fill="white" />
-                            <ellipse cx="320" cy="230" rx="155" ry="190" fill="black" />
-                        </mask>
-                    </defs>
-                    <rect width="640" height="480" fill="rgba(0,0,0,0.38)" mask="url(#ovalMask)" />
-                    <ellipse cx="320" cy="230" rx="155" ry="190" fill="none"
-                        [attr.stroke]="lightingStatus().type === 'success' ? '#4ade80' : lightingStatus().type === 'error' ? '#f87171' : '#facc15'"
-                        stroke-width="2.5" class="oval-frame" [class.pulse-green]="lightingStatus().type === 'success'"
-                        [class.pulse-yellow]="lightingStatus().type === 'warning'" />
-                    <g [attr.stroke]="lightingStatus().type === 'success' ? '#4ade80' : '#facc15'" stroke-width="3"
-                        stroke-linecap="round">
-                        <line x1="300" y1="40" x2="340" y2="40" />
-                        <line x1="300" y1="420" x2="340" y2="420" />
-                        <line x1="160" y1="210" x2="160" y2="250" />
-                        <line x1="480" y1="210" x2="480" y2="250" />
-                    </g>
-                    <ng-container *ngIf="faceTracker.isFaceDetected() && faceTracker.facePoints(); let pts">
-                        <circle [attr.cx]="(1 - pts.forehead.x) * 640" [attr.cy]="pts.forehead.y * 480" r="5"
-                            fill="rgba(74,222,128,0.85)" class="scan-dot" />
-                        <circle [attr.cx]="(1 - pts.nose.x) * 640" [attr.cy]="pts.nose.y * 480" r="4"
-                            fill="rgba(74,222,128,0.85)" class="scan-dot" />
-                        <circle [attr.cx]="(1 - pts.leftCheek.x) * 640" [attr.cy]="pts.leftCheek.y * 480" r="6"
-                            fill="rgba(74,222,128,0.85)" class="scan-dot" />
-                        <circle [attr.cx]="(1 - pts.rightCheek.x) * 640" [attr.cy]="pts.rightCheek.y * 480" r="6"
-                            fill="rgba(74,222,128,0.85)" class="scan-dot" />
-                        <circle [attr.cx]="(1 - pts.chin.x) * 640" [attr.cy]="pts.chin.y * 480" r="4"
-                            fill="rgba(74,222,128,0.85)" class="scan-dot" />
-                    </ng-container>
-                </svg>
-            </div>
+            <div class="corner tl"></div>
+            <div class="corner tr"></div>
+            <div class="corner bl"></div>
+            <div class="corner br"></div>
 
-            <!-- Loading state -->
-            <div class="camera-off-placeholder" *ngIf="!isCameraActive">
+            @if (isCameraActive) {
+              <div class="face-guide-overlay">
+                <svg class="face-guide-svg" viewBox="0 0 640 480" preserveAspectRatio="none">
+                  <defs>
+                    <mask id="ovalMask2">
+                      <rect width="640" height="480" fill="white"/>
+                      <ellipse cx="320" cy="230" rx="155" ry="190" fill="black"/>
+                    </mask>
+                  </defs>
+                  <rect width="640" height="480" fill="rgba(0,0,0,0.42)" mask="url(#ovalMask2)"/>
+                  <ellipse cx="320" cy="230" rx="155" ry="190" fill="none"
+                    [attr.stroke]="lightingStatus().type === 'success' ? '#FF3CAC' : lightingStatus().type === 'error' ? '#ef4444' : '#f59e0b'"
+                    stroke-width="2" stroke-dasharray="8 4" class="oval-frame"
+                    [class.pulse-pink]="lightingStatus().type === 'success'"/>
+                  @if (faceTracker.isFaceDetected() && faceTracker.facePoints(); as pts) {
+                    <circle [attr.cx]="(1 - pts.forehead.x) * 640" [attr.cy]="pts.forehead.y * 480" r="4" fill="#FF3CAC" class="scan-dot"/>
+                    <circle [attr.cx]="(1 - pts.nose.x) * 640" [attr.cy]="pts.nose.y * 480" r="3" fill="#FF3CAC" class="scan-dot"/>
+                    <circle [attr.cx]="(1 - pts.leftCheek.x) * 640" [attr.cy]="pts.leftCheek.y * 480" r="5" fill="#FF3CAC" class="scan-dot"/>
+                    <circle [attr.cx]="(1 - pts.rightCheek.x) * 640" [attr.cy]="pts.rightCheek.y * 480" r="5" fill="#FF3CAC" class="scan-dot"/>
+                    <circle [attr.cx]="(1 - pts.chin.x) * 640" [attr.cy]="pts.chin.y * 480" r="3" fill="#FF3CAC" class="scan-dot"/>
+                  }
+                </svg>
+              </div>
+            }
+
+            @if (!isCameraActive) {
+              <div class="camera-off-placeholder">
                 <div class="cam-spinner"></div>
                 <p>Đang khởi động camera...</p>
                 <p class="cam-hint">Vui lòng cho phép truy cập camera khi được hỏi</p>
-            </div>
+              </div>
+            }
 
-            <!-- Lighting chip -->
-            <div class="lighting-chip" *ngIf="isCameraActive" [ngClass]="lightingStatus().type">
-                <span class="chip-dot"></span>
-                <span>{{ lightingStatus().message }}</span>
-            </div>
-
-            <!-- Scanning overlay -->
-            <div class="scanning-overlay" *ngIf="isProcessing">
+            @if (isProcessing) {
+              <div class="scanning-overlay">
                 <div class="scan-line"></div>
                 <p>Đang phân tích tông da...</p>
-            </div>
-        </div>
+              </div>
+            }
 
-        <!-- Controls -->
-        <div class="controls-panel">
+            @if (isCameraActive) {
+              <div class="status-chip" [ngClass]="lightingStatus().type">
+                <span class="chip-dot"></span>{{ lightingStatus().message }}
+              </div>
+            }
+
+            @if (isCameraActive && fps() > 0) {
+              <div class="fps-counter">
+                <span>FPS {{ fps() }}</span>
+                <span>· {{ faceTracker.isFaceDetected() ? '248 POINTS' : 'DETECTING' }}</span>
+              </div>
+            }
+          </div>
+
+          <div class="controls-bar">
             <div class="skin-type-row">
-                <label>Loại da</label>
-                <div class="skin-tabs">
-                    <button class="skin-tab" [class.active]="selectedSkinType === 'Normal'"
-                        (click)="selectedSkinType = 'Normal'">Thường</button>
-                    <button class="skin-tab" [class.active]="selectedSkinType === 'Oily'"
-                        (click)="selectedSkinType = 'Oily'">Dầu</button>
-                    <button class="skin-tab" [class.active]="selectedSkinType === 'Dry'"
-                        (click)="selectedSkinType = 'Dry'">Khô</button>
-                </div>
+              <span class="ctrl-label">Loại da</span>
+              <div class="skin-tabs">
+                <button class="skin-tab" [class.active]="selectedSkinType === 'Normal'" (click)="selectedSkinType = 'Normal'">Thường</button>
+                <button class="skin-tab" [class.active]="selectedSkinType === 'Oily'" (click)="selectedSkinType = 'Oily'">Dầu</button>
+                <button class="skin-tab" [class.active]="selectedSkinType === 'Dry'" (click)="selectedSkinType = 'Dry'">Khô</button>
+              </div>
             </div>
-            <div class="action-row">
-                <button class="btn-scan" [disabled]="!isCameraActive || !lightingStatus().isValid || isProcessing"
-                    (click)="scanShade()">
-                    <span>✨</span> {{ isProcessing ? 'Đang quét...' : 'Quét Shade & AI Routine' }}
-                </button>
-            </div>
-            <p class="error-msg" *ngIf="error">{{ error }}</p>
-            <div class="tip-box" *ngIf="isCameraActive && !lightingStatus().isValid">
-                <span>💡</span>
-                <span>Nhìn thẳng vào camera, đảm bảo ánh sáng tự nhiên chiếu đều lên mặt</span>
-            </div>
+            <button class="btn-scan" [disabled]="!isCameraActive || !lightingStatus().isValid || isProcessing" (click)="scanShade()">
+              {{ isProcessing ? 'Đang phân tích...' : 'Quét ngay' }}
+            </button>
+            @if (error) { <p class="error-msg">{{ error }}</p> }
+            @if (isCameraActive && !lightingStatus().isValid) { <p class="tip-msg">{{ lightingStatus().message }}</p> }
+          </div>
         </div>
-    </div>
 
-    <!-- =============================================
-       RESULT MODAL
-       ============================================= -->
-    <div class="modal-backdrop" *ngIf="showResultModal()" (click)="closeModal()">
-        <div class="result-modal" (click)="$event.stopPropagation()">
+        <!-- ─── LIVE METRICS PANEL ─── -->
+        <div class="metrics-panel">
+          <div class="panel-header">
+            <span class="panel-title">AI LIVE DETECTION</span>
+            <span class="panel-sub">Neural engine · 248 facial points</span>
+          </div>
 
-            <!-- Header -->
-            <div class="modal-top">
-                <h3>✨ Kết quả phân tích da</h3>
-                <button class="close-x" (click)="closeModal()">✕</button>
+          @if (liveMetrics()) {
+            <div class="metrics-list">
+              <div class="metric-row">
+                <div class="metric-label-row"><span>Moisture Level</span><span class="metric-val">{{ liveMetrics()!.moisture }}%</span></div>
+                <div class="metric-track"><div class="metric-fill moisture" [style.width.%]="liveMetrics()!.moisture"></div></div>
+              </div>
+              <div class="metric-row">
+                <div class="metric-label-row"><span>Pores Density</span><span class="metric-val">{{ liveMetrics()!.pores }}%</span></div>
+                <div class="metric-track"><div class="metric-fill pores" [style.width.%]="liveMetrics()!.pores * 2"></div></div>
+              </div>
+              <div class="metric-row">
+                <div class="metric-label-row"><span>Redness</span><span class="metric-val">{{ liveMetrics()!.redness }}%</span></div>
+                <div class="metric-track"><div class="metric-fill redness" [style.width.%]="liveMetrics()!.redness * 1.6"></div></div>
+              </div>
+              <div class="metric-row">
+                <div class="metric-label-row"><span>Evenness</span><span class="metric-val">{{ liveMetrics()!.evenness }}%</span></div>
+                <div class="metric-track"><div class="metric-fill evenness" [style.width.%]="liveMetrics()!.evenness"></div></div>
+              </div>
             </div>
-
-            <!-- Tab Bar -->
-            <div class="modal-tabs">
-                <button class="modal-tab" [class.active]="activeTab() === 'shade'" (click)="activeTab.set('shade')">
-                    🎨 Shade Finder
-                </button>
-                <button class="modal-tab" [class.active]="activeTab() === 'routine'" (click)="activeTab.set('routine')">
-                    🧴 AI Skincare Routine
-                    <span class="tab-badge" *ngIf="isLoadingRoutine()">⏳</span>
-                    <span class="tab-badge new" *ngIf="routine() && !isLoadingRoutine()">✓</span>
-                </button>
+            <p class="panel-note">Phân tích real-time · Kết quả thay đổi theo điều kiện ánh sáng</p>
+          } @else {
+            <div class="metrics-placeholder">
+              <div class="placeholder-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32" height="32">
+                  <circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/>
+                </svg>
+              </div>
+              <p>Hướng mặt vào camera để bắt đầu phân tích</p>
             </div>
+          }
 
-            <!-- ── TAB 1: SHADE MATCH ── -->
-            <div *ngIf="activeTab() === 'shade'">
-                <!-- BEST MATCH — Hero section -->
-                <div class="best-match-hero" *ngIf="bestMatch">
-                    <div class="hero-left">
-                        <img [src]="resolveImage(bestMatch.Image_URL || bestMatch.Shade_Image)"
-                            [alt]="bestMatch.Product_Name" class="hero-img"
-                            (error)="$any($event.target).src='https://placehold.co/300x300/f5f5f5/999?text=TirTir'" />
-                    </div>
-                    <div class="hero-right">
-                        <span class="best-badge">🏆 Best Match</span>
-                        <h4 class="product-title">{{ bestMatch.Product_Name }}</h4>
-                        <div class="shade-row">
-                            <span class="shade-swatch" [style.background]="bestMatch.Hex_Code"></span>
-                            <span class="shade-label">{{ bestMatch.Shade_Name }}</span>
-                            <span class="shade-code-tag">{{ bestMatch.Shade_Code }}</span>
-                        </div>
-                        <div class="match-bar-wrap">
-                            <div class="match-bar" [style.width.%]="matchPercent(bestMatch.matchScore)"></div>
-                        </div>
-                        <span class="match-text">{{ matchPercent(bestMatch.matchScore) }}% phù hợp</span>
-                        <div class="meta-chips">
-                            <span class="chip" *ngIf="bestMatch.predictedUndertone">
-                                Undertone: <strong>{{ bestMatch.predictedUndertone }}</strong>
-                            </span>
-                            <span class="chip" *ngIf="bestMatch.Coverage_Profile">
-                                {{ bestMatch.Coverage_Profile }}
-                            </span>
-                            <span class="chip" *ngIf="bestMatch.Finish_Type">
-                                {{ bestMatch.Finish_Type }}
-                            </span>
-                        </div>
-                        <p class="adjust-note" *ngIf="bestMatch.adjustmentNote">{{ bestMatch.adjustmentNote }}</p>
-                        <button class="btn-buy" (click)="addToCart(bestMatch)">🛒 Thêm vào giỏ hàng</button>
-                    </div>
-                </div>
-
-                <!-- OTHER MATCHES -->
-                <div class="other-section" *ngIf="matchResults.length > 1">
-                    <h4>Các shade khác có thể phù hợp</h4>
-                    <div class="other-list">
-                        <div class="other-card" *ngFor="let shade of matchResults.slice(1)">
-                            <img [src]="resolveImage(shade.Image_URL || shade.Shade_Image)" [alt]="shade.Product_Name"
-                                class="other-img"
-                                (error)="$any($event.target).src='https://placehold.co/100x100/f5f5f5/999?text=TirTir'" />
-                            <div class="other-info">
-                                <span class="other-product-name">{{ shade.Product_Name }}</span>
-                                <div class="other-shade-row">
-                                    <span class="shade-swatch small" [style.background]="shade.Hex_Code"></span>
-                                    <span>{{ shade.Shade_Name }}</span>
-                                    <span class="shade-code-tag small">{{ shade.Shade_Code }}</span>
-                                </div>
-                            </div>
-                            <div class="other-right">
-                                <span class="match-pct">{{ matchPercent(shade.matchScore) }}%</span>
-                                <button class="btn-add-sm" (click)="addToCart(shade)">Thêm</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="modal-bottom">
-                    <button class="btn-retry" (click)="closeModal()">🔄 Quét lại</button>
-                </div>
-            </div>
-
-            <!-- ── TAB 2: AI ROUTINE ── -->
-            <div *ngIf="activeTab() === 'routine'" class="routine-tab">
-
-                <!-- Skin Profile Summary -->
-                <div class="skin-profile-bar" *ngIf="skinProfile()">
-                    <div class="profile-tag">
-                        <span class="profile-icon">🌈</span>
-                        <span>Tông: <strong>{{ skinProfile()!.skinTone }}</strong></span>
-                    </div>
-                    <div class="profile-tag">
-                        <span class="profile-icon">🎨</span>
-                        <span>Undertone: <strong>{{ skinProfile()!.undertone }}</strong></span>
-                    </div>
-                    <div class="profile-tag">
-                        <span class="profile-icon">💧</span>
-                        <span>Loại da: <strong>{{ skinProfile()!.skinType }}</strong></span>
-                    </div>
-                    <!-- concerns is guaranteed to exist due to previous check, but strict templates needs explicit handling -->
-                    <div class="profile-tag" *ngIf="skinProfile()!.concerns?.length && skinProfile()!.concerns?.[0] !== 'None'">
-                        <span class="profile-icon">🔍</span>
-                        <span>Vấn đề: <strong>{{ skinProfile()!.concerns?.join(', ') }}</strong></span>
-                    </div>
-                </div>
-
-                <!-- Loading state -->
-                <div class="routine-loading" *ngIf="isLoadingRoutine()">
-                    <div class="routine-skeleton" *ngFor="let i of [1, 2, 3]"></div>
-                    <p class="loading-text">✨ Gemini AI đang tạo routine cá nhân hóa...</p>
-                </div>
-
-                <!-- Error state -->
-                <div class="routine-error" *ngIf="!isLoadingRoutine() && routineError()">
-                    <span>⚠️</span>
-                    <p>{{ routineError() }}</p>
-                </div>
-
-                <!-- Routine Steps -->
-                <div class="routine-steps" *ngIf="!isLoadingRoutine() && routine()">
-                    <div class="routine-step-card" *ngFor="let step of routine()!.routine; let i = index">
-                        <div class="step-num">{{ i + 1 }}</div>
-                        <div class="step-img-wrap" *ngIf="step.product?.Thumbnail_Images">
-                            <img [src]="resolveImage(step.product!.Thumbnail_Images)"
-                                [alt]="step.product?.Name || step.step" class="step-product-img"
-                                (error)="$any($event.target).src='https://placehold.co/80x80/fdf0f3/c94c74?text=TirTir'" />
-                        </div>
-                        <div class="step-info">
-                            <span class="step-label">{{ step.step }}</span>
-                            <span class="step-product-name">{{ step.product?.Name || '—' }}</span>
-                            <p class="step-reason">{{ step.reason }}</p>
-                        </div>
-                        <button class="btn-step-add" *ngIf="step.product"
-                            (click)="addRoutineProductToCart(step)">
-                            🛒
-                        </button>
-                    </div>
-
-                    <!-- Expert Advice -->
-                    <div class="expert-advice" *ngIf="routine()!.advice">
-                        <span class="advice-icon">👩‍⚕️</span>
-                        <div>
-                            <strong>Lời khuyên từ chuyên gia</strong>
-                            <p>{{ routine()!.advice }}</p>
-                        </div>
-                    </div>
-
-                    <!-- Add all to cart -->
-                    <div class="routine-action-row">
-                        <button class="btn-retry" (click)="closeModal()">🔄 Quét lại</button>
-                    </div>
-                </div>
-            </div>
-
+          <div class="panel-tip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14">
+              <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+            </svg>
+            Đứng cách camera 40–60cm, nhìn thẳng và giữ yên
+          </div>
         </div>
+      </div>
     </div>
+  }
 
-    <!-- Toast -->
-    <div class="toast" *ngIf="toastMessage()">{{ toastMessage() }}</div>
+  <!-- ═══════════════════════════════════════════════════
+       RESULT MODAL — 3 TABS
+       ═══════════════════════════════════════════════════ -->
+  @if (showResultModal()) {
+    <div class="modal-backdrop" (click)="closeModal()">
+      <div class="result-modal" (click)="$event.stopPropagation()">
+
+        <!-- Header -->
+        <div class="modal-top">
+          <div class="modal-top-left">
+            <h3>Kết quả phân tích da</h3>
+            <p class="modal-sub" *ngIf="skinProfile()">
+              {{ skinProfile()!.skinType }} · {{ skinProfile()!.skinTone }} · {{ skinProfile()!.undertone }}
+            </p>
+          </div>
+          <button class="close-x" (click)="closeModal()">✕</button>
+        </div>
+
+        <!-- Tab Bar -->
+        <div class="modal-tabs">
+          <button class="modal-tab" [class.active]="activeTab() === 'shade'" (click)="activeTab.set('shade')">
+            Shade Match
+          </button>
+          <button class="modal-tab" [class.active]="activeTab() === 'report'" (click)="activeTab.set('report')">
+            Skin Report
+            <span class="tab-badge done" *ngIf="routine()?.skinMetrics && !isLoadingRoutine()"></span>
+            <span class="tab-badge loading" *ngIf="isLoadingRoutine()"></span>
+          </button>
+          <button class="modal-tab" [class.active]="activeTab() === 'routine'" (click)="activeTab.set('routine')">
+            AI Routine
+            <span class="tab-badge done" *ngIf="routine() && !isLoadingRoutine()"></span>
+            <span class="tab-badge loading" *ngIf="isLoadingRoutine()"></span>
+          </button>
+        </div>
+
+        <!-- ═══ TAB 1: SHADE MATCH ═══ -->
+        <div *ngIf="activeTab() === 'shade'">
+          <div class="best-match-hero" *ngIf="bestMatch">
+            <div class="hero-left">
+              <img [src]="resolveImage(bestMatch.Image_URL || bestMatch.Shade_Image)" [alt]="bestMatch.Product_Name" class="hero-img"
+                  (error)="$any($event.target).src='https://placehold.co/300x300/f5f5f5/999?text=TirTir'"/>
+            </div>
+            <div class="hero-right">
+              <span class="best-badge">Best Match</span>
+              <h4 class="product-title">{{ bestMatch.Product_Name }}</h4>
+              <div class="shade-row">
+                <span class="shade-swatch" [style.background]="bestMatch.Hex_Code"></span>
+                <span class="shade-label">{{ bestMatch.Shade_Name }}</span>
+                <span class="shade-code-tag">{{ bestMatch.Shade_Code }}</span>
+              </div>
+              <div class="match-bar-wrap"><div class="match-bar" [style.width.%]="matchPercent(bestMatch.matchScore)"></div></div>
+              <span class="match-text">{{ matchPercent(bestMatch.matchScore) }}% phù hợp</span>
+              <div class="meta-chips">
+                <span class="chip" *ngIf="bestMatch.predictedUndertone">Undertone: <strong>{{ bestMatch.predictedUndertone }}</strong></span>
+                <span class="chip" *ngIf="bestMatch.Coverage_Profile">{{ bestMatch.Coverage_Profile }}</span>
+                <span class="chip" *ngIf="bestMatch.Finish_Type">{{ bestMatch.Finish_Type }}</span>
+              </div>
+              <p class="adjust-note" *ngIf="bestMatch.adjustmentNote">{{ bestMatch.adjustmentNote }}</p>
+              <button class="btn-buy" (click)="addToCart(bestMatch)">Thêm vào giỏ hàng</button>
+            </div>
+          </div>
+          <div class="other-section" *ngIf="matchResults.length > 1">
+            <h4>Các shade khác có thể phù hợp</h4>
+            <div class="other-list">
+              <div class="other-card" *ngFor="let shade of matchResults.slice(1)">
+                <img [src]="resolveImage(shade.Image_URL || shade.Shade_Image)" [alt]="shade.Product_Name" class="other-img"
+                    (error)="$any($event.target).src='https://placehold.co/100x100/f5f5f5/999?text=TirTir'"/>
+                <div class="other-info">
+                  <span class="other-product-name">{{ shade.Product_Name }}</span>
+                  <div class="other-shade-row">
+                    <span class="shade-swatch small" [style.background]="shade.Hex_Code"></span>
+                    <span>{{ shade.Shade_Name }}</span>
+                    <span class="shade-code-tag small">{{ shade.Shade_Code }}</span>
+                  </div>
+                </div>
+                <div class="other-right">
+                  <span class="match-pct">{{ matchPercent(shade.matchScore) }}%</span>
+                  <button class="btn-add-sm" (click)="addToCart(shade)">Thêm</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-bottom"><button class="btn-retry" (click)="closeModal()">Quét lại</button></div>
+        </div>
+
+        <!-- ═══ TAB 2: SKIN REPORT ═══ -->
+        <div *ngIf="activeTab() === 'report'" class="report-tab">
+
+          <!-- Loading -->
+          <div class="routine-loading" *ngIf="isLoadingRoutine()">
+            <div class="routine-skeleton" *ngFor="let i of [1,2,3,4]"></div>
+            <p class="loading-text">Gemini AI đang phân tích hồ sơ da của bạn...</p>
+          </div>
+
+          <!-- Error -->
+          <div class="routine-error" *ngIf="!isLoadingRoutine() && !routine()">
+            <p>Không thể tải báo cáo phân tích. Vui lòng thử lại.</p>
+          </div>
+
+          <ng-container *ngIf="!isLoadingRoutine() && routine()">
+            <!-- Report header -->
+            <div class="report-header">
+              <div class="report-header-left">
+                <h4 class="report-title">Clinical Analysis Overview</h4>
+                <p class="report-sub">Powered by TirTir AI · {{ skinProfile()?.skinType }} skin</p>
+              </div>
+              <span class="skin-type-badge">{{ skinProfile()?.skinType?.toUpperCase() }}</span>
+            </div>
+
+            <!-- Two-column layout -->
+            <div class="report-body">
+              <!-- Left: face image + derm note -->
+              <div class="report-left-col">
+                <div class="report-face-box">
+                  <img
+                    *ngIf="capturedImageUrl"
+                    [src]="capturedImageUrl"
+                    alt="Captured face"
+                    class="report-face-img"
+                  />
+                  <div *ngIf="!capturedImageUrl" class="report-face-placeholder">
+                    <span>Ảnh phân tích</span>
+                  </div>
+                  <div class="report-face-scan-bar">
+                    <span>AI SCANNING SYSTEM</span>
+                    <div class="face-scan-progress"><div class="face-scan-fill"></div></div>
+                  </div>
+                </div>
+
+                <!-- Dermatologist Note -->
+                <div class="derm-note" *ngIf="routine()!.dermatologistNote">
+                  <span class="derm-label">DERMATOLOGIST'S NOTE</span>
+                  <p>"{{ routine()!.dermatologistNote }}"</p>
+                </div>
+              </div>
+
+              <!-- Right: metric cards + sensitivity + CTA -->
+              <div class="report-right-col">
+                <!-- Score grid 2x2 -->
+                <div class="score-grid" *ngIf="routine()!.skinMetrics">
+                  <div class="score-card">
+                    <div class="score-top">
+                      <span class="score-name">Hydration</span>
+                      <span class="score-num hydration">{{ routine()!.skinMetrics!.hydration }}<span class="score-denom">/100</span></span>
+                    </div>
+                    <p class="score-desc">Mức độ độ ẩm sâu trong da và lớp bảo vệ bề mặt</p>
+                    <div class="score-bar-track"><div class="score-bar hydration-bar" [style.width.%]="routine()!.skinMetrics!.hydration"></div></div>
+                  </div>
+                  <div class="score-card">
+                    <div class="score-top">
+                      <span class="score-name">Elasticity</span>
+                      <span class="score-num elasticity">{{ routine()!.skinMetrics!.elasticity }}<span class="score-denom">/100</span></span>
+                    </div>
+                    <p class="score-desc">Độ đàn hồi và sức căng của collagen trong da</p>
+                    <div class="score-bar-track"><div class="score-bar elasticity-bar" [style.width.%]="routine()!.skinMetrics!.elasticity"></div></div>
+                  </div>
+                  <div class="score-card">
+                    <div class="score-top">
+                      <span class="score-name">Pigmentation</span>
+                      <span class="score-num pigmentation">{{ routine()!.skinMetrics!.pigmentation }}<span class="score-denom">/100</span></span>
+                    </div>
+                    <p class="score-desc">Mức độ đồng đều tông màu và các vùng thâm sạm</p>
+                    <div class="score-bar-track"><div class="score-bar pigmentation-bar" [style.width.%]="routine()!.skinMetrics!.pigmentation"></div></div>
+                  </div>
+                  <div class="score-card">
+                    <div class="score-top">
+                      <span class="score-name">Texture</span>
+                      <span class="score-num texture">{{ routine()!.skinMetrics!.texture }}<span class="score-denom">/100</span></span>
+                    </div>
+                    <p class="score-desc">Độ mịn màng bề mặt da, lỗ chân lông và kết cấu</p>
+                    <div class="score-bar-track"><div class="score-bar texture-bar" [style.width.%]="routine()!.skinMetrics!.texture"></div></div>
+                  </div>
+                </div>
+
+                <!-- Sensitivity index -->
+                <div class="sensitivity-block" *ngIf="routine()!.skinMetrics">
+                  <div class="sensitivity-row">
+                    <div class="sensitivity-left">
+                      <span class="sensitivity-label">Sensitivity Index</span>
+                      <span class="sensitivity-sub">Mức độ phản ứng với các tác nhân môi trường</span>
+                    </div>
+                    <div class="sensitivity-right">
+                      <span class="sensitivity-pct">{{ routine()!.skinMetrics!.sensitivity }}%</span>
+                      <span class="sensitivity-tag" [class.high]="routine()!.skinMetrics!.sensitivity > 60">
+                        {{ routine()!.skinMetrics!.sensitivity > 60 ? 'CARE ROUTINE REQUIRED' : 'WITHIN NORMAL RANGE' }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="sensitivity-bar-track">
+                    <div class="sensitivity-bar" [style.width.%]="routine()!.skinMetrics!.sensitivity"></div>
+                  </div>
+                </div>
+
+                <!-- View routine CTA -->
+                <div class="report-cta">
+                  <button class="btn-view-routine" (click)="activeTab.set('routine')">
+                    View Personalized Product Routine
+                    <span>→</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </ng-container>
+        </div>
+
+        <!-- ═══ TAB 3: AI ROUTINE GRID ═══ -->
+        <div *ngIf="activeTab() === 'routine'" class="routine-tab-v2">
+
+          <!-- Loading -->
+          <div class="routine-loading" *ngIf="isLoadingRoutine()">
+            <div class="routine-skeleton" *ngFor="let i of [1,2,3]"></div>
+            <p class="loading-text">Gemini AI đang tạo routine cá nhân hóa...</p>
+          </div>
+
+          <ng-container *ngIf="!isLoadingRoutine() && routine()">
+
+            <!-- Routine header -->
+            <div class="routine-v2-header">
+              <div class="routine-v2-header-info">
+                <h4>AI Morning Regimen</h4>
+                <p>{{ routine()!.skinType || skinProfile()?.skinType }} · {{ routine()!.routine.length }} bước</p>
+              </div>
+              <button class="btn-add-all" (click)="addAllToCart()">
+                ADD ALL TO CART
+                <span *ngIf="routine()!.totalPrice"> — {{ routine()!.totalPrice | number:'1.0-0' }}đ</span>
+              </button>
+            </div>
+
+            <!-- Step flow diagram -->
+            <div class="step-flow">
+              <div class="step-flow-item" *ngFor="let step of routine()!.routine; let i = index; let last = last">
+                <div class="step-flow-circle" [class.active]="i === 0">
+                  <span>{{ i + 1 }}</span>
+                </div>
+                <div class="step-flow-label">STEP {{ i + 1 }}</div>
+                <div class="step-flow-name">{{ step.step }}</div>
+                <div class="step-flow-line" *ngIf="!last"></div>
+              </div>
+            </div>
+
+            <!-- Product Cards Grid -->
+            <div class="product-grid">
+              <div class="product-card" *ngFor="let step of routine()!.routine">
+                <div class="product-card-badge">{{ step.step }}</div>
+                <div class="product-card-img-wrap">
+                  <img [src]="resolveImage(step.product?.Thumbnail_Images)" [alt]="step.product?.Name"
+                      (error)="$any($event.target).src='https://placehold.co/200x200/f5f5f5/999?text=TirTir'"/>
+                </div>
+                <div class="product-card-body">
+                  <h5>{{ step.product?.Name || '—' }}</h5>
+                  <p class="product-card-reason">{{ step.reason }}</p>
+                  <button class="btn-card-add" (click)="addRoutineProductToCart(step)">Thêm vào giỏ hàng</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Skin Evolution -->
+            <div class="evolution-section" *ngIf="routine()!.skinEvolution">
+              <h4 class="evolution-title">Your Skin Evolution</h4>
+              <p class="evolution-sub">Kết quả dự đoán sau 28 ngày sử dụng đều đặn</p>
+              <div class="evolution-grid">
+                <div class="evolution-card current">
+                  <span class="evo-label">CURRENT STATUS</span>
+                  <div class="evo-metrics-list">
+                    <div class="evo-metric">
+                      <div class="evo-metric-header">
+                        <span>Hydration</span>
+                        <span>{{ routine()!.skinEvolution!.current.hydration }}%</span>
+                      </div>
+                      <div class="evo-track"><div class="evo-fill" [style.width.%]="routine()!.skinEvolution!.current.hydration"></div></div>
+                    </div>
+                    <div class="evo-metric">
+                      <div class="evo-metric-header">
+                        <span>Texture Smoothness</span>
+                        <span>{{ routine()!.skinEvolution!.current.texture }}%</span>
+                      </div>
+                      <div class="evo-track"><div class="evo-fill" [style.width.%]="routine()!.skinEvolution!.current.texture"></div></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="evolution-card predicted">
+                  <span class="evo-label">PREDICTED AFTER 28 DAYS</span>
+                  <div class="evo-metrics-list">
+                    <div class="evo-metric">
+                      <div class="evo-metric-header">
+                        <span>Hydration</span>
+                        <span class="evo-delta-inline">
+                          {{ routine()!.skinEvolution!.predicted.hydration }}%
+                          <em>(+{{ routine()!.skinEvolution!.predicted.hydration - routine()!.skinEvolution!.current.hydration }}%)</em>
+                        </span>
+                      </div>
+                      <div class="evo-track"><div class="evo-fill predicted-fill" [style.width.%]="routine()!.skinEvolution!.predicted.hydration"></div></div>
+                    </div>
+                    <div class="evo-metric">
+                      <div class="evo-metric-header">
+                        <span>Texture Smoothness</span>
+                        <span class="evo-delta-inline">
+                          {{ routine()!.skinEvolution!.predicted.texture }}%
+                          <em>(+{{ routine()!.skinEvolution!.predicted.texture - routine()!.skinEvolution!.current.texture }}%)</em>
+                        </span>
+                      </div>
+                      <div class="evo-track"><div class="evo-fill predicted-fill" [style.width.%]="routine()!.skinEvolution!.predicted.texture"></div></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Expert advice -->
+            <div class="expert-advice" *ngIf="routine()!.advice">
+              <p>{{ routine()!.advice }}</p>
+              <span class="advice-note">Routine này được tối ưu theo điều kiện môi trường và sức khoẻ da hiện tại của bạn.</span>
+            </div>
+
+            <!-- Bottom actions -->
+            <div class="routine-v2-actions">
+              <button class="btn-add-all-lg" (click)="addAllToCart()">
+                ADD FULL ROUTINE TO CART
+                <span *ngIf="routine()!.totalPrice"> — {{ routine()!.totalPrice | number:'1.0-0' }}đ</span>
+              </button>
+              <button class="btn-save-profile" (click)="closeModal()">SAVE TO PROFILE</button>
+            </div>
+          </ng-container>
+
+          <div class="routine-error" *ngIf="!isLoadingRoutine() && routineError()">
+            <p>{{ routineError() }}</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- Toast -->
+  <div class="toast" *ngIf="toastMessage()">{{ toastMessage() }}</div>
 </div>

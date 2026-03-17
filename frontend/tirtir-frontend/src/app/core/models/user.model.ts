@@ -1,3 +1,12 @@
+export interface SkinProfile {
+  skinTone: string;
+  undertone: string;
+  skinType: string;
+  concerns: string[];
+  confidence: number;
+  lastAnalyzedAt: Date | string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -8,7 +17,8 @@ export interface User {
   phone?: string;
   gender?: 'Male' | 'Female' | 'Other';
   birthDate?: Date | string;
-  addresses?: any[]; // Address array, imported separately to avoid circular dependency
+  addresses?: any[];
+  skinProfile?: SkinProfile;
   createdAt?: Date;
   updatedAt?: Date;
 }

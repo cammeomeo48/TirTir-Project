@@ -2,10 +2,14 @@ import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { ProductCard } from '../../shared/components/product-card/product-card';
 import { SkeletonLoaderComponent } from '../../shared/components/skeleton-loader/skeleton-loader';
 import { PRODUCTS, ProductData } from '../../core/constants/products.data';
 import { ProductService } from '../../core/services/product.service';
+import { AuthService } from '../../core/services/auth.service';
+import { SkinProfile } from '../../core/models';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-shop',
@@ -18,6 +22,12 @@ export class ShopComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private productService = inject(ProductService);
   private cdr = inject(ChangeDetectorRef);
+  private authService = inject(AuthService);
+  private http = inject(HttpClient);
+  private readonly aiBase = environment.apiUrl;
+
+  // Skin personalization
+  userSkinProfile: SkinProfile | null = null;
 
   isMakeupCollection = false;
   isSkincareCollection = false; // Added
@@ -106,13 +116,21 @@ export class ShopComponent implements OnInit {
         this.setupShopAllView();
       }
 
-      // Pre-select category if passed and valid (and not just defining the view)
-      // If the view is 'makeup', we don't necessarily want to check 'makeup' box, 
-      // usually we want to see ALL makeup. But if user clicked "Cushion", that's different.
-      // For now, the 'category' param acts as the VIEW SWITCHER as per requirements.
-
       this.loadProducts();
     });
+
+    // Load user skin profile for personalized match badges
+    if (this.authService.isAuthenticated()) {
+      this.http.get<{ success: boolean; data: { skinProfile: SkinProfile } | null }>(
+        `${this.aiBase}/ai/latest-profile`
+      ).subscribe({
+        next: (res) => {
+          this.userSkinProfile = res.data?.skinProfile || null;
+          this.cdr.detectChanges();
+        },
+        error: () => { /* silently ignore — personalisation is optional */ }
+      });
+    }
   }
 
   setupMakeupView() {
@@ -336,5 +354,22 @@ export class ShopComponent implements OnInit {
 
   trackByProduct(index: number, product: ProductData): string {
     return product.id;
+  }
+
+  /**
+   * Returns true when the product's target skin type or main concern
+   * matches what the AI scanner detected for the logged-in user.
+   */
+  matchesSkin(product: any): boolean {
+    if (!this.userSkinProfile) return false;
+    const p = product as any;
+    const skinTypeMatch = p.Skin_Type_Target &&
+      (p.Skin_Type_Target as string).toLowerCase().includes(
+        (this.userSkinProfile.skinType || '').toLowerCase()
+      );
+    const concernMatch = this.userSkinProfile.concerns?.some(c =>
+      p.Main_Concern && (p.Main_Concern as string).toLowerCase().includes(c.toLowerCase())
+    );
+    return !!(skinTypeMatch || concernMatch);
   }
 }

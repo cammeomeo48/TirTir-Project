@@ -27,6 +27,70 @@
 
 
 
+    <!-- ===== SKIN PROFILE SECTION ===== -->
+    <div class="skin-profile-section">
+        <div class="skin-profile-header">
+            <h2>🧬 Hồ sơ da của bạn</h2>
+            @if (skinProfile) {
+            <span class="ai-badge">✨ AI Analyzed</span>
+            }
+        </div>
+
+        @if (loadingSkinProfile) {
+        <div class="skin-profile-loading">
+            <span class="spinner-sm"></span> Đang tải hồ sơ da...
+        </div>
+        } @else if (skinProfile) {
+        <div class="skin-profile-card">
+            <div class="skin-info-grid">
+                <div class="skin-info-item">
+                    <span class="skin-label">Màu da</span>
+                    <span class="skin-value tone-badge">{{ getSkinToneLabel(skinProfile.skinTone) }}</span>
+                </div>
+                <div class="skin-info-item">
+                    <span class="skin-label">Undertone</span>
+                    <span class="skin-value">{{ skinProfile.undertone }}</span>
+                </div>
+                <div class="skin-info-item">
+                    <span class="skin-label">Loại da</span>
+                    <span class="skin-value">{{ getSkinTypeLabel(skinProfile.skinType) }}</span>
+                </div>
+                <div class="skin-info-item">
+                    <span class="skin-label">Độ chính xác</span>
+                    <div class="confidence-wrap">
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" [style.width.%]="skinProfile.confidence * 100"></div>
+                        </div>
+                        <span class="confidence-pct">{{ (skinProfile.confidence * 100) | number:'1.0-0' }}%</span>
+                    </div>
+                </div>
+            </div>
+
+            @if (skinProfile.concerns && skinProfile.concerns.length > 0) {
+            <div class="skin-concerns">
+                <span class="skin-label">Vấn đề da</span>
+                <div class="concern-tags">
+                    @for (concern of skinProfile.concerns; track concern) {
+                    <span class="concern-tag">{{ concern }}</span>
+                    }
+                </div>
+            </div>
+            }
+
+            <div class="skin-profile-footer">
+                <span class="last-analyzed">🕐 Lần cuối: {{ formatLastAnalyzed(skinProfile.lastAnalyzedAt) }}</span>
+                <button type="button" class="btn-rescan" (click)="navigateToShadeFinder()">🔄 Quét lại</button>
+            </div>
+        </div>
+        } @else {
+        <div class="skin-profile-empty">
+            <div class="empty-icon">🔬</div>
+            <p>Bạn chưa có hồ sơ da. Hãy thử Virtual Shade Finder để phân tích da và nhận gợi ý sản phẩm phù hợp!</p>
+            <button type="button" class="btn btn-primary" (click)="navigateToShadeFinder()">✨ Scan ngay</button>
+        </div>
+        }
+    </div>
+
     <!-- Hidden file input -->
     <input type="file" #fileInput style="display: none" accept="image/jpeg,image/jpg,image/png,image/webp"
         (change)="onFileSelected($event)">

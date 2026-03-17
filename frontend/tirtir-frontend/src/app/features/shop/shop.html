@@ -158,8 +158,14 @@
             </div>
 
             <div class="products-grid" *ngIf="!isLoading && paginatedProducts.length > 0; else noProducts">
-                <app-product-card *ngFor="let product of paginatedProducts; trackBy: trackByProduct"
-                    [product]="product"></app-product-card>
+                <div *ngFor="let product of paginatedProducts; trackBy: trackByProduct"
+                     class="product-card-wrapper"
+                     [class.skin-match]="matchesSkin(product)">
+                    <div *ngIf="userSkinProfile && matchesSkin(product)" class="skin-match-badge">
+                        ✨ Phù hợp với da bạn
+                    </div>
+                    <app-product-card [product]="product"></app-product-card>
+                </div>
             </div>
 
             <ng-template #noProducts>

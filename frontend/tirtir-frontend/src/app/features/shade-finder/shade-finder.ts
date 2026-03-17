@@ -121,6 +121,7 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
   showResultModal = signal(false);
   activeTab = signal<'shade' | 'report' | 'routine'>('shade');
   toastMessage = signal<string | null>(null);
+  capturedImageUrl: string | null = null;
   private toastTimer: any = null;
 
   private readonly backendBase = environment.apiUrl.replace('/api/v1', ''); // http://localhost:5001
@@ -315,6 +316,7 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
 
     // ── 2. Capture base64 once, reuse for AI ───────────────────────────────
     const imageData = this.captureBase64();
+    this.capturedImageUrl = imageData; // store for Skin Report face preview
 
     // ── 3. Shade match (RGB) ────────────────────────────────────────────────
     const shade$ = this.http.post<ShadeMatch[]>(`${this.apiBase}/shades/match`, {
