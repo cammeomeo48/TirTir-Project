@@ -261,54 +261,111 @@
         </div>
 
         <!-- ═══ TAB 1: SHADE MATCH ═══ -->
-        <div *ngIf="activeTab() === 'shade'">
-          <div class="best-match-hero" *ngIf="bestMatch">
-            <div class="hero-left">
-              <img [src]="resolveImage(bestMatch.Image_URL || bestMatch.Shade_Image)" [alt]="bestMatch.Product_Name" class="hero-img"
-                  (error)="$any($event.target).src='https://placehold.co/300x300/f5f5f5/999?text=TirTir'"/>
-            </div>
-            <div class="hero-right">
-              <span class="best-badge">Best Match</span>
-              <h4 class="product-title">{{ bestMatch.Product_Name }}</h4>
-              <div class="shade-row">
-                <span class="shade-swatch" [style.background]="bestMatch.Hex_Code"></span>
-                <span class="shade-label">{{ bestMatch.Shade_Name }}</span>
-                <span class="shade-code-tag">{{ bestMatch.Shade_Code }}</span>
-              </div>
-              <div class="match-bar-wrap"><div class="match-bar" [style.width.%]="matchPercent(bestMatch.matchScore)"></div></div>
-              <span class="match-text">{{ matchPercent(bestMatch.matchScore) }}% phù hợp</span>
-              <div class="meta-chips">
-                <span class="chip" *ngIf="bestMatch.predictedUndertone">Undertone: <strong>{{ bestMatch.predictedUndertone }}</strong></span>
-                <span class="chip" *ngIf="bestMatch.Coverage_Profile">{{ bestMatch.Coverage_Profile }}</span>
-                <span class="chip" *ngIf="bestMatch.Finish_Type">{{ bestMatch.Finish_Type }}</span>
-              </div>
-              <p class="adjust-note" *ngIf="bestMatch.adjustmentNote">{{ bestMatch.adjustmentNote }}</p>
-              <button class="btn-buy" (click)="addToCart(bestMatch)">Thêm vào giỏ hàng</button>
-            </div>
+        <div *ngIf="activeTab() === 'shade'" class="shade-tab">
+
+          <!-- No match state -->
+          <div class="shade-empty" *ngIf="!bestMatch">
+            <p>Không tìm được kết quả phù hợp. Vui lòng <strong>quét lại</strong>.</p>
           </div>
-          <div class="other-section" *ngIf="matchResults.length > 1">
-            <h4>Các shade khác có thể phù hợp</h4>
-            <div class="other-list">
-              <div class="other-card" *ngFor="let shade of matchResults.slice(1)">
-                <img [src]="resolveImage(shade.Image_URL || shade.Shade_Image)" [alt]="shade.Product_Name" class="other-img"
-                    (error)="$any($event.target).src='https://placehold.co/100x100/f5f5f5/999?text=TirTir'"/>
-                <div class="other-info">
-                  <span class="other-product-name">{{ shade.Product_Name }}</span>
-                  <div class="other-shade-row">
-                    <span class="shade-swatch small" [style.background]="shade.Hex_Code"></span>
-                    <span>{{ shade.Shade_Name }}</span>
-                    <span class="shade-code-tag small">{{ shade.Shade_Code }}</span>
-                  </div>
-                </div>
-                <div class="other-right">
-                  <span class="match-pct">{{ matchPercent(shade.matchScore) }}%</span>
-                  <button class="btn-add-sm" (click)="addToCart(shade)">Thêm</button>
+
+          <!-- Primary match hero -->
+          <div class="shade-hero" *ngIf="bestMatch">
+            <!-- Left: Product image -->
+            <div class="shade-hero-img-wrap">
+              <img
+                [src]="resolveImage(bestMatch.Image_URL || bestMatch.Shade_Image)"
+                [alt]="bestMatch.Product_Name"
+                class="shade-hero-img"
+                (error)="$any($event.target).src='https://placehold.co/320x320/f5f5f5/bbb?text=TirTir'"
+              />
+              <span class="shade-hero-badge">BEST MATCH</span>
+            </div>
+
+            <!-- Right: Match details -->
+            <div class="shade-hero-info">
+              <p class="shade-product-sub">Shade Recommendation</p>
+              <h3 class="shade-product-name">{{ bestMatch.Product_Name }}</h3>
+
+              <!-- Color swatch row -->
+              <div class="shade-swatch-row">
+                <span class="shade-swatch-lg" [style.background]="bestMatch.Hex_Code"></span>
+                <div>
+                  <p class="shade-swatch-name">{{ bestMatch.Shade_Name }}</p>
+                  <p class="shade-swatch-code">{{ bestMatch.Shade_Code }}</p>
                 </div>
               </div>
+
+              <!-- Match confidence bar -->
+              <div class="shade-confidence">
+                <div class="shade-confidence-header">
+                  <span class="shade-confidence-label">Match Confidence</span>
+                  <span class="shade-confidence-pct">{{ matchPercent(bestMatch.matchScore) }}%</span>
+                </div>
+                <div class="shade-confidence-track">
+                  <div class="shade-confidence-fill" [style.width.%]="matchPercent(bestMatch.matchScore)"></div>
+                </div>
+              </div>
+
+              <!-- Metadata chips -->
+              <div class="shade-chips">
+                <span class="shade-chip" *ngIf="bestMatch.predictedUndertone">
+                  <span class="chip-dot"></span>Undertone: <strong>{{ bestMatch.predictedUndertone }}</strong>
+                </span>
+                <span class="shade-chip" *ngIf="bestMatch.Coverage_Profile">{{ bestMatch.Coverage_Profile }}</span>
+                <span class="shade-chip" *ngIf="bestMatch.Finish_Type">{{ bestMatch.Finish_Type }}</span>
+                <span class="shade-chip warn" *ngIf="bestMatch.Oxidation_Risk_Level === 'High'">Oxidation Risk</span>
+              </div>
+
+              <!-- Adjustment note -->
+              <p class="shade-adjust-note" *ngIf="bestMatch.adjustmentNote">
+                <span class="note-icon">ℹ</span>{{ bestMatch.adjustmentNote }}
+              </p>
+
+              <!-- CTA -->
+              <button class="shade-cta-btn" (click)="addToCart(bestMatch)">
+                Thêm vào giỏ hàng
+              </button>
             </div>
           </div>
-          <div class="modal-bottom"><button class="btn-retry" (click)="closeModal()">Quét lại</button></div>
+
+          <!-- Divider -->
+          <div class="shade-divider" *ngIf="matchResults.length > 1">
+            <span>Các shade khác có thể phù hợp</span>
+          </div>
+
+          <!-- Alternates list -->
+          <div class="shade-alt-list" *ngIf="matchResults.length > 1">
+            <div class="shade-alt-row" *ngFor="let shade of matchResults.slice(1); let i = index">
+              <span class="shade-alt-rank">{{ i + 2 }}</span>
+              <img
+                [src]="resolveImage(shade.Image_URL || shade.Shade_Image)"
+                [alt]="shade.Product_Name"
+                class="shade-alt-img"
+                (error)="$any($event.target).src='https://placehold.co/60x60/f5f5f5/bbb?text=T'"
+              />
+              <div class="shade-alt-info">
+                <p class="shade-alt-name">{{ shade.Product_Name }}</p>
+                <div class="shade-alt-shade-row">
+                  <span class="shade-swatch-sm" [style.background]="shade.Hex_Code"></span>
+                  <span>{{ shade.Shade_Name }}</span>
+                  <span class="shade-code-mini">{{ shade.Shade_Code }}</span>
+                </div>
+              </div>
+              <div class="shade-alt-right">
+                <div class="shade-mini-bar-track">
+                  <div class="shade-mini-bar-fill" [style.width.%]="matchPercent(shade.matchScore)"></div>
+                </div>
+                <span class="shade-alt-pct">{{ matchPercent(shade.matchScore) }}%</span>
+                <button class="shade-alt-btn" (click)="addToCart(shade)">+ Cart</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="shade-retry-row">
+            <button class="shade-retry-btn" (click)="closeModal()">↺ Quét lại</button>
+          </div>
         </div>
+
 
         <!-- ═══ TAB 2: SKIN REPORT ═══ -->
         <div *ngIf="activeTab() === 'report'" class="report-tab">
@@ -316,7 +373,7 @@
           <!-- Loading -->
           <div class="routine-loading" *ngIf="isLoadingRoutine()">
             <div class="routine-skeleton" *ngFor="let i of [1,2,3,4]"></div>
-            <p class="loading-text">Gemini AI đang phân tích hồ sơ da của bạn...</p>
+            <p class="loading-text">TirTir AI đang phân tích hồ sơ da của bạn...</p>
           </div>
 
           <!-- Error -->
@@ -325,110 +382,137 @@
           </div>
 
           <ng-container *ngIf="!isLoadingRoutine() && routine()">
-            <!-- Report header -->
-            <div class="report-header">
-              <div class="report-header-left">
-                <h4 class="report-title">Clinical Analysis Overview</h4>
-                <p class="report-sub">Powered by TirTir AI · {{ skinProfile()?.skinType }} skin</p>
+
+            <!-- Report header bar -->
+            <div class="rpt-header">
+              <div>
+                <p class="rpt-eyebrow">TIRTIR AI · SKIN ANALYSIS REPORT</p>
+                <h4 class="rpt-title">Clinical Skin Overview</h4>
               </div>
-              <span class="skin-type-badge">{{ skinProfile()?.skinType?.toUpperCase() }}</span>
+              <div class="rpt-skin-tag">
+                <span class="rpt-skin-label">SKIN TYPE</span>
+                <span class="rpt-skin-val">{{ skinProfile()?.skinType?.toUpperCase() || '—' }}</span>
+              </div>
             </div>
 
-            <!-- Two-column layout -->
-            <div class="report-body">
-              <!-- Left: face image + derm note -->
-              <div class="report-left-col">
-                <div class="report-face-box">
-                  <img
-                    *ngIf="capturedImageUrl"
-                    [src]="capturedImageUrl"
-                    alt="Captured face"
-                    class="report-face-img"
-                  />
-                  <div *ngIf="!capturedImageUrl" class="report-face-placeholder">
+            <!-- Two-column body -->
+            <div class="rpt-body">
+
+              <!-- LEFT: face photo -->
+              <div class="rpt-left">
+                <div class="rpt-face-wrap">
+                  <img *ngIf="capturedImageUrl" [src]="capturedImageUrl" alt="Face capture" class="rpt-face-img"/>
+                  <div *ngIf="!capturedImageUrl" class="rpt-face-empty">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1.5">
+                      <circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/>
+                    </svg>
                     <span>Ảnh phân tích</span>
                   </div>
-                  <div class="report-face-scan-bar">
-                    <span>AI SCANNING SYSTEM</span>
-                    <div class="face-scan-progress"><div class="face-scan-fill"></div></div>
+                  <!-- Scan overlay -->
+                  <div class="rpt-scan-overlay">
+                    <span class="rpt-scan-label">AI SCAN COMPLETE</span>
+                    <div class="rpt-scan-bar"><div class="rpt-scan-fill"></div></div>
                   </div>
                 </div>
 
-                <!-- Dermatologist Note -->
-                <div class="derm-note" *ngIf="routine()!.dermatologistNote">
-                  <span class="derm-label">DERMATOLOGIST'S NOTE</span>
-                  <p>"{{ routine()!.dermatologistNote }}"</p>
+                <!-- Tone + undertone row -->
+                <div class="rpt-tone-row">
+                  <div class="rpt-tone-item" *ngIf="skinProfile()?.skinTone">
+                    <span class="rpt-tone-key">Skin Tone</span>
+                    <span class="rpt-tone-val">{{ skinProfile()!.skinTone }}</span>
+                  </div>
+                  <div class="rpt-tone-item" *ngIf="skinProfile()?.undertone">
+                    <span class="rpt-tone-key">Undertone</span>
+                    <span class="rpt-tone-val">{{ skinProfile()!.undertone }}</span>
+                  </div>
+                </div>
+
+                <!-- Dermatologist note -->
+                <div class="rpt-derm-note" *ngIf="routine()!.dermatologistNote">
+                  <p class="rpt-derm-label">DERMATOLOGIST'S NOTE</p>
+                  <p class="rpt-derm-text">"{{ routine()!.dermatologistNote }}"</p>
                 </div>
               </div>
 
-              <!-- Right: metric cards + sensitivity + CTA -->
-              <div class="report-right-col">
-                <!-- Score grid 2x2 -->
-                <div class="score-grid" *ngIf="routine()!.skinMetrics">
-                  <div class="score-card">
-                    <div class="score-top">
-                      <span class="score-name">Hydration</span>
-                      <span class="score-num hydration">{{ routine()!.skinMetrics!.hydration }}<span class="score-denom">/100</span></span>
+              <!-- RIGHT: metrics -->
+              <div class="rpt-right">
+
+                <!-- 4 metric rows -->
+                <div class="rpt-metrics" *ngIf="routine()!.skinMetrics">
+                  <div class="rpt-metric-row">
+                    <div class="rpt-metric-header">
+                      <span class="rpt-metric-name">Hydration</span>
+                      <span class="rpt-metric-score">{{ routine()!.skinMetrics!.hydration }}<span class="rpt-denom">/100</span></span>
                     </div>
-                    <p class="score-desc">Mức độ độ ẩm sâu trong da và lớp bảo vệ bề mặt</p>
-                    <div class="score-bar-track"><div class="score-bar hydration-bar" [style.width.%]="routine()!.skinMetrics!.hydration"></div></div>
+                    <div class="rpt-bar-track">
+                      <div class="rpt-bar-fill" [style.width.%]="routine()!.skinMetrics!.hydration" [class.high]="routine()!.skinMetrics!.hydration >= 70"></div>
+                    </div>
+                    <p class="rpt-metric-desc">Độ ẩm sâu trong da và lớp bảo vệ bề mặt</p>
                   </div>
-                  <div class="score-card">
-                    <div class="score-top">
-                      <span class="score-name">Elasticity</span>
-                      <span class="score-num elasticity">{{ routine()!.skinMetrics!.elasticity }}<span class="score-denom">/100</span></span>
+
+                  <div class="rpt-metric-row">
+                    <div class="rpt-metric-header">
+                      <span class="rpt-metric-name">Elasticity</span>
+                      <span class="rpt-metric-score">{{ routine()!.skinMetrics!.elasticity }}<span class="rpt-denom">/100</span></span>
                     </div>
-                    <p class="score-desc">Độ đàn hồi và sức căng của collagen trong da</p>
-                    <div class="score-bar-track"><div class="score-bar elasticity-bar" [style.width.%]="routine()!.skinMetrics!.elasticity"></div></div>
+                    <div class="rpt-bar-track">
+                      <div class="rpt-bar-fill" [style.width.%]="routine()!.skinMetrics!.elasticity" [class.high]="routine()!.skinMetrics!.elasticity >= 70"></div>
+                    </div>
+                    <p class="rpt-metric-desc">Độ đàn hồi và sức căng của collagen trong da</p>
                   </div>
-                  <div class="score-card">
-                    <div class="score-top">
-                      <span class="score-name">Pigmentation</span>
-                      <span class="score-num pigmentation">{{ routine()!.skinMetrics!.pigmentation }}<span class="score-denom">/100</span></span>
+
+                  <div class="rpt-metric-row">
+                    <div class="rpt-metric-header">
+                      <span class="rpt-metric-name">Pigmentation</span>
+                      <span class="rpt-metric-score">{{ routine()!.skinMetrics!.pigmentation }}<span class="rpt-denom">/100</span></span>
                     </div>
-                    <p class="score-desc">Mức độ đồng đều tông màu và các vùng thâm sạm</p>
-                    <div class="score-bar-track"><div class="score-bar pigmentation-bar" [style.width.%]="routine()!.skinMetrics!.pigmentation"></div></div>
+                    <div class="rpt-bar-track">
+                      <div class="rpt-bar-fill" [style.width.%]="routine()!.skinMetrics!.pigmentation" [class.high]="routine()!.skinMetrics!.pigmentation >= 70"></div>
+                    </div>
+                    <p class="rpt-metric-desc">Mức độ đồng đều tông màu và vùng thâm sạm</p>
                   </div>
-                  <div class="score-card">
-                    <div class="score-top">
-                      <span class="score-name">Texture</span>
-                      <span class="score-num texture">{{ routine()!.skinMetrics!.texture }}<span class="score-denom">/100</span></span>
+
+                  <div class="rpt-metric-row">
+                    <div class="rpt-metric-header">
+                      <span class="rpt-metric-name">Texture</span>
+                      <span class="rpt-metric-score">{{ routine()!.skinMetrics!.texture }}<span class="rpt-denom">/100</span></span>
                     </div>
-                    <p class="score-desc">Độ mịn màng bề mặt da, lỗ chân lông và kết cấu</p>
-                    <div class="score-bar-track"><div class="score-bar texture-bar" [style.width.%]="routine()!.skinMetrics!.texture"></div></div>
+                    <div class="rpt-bar-track">
+                      <div class="rpt-bar-fill" [style.width.%]="routine()!.skinMetrics!.texture" [class.high]="routine()!.skinMetrics!.texture >= 70"></div>
+                    </div>
+                    <p class="rpt-metric-desc">Độ mịn bề mặt, lỗ chân lông và kết cấu da</p>
                   </div>
                 </div>
 
-                <!-- Sensitivity index -->
-                <div class="sensitivity-block" *ngIf="routine()!.skinMetrics">
-                  <div class="sensitivity-row">
-                    <div class="sensitivity-left">
-                      <span class="sensitivity-label">Sensitivity Index</span>
-                      <span class="sensitivity-sub">Mức độ phản ứng với các tác nhân môi trường</span>
+                <!-- Sensitivity index full-width -->
+                <div class="rpt-sensitivity" *ngIf="routine()!.skinMetrics">
+                  <div class="rpt-sens-top">
+                    <div>
+                      <p class="rpt-sens-name">Sensitivity Index</p>
+                      <p class="rpt-sens-sub">Mức phản ứng với tác nhân môi trường</p>
                     </div>
-                    <div class="sensitivity-right">
-                      <span class="sensitivity-pct">{{ routine()!.skinMetrics!.sensitivity }}%</span>
-                      <span class="sensitivity-tag" [class.high]="routine()!.skinMetrics!.sensitivity > 60">
-                        {{ routine()!.skinMetrics!.sensitivity > 60 ? 'CARE ROUTINE REQUIRED' : 'WITHIN NORMAL RANGE' }}
+                    <div class="rpt-sens-right">
+                      <span class="rpt-sens-pct">{{ routine()!.skinMetrics!.sensitivity }}%</span>
+                      <span class="rpt-sens-tag" [class.danger]="routine()!.skinMetrics!.sensitivity > 60">
+                        {{ routine()!.skinMetrics!.sensitivity > 60 ? 'CARE REQUIRED' : 'NORMAL RANGE' }}
                       </span>
                     </div>
                   </div>
-                  <div class="sensitivity-bar-track">
-                    <div class="sensitivity-bar" [style.width.%]="routine()!.skinMetrics!.sensitivity"></div>
+                  <div class="rpt-sens-track">
+                    <div class="rpt-sens-fill" [style.width.%]="routine()!.skinMetrics!.sensitivity"
+                         [class.danger]="routine()!.skinMetrics!.sensitivity > 60"></div>
                   </div>
                 </div>
 
-                <!-- View routine CTA -->
-                <div class="report-cta">
-                  <button class="btn-view-routine" (click)="activeTab.set('routine')">
-                    View Personalized Product Routine
-                    <span>→</span>
-                  </button>
-                </div>
+                <!-- CTA -->
+                <button class="rpt-cta-btn" (click)="activeTab.set('routine')">
+                  Xem AI Routine cá nhân hóa <span class="rpt-cta-arrow">→</span>
+                </button>
               </div>
             </div>
           </ng-container>
         </div>
+
 
         <!-- ═══ TAB 3: AI ROUTINE GRID ═══ -->
         <div *ngIf="activeTab() === 'routine'" class="routine-tab-v2">
@@ -449,7 +533,6 @@
               </div>
               <button class="btn-add-all" (click)="addAllToCart()">
                 ADD ALL TO CART
-                <span *ngIf="routine()!.totalPrice"> — {{ routine()!.totalPrice | number:'1.0-0' }}đ</span>
               </button>
             </div>
 
@@ -566,7 +649,6 @@
             <div class="routine-v2-actions">
               <button class="btn-add-all-lg" (click)="addAllToCart()">
                 ADD FULL ROUTINE TO CART
-                <span *ngIf="routine()!.totalPrice"> — {{ routine()!.totalPrice | number:'1.0-0' }}đ</span>
               </button>
               <button class="btn-save-profile" (click)="closeModal()">SAVE TO PROFILE</button>
             </div>
