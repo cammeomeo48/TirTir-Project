@@ -89,11 +89,4 @@ export class CustomerDetailComponent implements OnInit {
             day: 'numeric'
         });
     }
-
-    formatCurrency(amount: number): string {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD'
-        }).format(amount || 0);
-    }
 }

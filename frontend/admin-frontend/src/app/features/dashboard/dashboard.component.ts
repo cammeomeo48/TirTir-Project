@@ -1,7 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
-import { DashboardService, DashboardStats, RevenuePoint, TopProduct } from '../../core/services/dashboard.service';
+import { RouterModule, Router } from '@angular/router';
+import { DashboardService, GeneralOverviewResponse, OverviewRevenuePoint, OverviewTrafficPoint, TopProduct } from '../../core/services/dashboard.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
     selector: 'app-dashboard',
@@ -11,129 +12,80 @@ import { DashboardService, DashboardStats, RevenuePoint, TopProduct } from '../.
     styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent implements OnInit {
-    // Stats
-    stats: DashboardStats | null = null;
-    statsLoading = true;
-    statsError: string | null = null;
+    overview: GeneralOverviewResponse | null = null;
+    overviewLoading = true;
+    overviewError: string | null = null;
 
-    // Revenue chart
-    revenueData: RevenuePoint[] = [];
-    revenueLoading = true;
-    maxRevenue = 1;
-
-    // Top products
+    // Derived view models for charts/tables
+    revenueSeries: OverviewRevenuePoint[] = [];
+    trafficSeries: OverviewTrafficPoint[] = [];
     topProducts: TopProduct[] = [];
-    topProductsLoading = true;
-
-    // Recent orders (via admin/orders with limit=5)
     recentOrders: any[] = [];
-    recentOrdersLoading = true;
-
-    // Low stock alerts
     lowStockItems: any[] = [];
-    lowStockLoading = true;
+    customerGrowthSeries: { month: string; count: number }[] = [];
 
-    // Cart recovery stats
-    recoveryStats: any = null;
-    recoveryLoading = true;
+    maxRevenue = 1;
+    maxViews = 1;
+    maxCustomerGrowth = 1;
 
-    constructor(private dashboardService: DashboardService) { }
+    constructor(
+        private dashboardService: DashboardService,
+        private router: Router
+    ) { }
 
-    ngOnInit(): void {
-        this.loadStats();
-        this.loadRevenue();
-        this.loadTopProducts();
-        this.loadRecentOrders();
-        this.loadLowStock();
-        this.loadRecoveryStats();
+    get showCartRecovery(): boolean {
+        const cr = this.overview?.cartRecovery;
+        if (!cr) return false;
+        return (cr.recoveredCount ?? 0) > 0 || (cr.recoveredRevenue ?? 0) > 0;
     }
 
-    loadStats(): void {
-        this.statsLoading = true;
-        this.dashboardService.getStats().subscribe({
+    ngOnInit(): void {
+        this.loadOverview();
+    }
+
+    loadOverview(): void {
+        this.overviewLoading = true;
+        this.overviewError = null;
+
+        // Default range for General overview: last 30 days
+        this.dashboardService.getOverview('30d').subscribe({
             next: (data) => {
-                this.stats = data;
-                this.statsLoading = false;
+                this.overview = data;
+                this.revenueSeries = Array.isArray(data?.revenueSeries) ? data.revenueSeries : [];
+                this.trafficSeries = Array.isArray(data?.traffic?.viewsSeries) ? data.traffic.viewsSeries : [];
+                this.topProducts = Array.isArray(data?.topProducts) ? data.topProducts.slice(0, 10) : [];
+                this.recentOrders = Array.isArray(data?.recentOrders) ? data.recentOrders.slice(0, 5) : [];
+                this.lowStockItems = Array.isArray(data?.lowStockAlerts) ? data.lowStockAlerts.slice(0, 5) : [];
+                this.customerGrowthSeries = Array.isArray(data?.customerGrowthSeries) ? data.customerGrowthSeries : [];
+
+                this.maxRevenue = Math.max(...this.revenueSeries.map(d => d.revenue), 1);
+                this.maxViews = Math.max(...this.trafficSeries.map(d => d.views), 1);
+                this.maxCustomerGrowth = Math.max(...this.customerGrowthSeries.map(d => d.count), 1);
+                this.overviewLoading = false;
             },
-            error: () => {
-                this.statsError = 'Failed to load stats';
-                this.statsLoading = false;
+            error: (err: any) => {
+                console.error('General overview load error:', err);
+                this.overviewError = 'Failed to load overview';
+                this.overviewLoading = false;
             }
         });
     }
 
-    loadRevenue(): void {
-        this.revenueLoading = true;
-        this.dashboardService.getRevenueChart().subscribe({
-            next: (data) => {
-                this.revenueData = Array.isArray(data) ? data : [];
-                this.maxRevenue = Math.max(...this.revenueData.map(d => d.revenue), 1);
-                this.revenueLoading = false;
-            },
-            error: () => { this.revenueLoading = false; }
-        });
-    }
-
-    loadTopProducts(): void {
-        this.dashboardService.getTopProducts().subscribe({
-            next: (data) => {
-                this.topProducts = Array.isArray(data) ? data.slice(0, 10) : [];
-                this.topProductsLoading = false;
-            },
-            error: () => { this.topProductsLoading = false; }
-        });
-    }
-
-    loadRecentOrders(): void {
-        this.dashboardService.getAllOrders(1).subscribe({
-            next: (data: any) => {
-                const orders = Array.isArray(data) ? data : (data?.orders ?? []);
-                this.recentOrders = orders.slice(0, 5);
-                this.recentOrdersLoading = false;
-            },
-            error: () => { this.recentOrdersLoading = false; }
-        });
-    }
-
-    loadLowStock(): void {
-        this.dashboardService.getLowStockAlerts().subscribe({
-            next: (data: any) => {
-                const items = data?.lowStock?.items ?? (Array.isArray(data) ? data : []);
-                this.lowStockItems = items.slice(0, 5);
-                this.lowStockLoading = false;
-            },
-            error: () => { this.lowStockLoading = false; }
-        });
-    }
-
-    loadRecoveryStats(): void {
-        this.recoveryLoading = true;
-        this.dashboardService.getCartRecoveryStats().subscribe({
-            next: (data) => {
-                this.recoveryStats = data;
-                this.recoveryLoading = false;
-            },
-            error: () => { this.recoveryLoading = false; }
-        });
-    }
-
     // ── Helpers ─────────────────────────────────────────────────
-    getTotalOrders(): number {
-        if (!this.stats?.ordersByStatus) return 0;
-        return Object.values(this.stats.ordersByStatus)
-            .reduce((sum: number, v) => sum + (Number(v) || 0), 0);
-    }
-
-    getBarWidth(revenue: number): string {
+    getBarHeight(revenue: number): string {
         return `${Math.round((revenue / this.maxRevenue) * 100)}%`;
     }
 
-    formatCurrency(val: number): string {
-        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
+    getViewsBarHeight(views: number): string {
+        return `${Math.round((views / this.maxViews) * 100)}%`;
+    }
+
+    getGrowthBarHeight(count: number): string {
+        return `${Math.round((count / this.maxCustomerGrowth) * 100)}%`;
     }
 
     formatDate(date: string): string {
-        return new Date(date).toLocaleDateString('vi-VN');
+        return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
     }
 
     getStatusClass(status: string): string {
@@ -152,5 +104,31 @@ export class DashboardComponent implements OnInit {
         if (!img) return '';
         if (Array.isArray(img)) return img[0] ?? '';
         return img;
+    }
+
+    /** Fix relative backend asset URLs (e.g. "assets/images/...") for admin app origin. */
+    fixAssetUrl(url: string | undefined | null): string {
+        if (!url) return '';
+        if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
+        const backendBase = environment.apiUrl.replace('/api/v1', '');
+        const clean = url.startsWith('/') ? url.slice(1) : url;
+        return `${backendBase}/${clean}`;
+    }
+
+    // ── Click-through navigation ────────────────────────────────
+    goToAnalytics(): void {
+        this.router.navigate(['/analytics']);
+    }
+
+    goToProducts(): void {
+        this.router.navigate(['/products']);
+    }
+
+    goToOrders(): void {
+        this.router.navigate(['/orders']);
+    }
+
+    goToInventoryLowStock(): void {
+        this.router.navigate(['/inventory'], { queryParams: { filter: 'low-stock' } });
     }
 }

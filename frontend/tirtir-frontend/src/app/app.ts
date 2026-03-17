@@ -4,6 +4,7 @@ import { HeaderComponent } from './shared/components/header/header';
 import { FooterComponent } from './shared/components/footer/footer';
 import { ChatWidgetComponent } from './features/chat-widget/chat-widget.component';
 import { AccessibilityWidgetComponent } from './shared/components/accessibility-widget/accessibility-widget.component';
+import { AnalyticsService } from './core/services/analytics.service';
 
 @Component({
   selector: 'app-root',
@@ -14,4 +15,8 @@ import { AccessibilityWidgetComponent } from './shared/components/accessibility-
 })
 export class AppComponent {
   protected readonly title = signal('tirtir-frontend');
+
+  constructor(private analytics: AnalyticsService) {
+    this.analytics.startPageViewTracking();
+  }
 }

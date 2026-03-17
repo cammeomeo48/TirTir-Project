@@ -56,7 +56,7 @@
                         <span class="stat-label">Total Orders</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-value">{{ formatCurrency(customer.total_spent || 0) }}</span>
+                        <span class="stat-value">{{ (customer.total_spent || 0) | currency:'USD' }}</span>
                         <span class="stat-label">Total Spent</span>
                     </div>
                 </div>
@@ -98,7 +98,7 @@
                         <tr *ngFor="let order of orders">
                             <td>{{ order.Order_ID || order._id }}</td>
                             <td>{{ formatDate(order.createdAt) }}</td>
-                            <td>{{ formatCurrency(order.Total_Price) }}</td>
+                            <td>{{ (order.Total_Price || 0) | currency:'USD' }}</td>
                             <td>
                                 <span class="order-status-badge" [class]="order.Order_Status?.toLowerCase()">
                                     {{ order.Order_Status }}

@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { OrderService, Order } from '../../../core/services/order.service';
 import { ExportService } from '../../../core/services/export.service';
@@ -39,10 +39,25 @@ export class OrderListComponent implements OnInit {
 
     constructor(
         private orderService: OrderService,
-        private exportService: ExportService
+        private exportService: ExportService,
+        private route: ActivatedRoute
     ) { }
 
     ngOnInit(): void {
+        // Optional deep-link filters from General tab
+        this.route.queryParams.subscribe(params => {
+            const status = params['status'];
+            const range = params['range'];
+            const search = params['q'] || params['search'];
+
+            if (typeof status === 'string') this.selectedStatus = status;
+            if (typeof range === 'string') this.selectedDateRange = range;
+            if (typeof search === 'string') this.searchQuery = search;
+
+            // Apply immediately if we already have data loaded
+            if (this.orders.length > 0) this.applyFilters();
+        });
+
         this.loadOrders();
     }
 

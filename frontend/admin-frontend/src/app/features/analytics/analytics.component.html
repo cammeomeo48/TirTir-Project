@@ -20,7 +20,12 @@
         <!-- Stat Cards -->
         <div class="stat-cards">
             <div class="stat-card" *ngFor="let card of statCards">
-                <div class="stat-value">{{ card.value }}</div>
+                <div class="stat-value">
+                    <ng-container *ngIf="card.kind === 'money'; else plainValue">
+                        {{ card.value | currency:'USD' }}
+                    </ng-container>
+                    <ng-template #plainValue>{{ card.value }}</ng-template>
+                </div>
                 <div class="stat-label">{{ card.label }}</div>
                 <div class="stat-sub" *ngIf="card.sub">{{ card.sub }}</div>
             </div>
@@ -54,13 +59,13 @@
                     <div class="chart-bar-col" *ngFor="let item of revenueData">
                         <div class="chart-bar-wrap">
                             <div class="chart-bar" [style.height]="getBarWidth(item.revenue)"
-                                [title]="item._id + ': ' + formatCurrency(item.revenue)">
+                                [title]="item._id + ': ' + (item.revenue | currency:'USD')">
                             </div>
                         </div>
                         <div class="chart-label">{{ item._id | slice:5:10 }}</div>
                     </div>
                 </div>
-                <div class="chart-legend">Bar height relative to max: {{ formatCurrency(maxRevenue) }}</div>
+                <div class="chart-legend">Bar height relative to max: {{ maxRevenue | currency:'USD' }}</div>
             </div>
         </div>
 
@@ -86,7 +91,7 @@
                             </div>
                         </td>
                         <td>{{ p.Sold_Quantity ?? p.sold ?? '—' }}</td>
-                        <td>{{ p.Revenue ? formatCurrency(p.Revenue) : '—' }}</td>
+                        <td>{{ p.Revenue ? (p.Revenue | currency:'USD') : '—' }}</td>
                     </tr>
                 </tbody>
             </table>

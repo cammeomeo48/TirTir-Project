@@ -27,9 +27,9 @@ export class SidebarComponent implements OnInit {
 
     allMenuGroups: MenuGroup[] = [
         {
-            title: 'GENERAL',
+            title: '',
             items: [
-                { label: 'Dashboard', route: '/dashboard' },
+                { label: 'General', route: '/dashboard' },
                 { label: 'Products', route: '/products', roles: ['admin'] },
                 { label: 'Inventory', route: '/inventory', roles: ['admin', 'inventory_staff'] },
                 { label: 'Orders', route: '/orders', roles: ['admin', 'customer_service'] },

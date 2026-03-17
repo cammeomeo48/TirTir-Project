@@ -153,11 +153,7 @@ export class ShippingSimulatorComponent implements OnInit, OnDestroy {
     }
 
     formatDate(iso: string): string {
-        return new Date(iso).toLocaleString('vi-VN');
-    }
-
-    formatPrice(amount: number): string {
-        return amount.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
+        return new Date(iso).toLocaleString('en-US');
     }
 
     shortId(id: string): string {

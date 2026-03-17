@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CustomerService, Customer } from '../../../core/services/customer.service';
 
@@ -26,9 +26,19 @@ export class CustomerListComponent implements OnInit {
     searchQuery = '';
     selectedStatus = '';
 
-    constructor(private customerService: CustomerService) { }
+    sortMode: 'newest' | 'none' = 'none';
+
+    constructor(
+        private customerService: CustomerService,
+        private route: ActivatedRoute
+    ) { }
 
     ngOnInit(): void {
+        this.route.queryParams.subscribe(params => {
+            const sort = params['sort'];
+            this.sortMode = sort === 'newest' ? 'newest' : 'none';
+            if (this.customers.length > 0) this.applyFilters();
+        });
         this.loadCustomers();
     }
 
@@ -53,6 +63,15 @@ export class CustomerListComponent implements OnInit {
 
     applyFilters(): void {
         let filtered = [...this.customers];
+
+        // Sort newest first when deep-linked from General
+        if (this.sortMode === 'newest') {
+            filtered.sort((a: any, b: any) => {
+                const ta = new Date(a.createdAt || a.Created_At || 0).getTime();
+                const tb = new Date(b.createdAt || b.Created_At || 0).getTime();
+                return tb - ta;
+            });
+        }
 
         // Search filter
         if (this.searchQuery.trim()) {

@@ -43,7 +43,7 @@
 
         <div class="stat-card success">
             <div class="stat-label">Total Inventory Value</div>
-            <div class="stat-value">{{ formatCurrency(stats.totalValue) }}</div>
+            <div class="stat-value">{{ stats.totalValue | currency:'USD' }}</div>
         </div>
     </div>
 

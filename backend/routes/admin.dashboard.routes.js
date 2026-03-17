@@ -3,6 +3,7 @@ const router = express.Router();
 const { protect, authorize } = require('../middlewares/auth');
 const {
     getStats,
+    getOverview,
     getRevenueChart,
     getTopProducts,
     getCustomerStats,
@@ -17,6 +18,9 @@ router.use(authorize('admin'));
 
 // GET /api/admin/dashboard/stats
 router.get('/dashboard/stats', getStats);
+
+// GET /api/admin/dashboard/overview
+router.get('/dashboard/overview', getOverview);
 
 // GET /api/admin/dashboard/revenue
 router.get('/dashboard/revenue', getRevenueChart);

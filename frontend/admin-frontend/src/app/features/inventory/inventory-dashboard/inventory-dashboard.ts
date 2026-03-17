@@ -125,11 +125,4 @@ export class InventoryDashboardComponent implements OnInit {
         if (alert.stock < 5) return 'high';
         return 'medium';
     }
-
-    formatCurrency(value: number): string {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD'
-        }).format(value);
-    }
 }

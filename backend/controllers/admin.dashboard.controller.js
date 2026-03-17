@@ -1,7 +1,45 @@
 const Order = require('../models/order.model');
 const User = require('../models/user.model');
 const Product = require('../models/product.model');
+const DailyStats = require('../models/daily.stats.model');
+const Cart = require('../models/cart.model');
 const { ORDER_STATUS } = require('../constants');
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+const formatYmd = (d) => new Date(d).toISOString().slice(0, 10);
+
+function parseRange({ range = '30d', from, to }) {
+    const now = new Date();
+
+    if (range === 'custom') {
+        const fromDate = from ? new Date(from) : new Date(now);
+        const toDate = to ? new Date(to) : new Date(now);
+        // Normalize end-of-day
+        toDate.setHours(23, 59, 59, 999);
+        return { range, from: fromDate, to: toDate };
+    }
+
+    const start = new Date(now);
+    switch (range) {
+        case 'today':
+            start.setHours(0, 0, 0, 0);
+            break;
+        case '7d':
+            start.setDate(start.getDate() - 7);
+            break;
+        case '30d':
+            start.setDate(start.getDate() - 30);
+            break;
+        case '90d':
+            start.setDate(start.getDate() - 90);
+            break;
+        default:
+            start.setDate(start.getDate() - 30);
+            range = '30d';
+            break;
+    }
+    return { range, from: start, to: now };
+}
 
 // GET /api/admin/dashboard/stats
 exports.getStats = async (req, res) => {
@@ -35,6 +73,198 @@ exports.getStats = async (req, res) => {
     } catch (error) {
         console.error("Dashboard Stats Error:", error);
         res.status(500).json({ message: "Lỗi khi lấy thống kê dashboard" });
+    }
+};
+
+/**
+ * GET /api/v1/admin/dashboard/overview
+ * Query:
+ *   range=today|7d|30d|90d|custom
+ *   from=YYYY-MM-DD (custom)
+ *   to=YYYY-MM-DD   (custom)
+ *
+ * Returns a single, consistent payload for the Admin "General" overview tab.
+ */
+exports.getOverview = async (req, res) => {
+    try {
+        const { range, from, to } = parseRange(req.query || {});
+
+        // Core: Orders + Revenue (range-scoped, excluding cancelled)
+        const orderMatch = {
+            createdAt: { $gte: from, $lte: to },
+            status: { $ne: ORDER_STATUS.CANCELLED }
+        };
+
+        const revenueAgg = await Order.aggregate([
+            { $match: orderMatch },
+            { $group: { _id: null, totalRevenue: { $sum: '$totalAmount' }, totalOrders: { $sum: 1 } } }
+        ]);
+        const totalRevenue = revenueAgg[0]?.totalRevenue || 0;
+        const totalOrders = revenueAgg[0]?.totalOrders || 0;
+        const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+        const deliveredOrders = await Order.countDocuments({
+            createdAt: { $gte: from, $lte: to },
+            status: ORDER_STATUS.DELIVERED
+        });
+
+        const statusAgg = await Order.aggregate([
+            { $match: { createdAt: { $gte: from, $lte: to } } },
+            { $group: { _id: '$status', count: { $sum: 1 } } }
+        ]);
+        const orderStatusBreakdown = statusAgg.reduce((acc, cur) => {
+            acc[cur._id] = cur.count;
+            return acc;
+        }, {});
+        Object.values(ORDER_STATUS).forEach((s) => {
+            if (orderStatusBreakdown[s] === undefined) orderStatusBreakdown[s] = 0;
+        });
+
+        const newCustomers = await User.countDocuments({
+            role: 'user',
+            createdAt: { $gte: from, $lte: to }
+        });
+
+        const revenueSeriesAgg = await Order.aggregate([
+            { $match: orderMatch },
+            { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, revenue: { $sum: '$totalAmount' }, orderCount: { $sum: 1 } } },
+            { $sort: { _id: 1 } }
+        ]);
+        const revenueSeries = revenueSeriesAgg.map((p) => ({ date: p._id, revenue: p.revenue, orderCount: p.orderCount }));
+
+        // Defaults for optional blocks
+        let recentOrders = [];
+        let lowStockAlerts = [];
+        let lowStockCount = 0;
+        let trafficAgg = [];
+        let websiteViews = 0;
+        let customerGrowthSeries = [];
+        let topProducts = [];
+        let cartRecovery = null;
+
+        // Optional: Recent orders
+        try {
+            recentOrders = await Order.find({})
+                .populate('user', 'name email')
+                .sort({ createdAt: -1 })
+                .limit(5)
+                .select('user totalAmount status createdAt');
+        } catch (e) {
+            console.warn('[Overview] recentOrders failed:', e.message);
+        }
+
+        // Optional: Low stock alerts
+        try {
+            const threshold = parseInt(req.query.threshold || '10', 10);
+            lowStockAlerts = await Product.find({ Stock_Quantity: { $lt: threshold } })
+                .sort({ Stock_Quantity: 1 })
+                .limit(10)
+                .select('Product_ID Name Stock_Quantity Stock_Reserved Thumbnail_Images Category');
+            lowStockCount = await Product.countDocuments({ Stock_Quantity: { $lt: threshold } });
+        } catch (e) {
+            console.warn('[Overview] lowStock failed:', e.message);
+        }
+
+        // Optional: Website views (DailyStats)
+        try {
+            const fromYmdStr = formatYmd(from);
+            const toYmdStr = formatYmd(to);
+            trafficAgg = await DailyStats.aggregate([
+                { $match: { date: { $gte: fromYmdStr, $lte: toYmdStr } } },
+                { $project: { _id: 0, date: 1, views: 1 } },
+                { $sort: { date: 1 } }
+            ]);
+            websiteViews = trafficAgg.reduce((sum, p) => sum + (p.views || 0), 0);
+        } catch (e) {
+            console.warn('[Overview] traffic failed:', e.message);
+        }
+
+        // Optional: Customer growth trend (last 6 months)
+        try {
+            const sixMonthsAgo = new Date();
+            sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+            const growthAgg = await User.aggregate([
+                { $match: { role: 'user', createdAt: { $gte: sixMonthsAgo } } },
+                { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$createdAt' } }, count: { $sum: 1 } } },
+                { $sort: { _id: 1 } }
+            ]);
+            customerGrowthSeries = growthAgg.map((p) => ({ month: p._id, count: p.count }));
+        } catch (e) {
+            console.warn('[Overview] customerGrowth failed:', e.message);
+        }
+
+        // Optional: Top products
+        try {
+            const limit = 10;
+            const top = await Order.aggregate([
+                { $match: orderMatch },
+                { $unwind: '$items' },
+                { $group: { _id: '$items.product', name: { $first: '$items.name' }, image: { $first: '$items.image' }, totalSold: { $sum: '$items.quantity' }, totalRevenue: { $sum: { $multiply: ['$items.price', '$items.quantity'] } } } },
+                { $sort: { totalSold: -1 } },
+                { $limit: limit }
+            ]);
+            const populated = await Product.populate(top, { path: '_id', select: 'Product_Name Product_ID Thumbnail_Images' });
+            topProducts = populated
+                .filter((i) => i._id)
+                .map((i) => ({
+                    product: {
+                        _id: i._id._id.toString(),
+                        name: i._id.Product_Name || i.name,
+                        sku: i._id.Product_ID,
+                        mainImage: Array.isArray(i._id.Thumbnail_Images) ? i._id.Thumbnail_Images[0] : i._id.Thumbnail_Images
+                    },
+                    salesCount: i.totalSold,
+                    revenue: i.totalRevenue
+                }));
+        } catch (e) {
+            console.warn('[Overview] topProducts failed:', e.message);
+        }
+
+        // Optional: Cart recovery metrics (only if reliable)
+        try {
+            const totalAbandoned = await Cart.countDocuments({ recoveryStatus: { $nin: ['recovered', 'abandoned_final'] } });
+            const recoveryStats = await Order.aggregate([
+                { $match: { status: { $ne: ORDER_STATUS.CANCELLED }, recoveredFrom: { $in: ['email_1', 'email_2', 'email_3', 'manual'] } } },
+                { $group: { _id: null, recoveredCount: { $sum: 1 }, recoveredRevenue: { $sum: '$totalAmount' } } }
+            ]);
+            const recoveredCount = recoveryStats[0]?.recoveredCount || 0;
+            const recoveredRevenue = recoveryStats[0]?.recoveredRevenue || 0;
+            const totalSentOrPending = totalAbandoned + recoveredCount;
+            const conversionRate = totalSentOrPending > 0 ? Number(((recoveredCount / totalSentOrPending) * 100).toFixed(2)) : 0;
+            cartRecovery = { totalAbandoned, recoveredCount, recoveredRevenue, conversionRate };
+        } catch (e) {
+            cartRecovery = null;
+        }
+
+        const response = {
+            range: { range, from: formatYmd(from), to: formatYmd(to) },
+            summary: {
+                totalRevenue,
+                totalOrders,
+                deliveredOrders,
+                newCustomers,
+                averageOrderValue,
+                lowStockCount,
+                websiteViews
+            },
+            orderStatusBreakdown,
+            revenueSeries,
+            traffic: {
+                viewsTotal: websiteViews,
+                viewsSeries: trafficAgg
+            },
+            customerGrowthSeries,
+            topProducts,
+            recentOrders,
+            lowStockAlerts
+        };
+
+        if (cartRecovery) response.cartRecovery = cartRecovery;
+
+        res.json(response);
+    } catch (error) {
+        console.error('Admin Overview Error:', error);
+        res.status(500).json({ message: 'Failed to load admin overview' });
     }
 };
 

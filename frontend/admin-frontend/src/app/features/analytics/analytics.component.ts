@@ -5,8 +5,9 @@ import { DashboardService } from '../../core/services/dashboard.service';
 
 interface StatCard {
     label: string;
-    value: string | number;
+    value: number;
     sub?: string;
+    kind?: 'money' | 'number';
 }
 
 @Component({
@@ -59,23 +60,27 @@ export class AnalyticsComponent implements OnInit {
         this.statCards = [
             {
                 label: 'Total Revenue',
-                value: this.formatCurrency(data.totalRevenue ?? 0),
-                sub: 'All time'
+                value: Number(data.totalRevenue ?? 0),
+                sub: 'All time',
+                kind: 'money'
             },
             {
                 label: 'Total Orders',
-                value: Object.values(data.ordersByStatus ?? {}).reduce((a: any, b: any) => a + b, 0) as number,
-                sub: `Pending: ${data.ordersByStatus?.Pending ?? 0}`
+                value: Number(Object.values(data.ordersByStatus ?? {}).reduce((a: any, b: any) => a + b, 0)),
+                sub: `Pending: ${data.ordersByStatus?.Pending ?? 0}`,
+                kind: 'number'
             },
             {
                 label: 'New Customers',
-                value: data.newCustomersCount ?? 0,
-                sub: 'Recent period'
+                value: Number(data.newCustomersCount ?? 0),
+                sub: 'Recent period',
+                kind: 'number'
             },
             {
                 label: 'Delivered',
-                value: data.ordersByStatus?.Delivered ?? 0,
-                sub: `Cancelled: ${data.ordersByStatus?.Cancelled ?? 0}`
+                value: Number(data.ordersByStatus?.Delivered ?? 0),
+                sub: `Cancelled: ${data.ordersByStatus?.Cancelled ?? 0}`,
+                kind: 'number'
             }
         ];
     }
@@ -103,10 +108,6 @@ export class AnalyticsComponent implements OnInit {
 
     getBarWidth(revenue: number): string {
         return `${Math.round((revenue / this.maxRevenue) * 100)}%`;
-    }
-
-    formatCurrency(val: number): string {
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
     }
 
     // Order status breakdown cho pie-style display

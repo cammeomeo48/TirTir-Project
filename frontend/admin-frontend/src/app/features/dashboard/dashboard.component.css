@@ -37,6 +37,17 @@
     margin-bottom: 24px;
 }
 
+.kpi-grid {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.subsection-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #111;
+    margin: 10px 0 10px;
+}
+
 .stat-card {
     background: #fff;
     border: 1px solid #e5e7eb;
@@ -46,7 +57,27 @@
     display: flex;
     align-items: center;
     gap: 16px;
+    min-height: 92px;
     transition: border-color 0.2s;
+}
+
+.stat-card-click {
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+}
+
+.stat-card-click {
+    border: 1px solid #e5e7eb;
+}
+
+.stat-card-click:focus-visible {
+    outline: 2px solid rgba(217, 45, 45, 0.5);
+    outline-offset: 2px;
+}
+
+.stat-card-click:hover {
+    border-left-color: #D92D2D;
 }
 
 .stat-card:hover {
@@ -56,6 +87,8 @@
 .stat-icon {
     font-size: 28px;
     flex-shrink: 0;
+    width: 32px;
+    text-align: center;
 }
 
 .stat-value {
@@ -86,6 +119,21 @@
     border-radius: 8px;
     padding: 20px 24px;
     margin-bottom: 20px;
+}
+
+.retry-btn {
+    margin-left: 12px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #fecaca;
+    background: #fff;
+    color: #991b1b;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.retry-btn:hover {
+    background: #fff7f7;
 }
 
 .section-title {
@@ -157,9 +205,10 @@
     display: flex;
     align-items: flex-end;
     gap: 4px;
-    height: 160px;
+    height: 140px;
     padding-bottom: 8px;
     overflow-x: auto;
+    border-bottom: 1px solid #eef2f7;
 }
 
 .chart-bar-group {
@@ -182,9 +231,17 @@
     width: 100%;
     background: #111;
     border-radius: 3px 3px 0 0;
-    min-height: 3px;
+    min-height: 6px;
     transition: background 0.15s;
     cursor: pointer;
+}
+
+.chart-bar-revenue {
+    background: rgba(217, 45, 45, 0.85);
+}
+
+.chart-bar-views {
+    background: rgba(17, 24, 39, 0.55);
 }
 
 .chart-bar:hover {
@@ -371,6 +428,43 @@
     padding: 12px 16px;
     font-size: 14px;
     margin-bottom: 16px;
+}
+
+.amount {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.mini-growth {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    height: 120px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eef2f7;
+    overflow-x: auto;
+}
+
+.mini-growth-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 44px;
+}
+
+.mini-growth-bar {
+    width: 100%;
+    background: rgba(217, 45, 45, 0.28);
+    border: 1px solid rgba(217, 45, 45, 0.45);
+    border-radius: 6px 6px 2px 2px;
+    min-height: 6px;
+}
+
+.mini-growth-label {
+    font-size: 10px;
+    color: #9ca3af;
+    margin-top: 6px;
+    white-space: nowrap;
 }
 
 /* Responsive */

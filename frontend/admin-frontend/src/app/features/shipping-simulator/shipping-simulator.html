@@ -61,7 +61,7 @@
                         <span class="ghn-code" *ngIf="order.ghnOrderCode">{{ order.ghnOrderCode }}</span>
                         <span class="text-muted" *ngIf="!order.ghnOrderCode">—</span>
                     </td>
-                    <td>{{ formatPrice(order.totalAmount) }}</td>
+                    <td>{{ (order.totalAmount || 0) | currency:'USD' }}</td>
                     <td class="text-muted">{{ formatDate(order.createdAt) }}</td>
                     <td>
                         <div class="action-buttons">

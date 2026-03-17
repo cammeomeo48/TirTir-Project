@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ProductService } from '../../../core/services/product.service';
 
@@ -64,9 +64,25 @@ export class ProductListComponent implements OnInit {
     pendingDeleteId: string | null = null;
     deleteError: string | null = null;
 
-    constructor(private productService: ProductService) { }
+    constructor(
+        private productService: ProductService,
+        private route: ActivatedRoute
+    ) { }
 
     ngOnInit(): void {
+        // Optional deep-link filters from General tab / other pages
+        this.route.queryParams.subscribe(params => {
+            const q = params['q'];
+            const stock = params['stock'];
+            const category = params['category'];
+
+            if (typeof q === 'string') this.searchQuery = q;
+            if (typeof stock === 'string') this.selectedStockStatus = stock;
+            if (typeof category === 'string') this.selectedCategory = category;
+
+            if (this.products.length > 0) this.applyFilters();
+        });
+
         this.loadProducts();
     }
 

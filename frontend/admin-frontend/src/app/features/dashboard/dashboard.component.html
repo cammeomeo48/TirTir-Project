@@ -3,105 +3,139 @@
     <!-- ── Header ────────────────────────────────────────────── -->
     <div class="dashboard-header">
         <div>
-            <h1>Dashboard</h1>
-            <p class="subtitle">Store performance overview</p>
+            <h1>General</h1>
+            <p class="subtitle">Store overview and performance</p>
         </div>
     </div>
 
-    <!-- ── Stats Cards ────────────────────────────────────────── -->
-    <div *ngIf="statsLoading" class="loading-row">
+    <!-- ── Summary Cards ───────────────────────────────────────── -->
+    <div *ngIf="overviewLoading" class="loading-row">
         <div class="skeleton-card" *ngFor="let i of [1,2,3,4]"></div>
     </div>
 
-    <div *ngIf="statsError && !statsLoading" class="error-msg">{{ statsError }}</div>
+    <div *ngIf="overviewError && !overviewLoading" class="error-msg">
+        {{ overviewError }}
+        <button class="retry-btn" (click)="loadOverview()">Retry</button>
+    </div>
 
-    <div class="stats-grid" *ngIf="!statsLoading && stats">
-        <!-- Total Revenue -->
+    <!-- ── KPI cards row ───────────────────────────────────────── -->
+    <div class="stats-grid kpi-grid" *ngIf="!overviewLoading && overview">
         <div class="stat-card">
             <div class="stat-icon">💰</div>
             <div class="stat-body">
-                <div class="stat-value">{{ formatCurrency(stats.totalRevenue) }}</div>
+                <div class="stat-value">{{ overview.summary.totalRevenue | currency:'USD' }}</div>
                 <div class="stat-label">Total Revenue</div>
             </div>
         </div>
 
-        <!-- Total Orders (sum of all statuses) -->
         <div class="stat-card">
             <div class="stat-icon">📑</div>
             <div class="stat-body">
-                <div class="stat-value">{{ getTotalOrders() }}</div>
+                <div class="stat-value">{{ overview.summary.totalOrders }}</div>
                 <div class="stat-label">Total Orders</div>
-                <div class="stat-sub" *ngIf="stats.ordersByStatus?.Pending">
-                    {{ stats.ordersByStatus?.Pending }} pending
-                </div>
             </div>
         </div>
 
-        <!-- New Customers -->
+        <div class="stat-card">
+            <div class="stat-icon">🧾</div>
+            <div class="stat-body">
+                <div class="stat-value">{{ overview.summary.averageOrderValue | currency:'USD' }}</div>
+                <div class="stat-label">Average Order Value</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">👁️</div>
+            <div class="stat-body">
+                <div class="stat-value">{{ overview.summary.websiteViews }}</div>
+                <div class="stat-label">Website Views</div>
+            </div>
+        </div>
+
         <div class="stat-card">
             <div class="stat-icon">👤</div>
             <div class="stat-body">
-                <div class="stat-value">{{ stats.newCustomersCount }}</div>
+                <div class="stat-value">{{ overview.summary.newCustomers }}</div>
                 <div class="stat-label">New Customers</div>
             </div>
         </div>
 
-        <!-- Delivered orders -->
         <div class="stat-card">
             <div class="stat-icon">✅</div>
             <div class="stat-body">
-                <div class="stat-value">{{ stats.ordersByStatus?.Delivered ?? 0 }}</div>
+                <div class="stat-value">{{ overview.summary.deliveredOrders }}</div>
                 <div class="stat-label">Delivered</div>
-                <div class="stat-sub" *ngIf="stats.ordersByStatus?.Cancelled">
-                    {{ stats.ordersByStatus?.Cancelled }} cancelled
-                </div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">⚠️</div>
+            <div class="stat-body">
+                <div class="stat-value">{{ overview.summary.lowStockCount }}</div>
+                <div class="stat-label">Low Stock Count</div>
             </div>
         </div>
     </div>
 
-    <!-- ── Order Status Breakdown ─────────────────────────────── -->
-    <div class="section-card" *ngIf="stats?.ordersByStatus">
-        <div class="section-title">Orders by Status</div>
-        <div class="status-badges">
-            <div class="status-badge pending" *ngIf="stats!.ordersByStatus?.Pending">
-                Pending: {{ stats!.ordersByStatus?.Pending }}
-            </div>
-            <div class="status-badge processing" *ngIf="stats!.ordersByStatus?.Processing">
-                Processing: {{ stats!.ordersByStatus?.Processing }}
-            </div>
-            <div class="status-badge shipped" *ngIf="stats!.ordersByStatus?.Shipped">
-                Shipped: {{ stats!.ordersByStatus?.Shipped }}
-            </div>
-            <div class="status-badge delivered" *ngIf="stats!.ordersByStatus?.Delivered">
-                Delivered: {{ stats!.ordersByStatus?.Delivered }}
-            </div>
-            <div class="status-badge cancelled" *ngIf="stats!.ordersByStatus?.Cancelled">
-                Cancelled: {{ stats!.ordersByStatus?.Cancelled }}
-            </div>
+    <!-- ── Analytics section ───────────────────────────────────── -->
+    <div class="section-card" *ngIf="!overviewLoading && overview">
+        <div class="section-header-row">
+            <div class="section-title">Analytics</div>
+            <a class="view-all" (click)="goToAnalytics()">View full analytics →</a>
         </div>
-    </div>
 
-    <!-- ── Revenue Chart (CSS bars) ───────────────────────────── -->
-    <div class="section-card">
-        <div class="section-title">Revenue Over Time</div>
-        <div *ngIf="revenueLoading" class="loading-text">Loading...</div>
-        <div *ngIf="!revenueLoading && revenueData.length === 0" class="empty-text">No revenue data available.</div>
-        <div *ngIf="!revenueLoading && revenueData.length > 0" class="revenue-chart">
-            <div class="chart-bar-group" *ngFor="let point of revenueData">
+        <div class="subsection-title">Revenue Over Time</div>
+        <div *ngIf="revenueSeries.length === 0" class="empty-text">No revenue data available.</div>
+        <div *ngIf="revenueSeries.length > 0" class="revenue-chart">
+            <div class="chart-bar-group" *ngFor="let point of revenueSeries">
                 <div class="chart-bar-wrap">
-                    <div class="chart-bar" [style.height]="getBarWidth(point.revenue)"
-                        [title]="point._id + ': ' + formatCurrency(point.revenue)">
-                    </div>
+                    <div class="chart-bar chart-bar-revenue" [style.height]="getBarHeight(point.revenue)"
+                        [title]="point.date + ': ' + (point.revenue | currency:'USD')"></div>
                 </div>
-                <div class="chart-label">{{ point._id | slice:5:10 }}</div>
+                <div class="chart-label">{{ point.date | slice:5:10 }}</div>
+            </div>
+        </div>
+
+        <div class="subsection-title" style="margin-top: 18px;">Website Views Over Time</div>
+        <div *ngIf="trafficSeries.length === 0" class="empty-text">No website view data available.</div>
+        <div *ngIf="trafficSeries.length > 0" class="revenue-chart">
+            <div class="chart-bar-group" *ngFor="let point of trafficSeries">
+                <div class="chart-bar-wrap">
+                    <div class="chart-bar chart-bar-views" [style.height]="getViewsBarHeight(point.views)"
+                        [title]="point.date + ': ' + point.views + ' views'"></div>
+                </div>
+                <div class="chart-label">{{ point.date | slice:5:10 }}</div>
+            </div>
+        </div>
+
+        <div class="subsection-title" style="margin-top: 18px;">Order Status Breakdown</div>
+        <div class="status-badges">
+            <div class="status-badge pending" [style.opacity]="overview.orderStatusBreakdown['Pending'] ? '1' : '0.35'">Pending: {{ overview.orderStatusBreakdown['Pending'] ?? 0 }}</div>
+            <div class="status-badge processing" [style.opacity]="overview.orderStatusBreakdown['Processing'] ? '1' : '0.35'">Processing: {{ overview.orderStatusBreakdown['Processing'] ?? 0 }}</div>
+            <div class="status-badge shipped" [style.opacity]="overview.orderStatusBreakdown['Shipped'] ? '1' : '0.35'">Shipped: {{ overview.orderStatusBreakdown['Shipped'] ?? 0 }}</div>
+            <div class="status-badge delivered" [style.opacity]="overview.orderStatusBreakdown['Delivered'] ? '1' : '0.35'">Delivered: {{ overview.orderStatusBreakdown['Delivered'] ?? 0 }}</div>
+            <div class="status-badge cancelled" [style.opacity]="overview.orderStatusBreakdown['Cancelled'] ? '1' : '0.35'">Cancelled: {{ overview.orderStatusBreakdown['Cancelled'] ?? 0 }}</div>
+        </div>
+
+        <div class="subsection-title" style="margin-top: 18px;">Customer Growth</div>
+        <div *ngIf="customerGrowthSeries.length === 0" class="empty-text">No customer growth data available.</div>
+        <div class="mini-growth" *ngIf="customerGrowthSeries.length > 0">
+            <div class="mini-growth-col" *ngFor="let p of customerGrowthSeries">
+                <div class="mini-growth-bar" [style.height]="getGrowthBarHeight(p.count)" [title]="p.month + ': ' + p.count"></div>
+                <div class="mini-growth-label">{{ p.month }}</div>
             </div>
         </div>
     </div>
 
     <!-- ── Top Products ───────────────────────────────────────── -->
-    <div class="section-card" *ngIf="topProducts.length > 0">
-        <div class="section-title">Top Products</div>
-        <table class="mini-table">
+    <div class="section-card">
+        <div class="section-header-row">
+            <div class="section-title">Top Products</div>
+            <a routerLink="/products" class="view-all">Manage →</a>
+        </div>
+        <div *ngIf="overviewLoading" class="loading-text">Loading...</div>
+        <div *ngIf="!overviewLoading && topProducts.length === 0" class="empty-text">No top products yet.</div>
+        <table class="mini-table" *ngIf="!overviewLoading && topProducts.length > 0">
             <thead>
                 <tr>
                     <th>#</th>
@@ -111,17 +145,19 @@
                 </tr>
             </thead>
             <tbody>
-                <tr *ngFor="let p of topProducts; let i = index">
+                <tr *ngFor="let p of topProducts; let i = index" class="clickable-row" (click)="goToProducts()">
                     <td class="rank">{{ i + 1 }}</td>
                     <td>
                         <div class="product-cell">
-                            <img *ngIf="p.Thumbnail_Images" [src]="getThumb(p.Thumbnail_Images)"
-                                [alt]="p.Name || p.Product_Name" class="thumb" />
-                            <span>{{ p.Name || p.Product_Name }}</span>
+                            <img *ngIf="p.product?.mainImage || p.Thumbnail_Images"
+                                [src]="fixAssetUrl(p.product?.mainImage || getThumb(p.Thumbnail_Images)) || '/placeholder-product.svg'"
+                                [alt]="p.product?.name || p.Name || p.Product_Name" class="thumb"
+                                onerror="this.onerror=null;this.src='/placeholder-product.svg';" />
+                            <span>{{ p.product?.name || p.Name || p.Product_Name }}</span>
                         </div>
                     </td>
                     <td>{{ p.totalSold ?? p.salesCount ?? '—' }}</td>
-                    <td>{{ (p.totalRevenue ?? p.revenue) ? formatCurrency(p.totalRevenue ?? p.revenue ?? 0) : '—' }}
+                    <td>{{ (p.totalRevenue ?? p.revenue) ? ((p.totalRevenue ?? p.revenue ?? 0) | currency:'USD') : '—' }}
                     </td>
                 </tr>
             </tbody>
@@ -134,9 +170,9 @@
             <div class="section-title">Recent Orders</div>
             <a routerLink="/orders" class="view-all">View All →</a>
         </div>
-        <div *ngIf="recentOrdersLoading" class="loading-text">Loading...</div>
-        <div *ngIf="!recentOrdersLoading && recentOrders.length === 0" class="empty-text">No orders yet.</div>
-        <table class="mini-table" *ngIf="!recentOrdersLoading && recentOrders.length > 0">
+        <div *ngIf="overviewLoading" class="loading-text">Loading...</div>
+        <div *ngIf="!overviewLoading && recentOrders.length === 0" class="empty-text">No orders yet.</div>
+        <table class="mini-table" *ngIf="!overviewLoading && recentOrders.length > 0">
             <thead>
                 <tr>
                     <th>Order ID</th>
@@ -151,51 +187,42 @@
                     <td class="order-id">{{ order._id | slice:0:8 }}...</td>
                     <td>{{ order.user?.name ?? 'N/A' }}</td>
                     <td>{{ formatDate(order.createdAt) }}</td>
-                    <td>{{ formatCurrency(order.totalAmount ?? order.Total_Price ?? 0) }}</td>
+                    <td class="amount">{{ (order.totalAmount ?? order.Total_Price ?? 0) | currency:'USD' }}</td>
                     <td><span class="badge" [ngClass]="getStatusClass(order.status)">{{ order.status }}</span></td>
                 </tr>
             </tbody>
         </table>
     </div>
 
-    <!-- ── Cart Recovery Metrics ────────────────────────────────────── -->
-    <div class="section-card">
+    <!-- ── Cart Recovery Metrics (only if real backend data exists) ─────────── -->
+    <div class="section-card" *ngIf="!overviewLoading && showCartRecovery">
         <div class="section-title">🛒 Cart Recovery Metrics</div>
-        <div *ngIf="recoveryLoading" class="loading-text">Loading...</div>
-        
-        <div class="stats-grid" *ngIf="!recoveryLoading && recoveryStats" style="margin-bottom: 0;">
-            <!-- Abandoned -->
+        <div class="stats-grid" style="margin-bottom: 0;">
             <div class="stat-card">
                 <div class="stat-icon">🛒</div>
                 <div class="stat-body">
-                    <div class="stat-value">{{ recoveryStats.totalAbandoned }}</div>
+                    <div class="stat-value">{{ overview!.cartRecovery!.totalAbandoned }}</div>
                     <div class="stat-label">Abandoned Carts</div>
                 </div>
             </div>
-
-            <!-- Recovered Count -->
             <div class="stat-card">
                 <div class="stat-icon">🔄</div>
                 <div class="stat-body">
-                    <div class="stat-value">{{ recoveryStats.recoveredCount }}</div>
+                    <div class="stat-value">{{ overview!.cartRecovery!.recoveredCount }}</div>
                     <div class="stat-label">Recovered Orders</div>
                 </div>
             </div>
-
-            <!-- Recovered Revenue -->
             <div class="stat-card">
                 <div class="stat-icon">💵</div>
                 <div class="stat-body">
-                    <div class="stat-value">{{ formatCurrency(recoveryStats.recoveredRevenue) }}</div>
+                    <div class="stat-value">{{ overview!.cartRecovery!.recoveredRevenue | currency:'USD' }}</div>
                     <div class="stat-label">Recovered Revenue</div>
                 </div>
             </div>
-
-            <!-- Conversion Rate -->
             <div class="stat-card">
                 <div class="stat-icon">📈</div>
                 <div class="stat-body">
-                    <div class="stat-value">{{ recoveryStats.conversionRate }}%</div>
+                    <div class="stat-value">{{ overview!.cartRecovery!.conversionRate }}%</div>
                     <div class="stat-label">Conversion Rate</div>
                 </div>
             </div>
@@ -203,11 +230,13 @@
     </div>
 
     <!-- ── Low Stock Alert ────────────────────────────────────── -->
-    <div class="section-card" *ngIf="!lowStockLoading && lowStockItems.length > 0">
+    <div class="section-card">
         <div class="section-header-row">
             <div class="section-title">⚠️ Low Stock Alerts</div>
-            <a routerLink="/inventory" class="view-all">Manage →</a>
+            <a routerLink="/inventory" [queryParams]="{ filter: 'low-stock' }" class="view-all">Manage →</a>
         </div>
+        <div *ngIf="overviewLoading" class="loading-text">Loading...</div>
+        <div *ngIf="!overviewLoading && lowStockItems.length === 0" class="empty-text">No low stock alerts.</div>
         <div class="low-stock-list">
             <div class="low-stock-row" *ngFor="let item of lowStockItems">
                 <span class="item-name">{{ item.Name || item.name }}</span>
