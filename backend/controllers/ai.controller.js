@@ -637,17 +637,19 @@ INSTRUCTIONS:
             .reduce((sum, r) => sum + (r.product?.Price || 0), 0);
 
         const responseData = {
-            routine: enrichedRoutine, // ✅ Keep ALL steps, even those without a product match
+            routine: enrichedRoutine,
             advice: recommendationData.expert_advice,
             dermatologistNote: recommendationData.dermatologist_note || null,
             skinMetrics: recommendationData.skin_metrics || null,
             skinEvolution: recommendationData.skin_evolution || null,
             totalPrice,
             skinType,
+            isHeuristicGenerated: recommendationData.isHeuristicGenerated || false, // C4 FIX
         };
 
-        // === PHASE C: CACHE WRITE — 2h TTL (shorter to allow re-testing) ===
-        await setCache(cacheKey, responseData, 7200);
+        // M3 FIX: Shorter TTL for heuristic results so Gemini recovery is reflected quickly
+        const cacheTTL = responseData.isHeuristicGenerated ? 300 : 7200; // 5min vs 2h
+        await setCache(cacheKey, responseData, cacheTTL);
         console.log(`Cached routine for [${skinTone}/${undertone}/${skinType}]`);
 
         res.json({ success: true, data: responseData, fromCache: false });

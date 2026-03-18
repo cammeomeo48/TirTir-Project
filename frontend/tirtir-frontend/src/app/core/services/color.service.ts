@@ -13,12 +13,15 @@ export class ColorService {
    */
   validateSkinColor(r: number, g: number, b: number): { isValid: boolean; reason?: string } {
     const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    if (lum <= 70) return { isValid: false, reason: 'Ánh sáng quá yếu. Vui lòng bật đèn hoặc ra chỗ sáng hơn.' };
-    if (lum > 230) return { isValid: false, reason: 'Ánh sáng quá chói. Vui lòng di chuyển ra xa nguồn sáng.' };
+    if (lum <= 50) return { isValid: false, reason: '💡 Not enough light. Please turn on a light.' };
+    if (lum > 220) return { isValid: false, reason: '☀️ Too bright. Move to shade.' };
     const lab = this.rgbToLab(r, g, b);
-    if (lab.L < 40) return { isValid: false, reason: 'Da quá tối. Di chuyển ra nơi sáng hơn.' };
-    if (lab.a < 5 || lab.a > 45) return { isValid: false, reason: 'Màu da bị ám. Kiểm tra lại ánh sáng.' };
-    if (lab.b < 5 || lab.b > 55) return { isValid: false, reason: 'Ánh sáng bị ám vàng/xanh. Kiểm tra lại.' };
+    // More lenient for darker skin: L < 15 instead of L < 40
+    if (lab.L < 15) return { isValid: false, reason: 'Lighting too dark. Please adjust.' };
+    // Allow warm tones: a up to 50 instead of 45
+    if (lab.a < 3 || lab.a > 50) return { isValid: false, reason: 'Color cast detected. Check lighting.' };
+    // Allow more yellow for darker skin: b up to 60
+    if (lab.b < 5 || lab.b > 60) return { isValid: false, reason: 'Yellow/blue tint detected. Adjust lighting.' };
     return { isValid: true };
   }
 

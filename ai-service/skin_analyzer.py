@@ -146,14 +146,52 @@ class SkinAnalyzer:
         # --- Detect Concerns ---
         concerns = self._detect_concerns(image, landmarks, h, w)
 
+        # --- C2 FIX: Derive skinType from multiple signals ---
+        skin_type = self._determine_skin_type(concerns, image, landmarks, h, w)
+
+        # --- C1 FIX: Compute real confidence ---
+        concern_penalty = len([c for c in concerns if c != "None"]) * 0.05
+        confidence = round(max(0.3, min(0.98, 0.92 - concern_penalty)), 2)
+
         return {
             "skinTone": skin_tone,
             "undertone": undertone,
-            "skinType": "Oily" if "Oily Skin" in concerns else "Normal",
+            "skinType": skin_type,
             "concerns": concerns,
-            "confidence": 0.95,
+            "confidence": confidence,
             "debug_values": {"L": L, "a": a, "b": b}
         }
+
+    def _determine_skin_type(self, concerns: list, image: np.ndarray, landmarks: list, h: int, w: int) -> str:
+        """Derive skin type from multiple analysis signals instead of binary Oily/Normal."""
+        has_oily = "Oily Skin" in concerns
+        has_redness = "Sensitive/Redness" in concerns
+        has_dry_indicators = "Dark Circles" in concerns  # often correlated with dryness
+
+        def get_coords(idx: int) -> tuple[int, int]:
+            pt = landmarks[idx]
+            return int(pt.x * w), int(pt.y * h)
+
+        # Check forehead dryness: low saturation in HSV
+        fh_coords = [get_coords(idx) for idx in self.rois["forehead"]]
+        cx = int(sum(c[0] for c in fh_coords) / len(fh_coords))
+        cy = int(sum(c[1] for c in fh_coords) / len(fh_coords))
+        fh_patch = image[max(0, cy - 20):min(h, cy + 20), max(0, cx - 20):min(w, cx + 20)]
+        low_saturation = False
+        if fh_patch.size > 0:
+            s_fh = cv2.split(cv2.cvtColor(fh_patch, cv2.COLOR_BGR2HSV))[1]
+            low_saturation = float(np.mean(s_fh)) < 40  # low saturation = dry appearance
+
+        if has_oily and has_redness:
+            return "Combination"
+        elif has_oily:
+            return "Oily"
+        elif has_redness:
+            return "Sensitive"
+        elif low_saturation or has_dry_indicators:
+            return "Dry"
+        else:
+            return "Normal"
 
     def _detect_concerns(self, image: np.ndarray, landmarks: list, h: int, w: int) -> list[str]:
         """Detect: Acne/Blemishes, Sensitive/Redness, Dark Circles, Visible Pores, Oily Skin."""

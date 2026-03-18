@@ -5,6 +5,14 @@ const { rgbToLab, deltaE00 } = require("../utils/colorUtils");
 exports.findBestMatch = async (req, res) => {
     try {
         const { r, g, b, l, a, b: bVal, skinType } = req.body;
+
+        // H2 FIX: Input validation
+        if (r !== undefined || g !== undefined || b !== undefined) {
+            if ([r, g, b].some(v => typeof v !== 'number' || v < 0 || v > 255 || isNaN(v))) {
+                return res.status(400).json({ message: "Invalid RGB values. Each must be a number between 0 and 255." });
+            }
+        }
+
         let userLab = { L: l, a: a, b: bVal };
 
         // If RGB provided but no LAB, convert it
@@ -33,13 +41,11 @@ exports.findBestMatch = async (req, res) => {
         // If Oily, we want a shade that STARTS lighter (higher L).
         // Target_L = User_L + Shift.
         let targetL = userLab.L;
-        let adjustmentNote = "Màu tệp với da tự nhiên.";
+        let adjustmentNote = "Shade matched to your natural skin tone.";
 
         if (skinType === 'Oily') {
-             // Shift target L up by 2.5 (User requested formula)
-             // We look for a shade that is brighter than the user.
-             targetL += 2.5; 
-             adjustmentNote = "Đã chọn màu sáng hơn 1 tone vì bạn da dầu (tránh xuống tông).";
+             targetL += 2.5;
+             adjustmentNote = "Selected a slightly lighter shade for oily skin (prevents oxidation darkening).";
         }
 
         // Modified User Target for Matching
@@ -114,21 +120,18 @@ exports.findBestMatch = async (req, res) => {
         // Get Top 5
         const topMatches = results.slice(0, 5);
 
-        // Enhance with Product Image
-        const finalResults = await Promise.all(topMatches.map(async (match) => {
-            let imageUrl = match.Shade_Image;
-            let productName = ""; // Default empty
+        // H1 FIX: Batch query all products at once instead of N+1
+        const productIds = [...new Set(topMatches.map(m => m.Product_ID))];
+        const products = await Product.find({ Product_ID: { $in: productIds } }).select('Product_ID Thumbnail_Images Name');
+        const productMap = new Map(products.map(p => [p.Product_ID, p]));
 
-            // If no specific shade image, or to get Product Name, fetch Product
-            // Optimization: We could fetch all products at once, but for 5 items, parallel requests are fine.
-            // We specifically want the Product Thumbnail if Shade Image is missing.
-            
-            const product = await Product.findOne({ Product_ID: match.Product_ID }).select('Thumbnail_Images Name');
-            
+        const finalResults = topMatches.map((match) => {
+            const product = productMap.get(match.Product_ID);
+            let imageUrl = match.Shade_Image;
+            let productName = "";
+
             if (product) {
-                if (!imageUrl) {
-                    imageUrl = product.Thumbnail_Images;
-                }
+                if (!imageUrl) imageUrl = product.Thumbnail_Images;
                 productName = product.Name;
             }
 
@@ -136,10 +139,8 @@ exports.findBestMatch = async (req, res) => {
                 ...match,
                 Image_URL: imageUrl,
                 Product_Name: productName
-                // Ensure we send back a valid image path
-                // If still no image, frontend will handle placeholder
             };
-        }));
+        });
 
         res.json(finalResults);
     } catch (err) {

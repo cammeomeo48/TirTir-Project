@@ -7,7 +7,6 @@ import { forkJoin, of, take } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import { FaceTrackerService } from '../../core/services/face-tracker.service';
 import { CartService } from '../../core/services/cart.service';
-import { AuthService } from '../../core/services/auth.service';
 import { ColorService } from '../../core/services/color.service';
 import { environment } from '../../../environments/environment';
 
@@ -129,6 +128,9 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
   routineError = signal<string | null>(null);
   lowConfidence = signal(false);  // F2: warn when AI confidence < 50%
 
+  // Issue #16: Track shade match errors separately
+  shadeMatchError = signal<string | null>(null);
+
   // UI
   showResultModal = signal(false);
   activeTab = signal<'shade' | 'report' | 'routine'>('shade');
@@ -162,7 +164,6 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
     public faceTracker: FaceTrackerService,
     private http: HttpClient,
     private cartService: CartService,
-    private authService: AuthService,
     private colorService: ColorService
   ) { }
 
@@ -194,8 +195,17 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
         this.isCameraActive = true;
         this.detectLoop();
       };
-    } catch (err) {
-      this.error = 'Cannot access camera. Please grant camera permissions.';
+    } catch (err: any) {
+      // Issue #1: Differentiate camera errors
+      if (err.name === 'NotAllowedError') {
+        this.error = '🚫 Camera permission denied. Please allow camera access in your browser settings.';
+      } else if (err.name === 'NotFoundError') {
+        this.error = '📷 No camera found. Please connect a camera and try again.';
+      } else if (err.name === 'NotReadableError') {
+        this.error = '⚠️ Camera is in use by another application. Please close it and try again.';
+      } else {
+        this.error = `Cannot access camera: ${err.message || 'Unknown error'}. Please check permissions.`;
+      }
     }
   }
 
@@ -225,12 +235,27 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
 
     this.faceTracker.detectFace(this.videoElement.nativeElement);
 
-    if (this.faceTracker.isFaceDetected()) {
-      this.processRealtimeValidation();
-    } else {
+    if (this.faceTracker.multipleDetected()) {
+      // Issue #10: Multiple faces warning
       this.lightingStatus.set({
         isValid: false,
-        message: 'No face detected. Please look straight at the camera.',
+        message: '⚠️ Multiple faces detected. Please have only ONE person in frame.',
+        type: 'error'
+      });
+      this.colorHistory = [];
+      this.liveMetrics.set(null);
+    } else if (this.faceTracker.isFaceDetected()) {
+      this.processRealtimeValidation();
+    } else {
+      // Issue #11: Differentiated pose messages
+      const pose = this.faceTracker.poseIssue();
+      let msg = 'No face detected. Please look straight at the camera.';
+      if (pose === 'eyesClosed') msg = '👁️ Eyes closed. Please open your eyes and look at the camera.';
+      else if (pose === 'tilted') msg = '↔️ Head tilted. Please face the camera straight on.';
+
+      this.lightingStatus.set({
+        isValid: false,
+        message: msg,
         type: 'warning'
       });
       this.colorHistory = [];
@@ -260,7 +285,7 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
     sm.g = Math.round(sm.g / this.colorHistory.length);
     sm.b = Math.round(sm.b / this.colorHistory.length);
 
-    const v = this.validateSkinColor(sm.r, sm.g, sm.b);
+    const v = this.colorService.validateSkinColor(sm.r, sm.g, sm.b);
     this.lightingStatus.set(v.isValid
       ? { isValid: true, message: 'Ready to scan', type: 'success' }
       : { isValid: false, message: v.reason || 'Lighting not adequate.', type: 'error' }
@@ -329,10 +354,16 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
     this.capturedImageUrl = imageData; // store for Skin Report face preview
 
     // ── 3. Shade match (RGB) ────────────────────────────────────────────────
+    // Issue #16: Track shade match errors
+    this.shadeMatchError.set(null);
     const shade$ = this.http.post<ShadeMatch[]>(`${this.apiBase}/shades/match`, {
       ...color,
       skinType: this.selectedSkinType
-    }).pipe(catchError(() => of([] as ShadeMatch[])));
+    }).pipe(catchError((error) => {
+      console.error('Shade match error:', error);
+      this.shadeMatchError.set('API');
+      return of([] as ShadeMatch[]);
+    }));
 
     // ── 4. AI face analyze (runs in parallel with shade match) ──────────────
     const analyze$ = imageData
@@ -504,33 +535,6 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
     this.toastTimer = setTimeout(() => this.toastMessage.set(null), 3000);
   }
 
-  // ──── Color Science Utils ────
-
-  validateSkinColor(r: number, g: number, b: number): { isValid: boolean, reason?: string } {
-    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    if (lum <= 70) return { isValid: false, reason: 'Too dark. Please turn on a light or move to a brighter spot.' };
-    if (lum > 230) return { isValid: false, reason: 'Too bright. Please move away from the light source.' };
-    const lab = this.rgbToLab(r, g, b);
-    if (lab.L < 40) return { isValid: false, reason: 'Skin appears too dark. Move to a brighter location.' };
-    if (lab.a < 5 || lab.a > 45) return { isValid: false, reason: 'Skin color off. Please adjust lighting.' };
-    if (lab.b < 5 || lab.b > 55) return { isValid: false, reason: 'Yellow/blue light tint detected. Please adjust lighting.' };
-    return { isValid: true };
-  }
-
-  rgbToLab(r: number, g: number, b: number) {
-    let r_ = r / 255, g_ = g / 255, b_ = b / 255;
-    if (r_ > 0.04045) r_ = Math.pow((r_ + 0.055) / 1.055, 2.4); else r_ /= 12.92;
-    if (g_ > 0.04045) g_ = Math.pow((g_ + 0.055) / 1.055, 2.4); else g_ /= 12.92;
-    if (b_ > 0.04045) b_ = Math.pow((b_ + 0.055) / 1.055, 2.4); else b_ /= 12.92;
-    r_ *= 100; g_ *= 100; b_ *= 100;
-    let X = r_ * 0.4124 + g_ * 0.3576 + b_ * 0.1805;
-    let Y = r_ * 0.2126 + g_ * 0.7152 + b_ * 0.0722;
-    let Z = r_ * 0.0193 + g_ * 0.1192 + b_ * 0.9505;
-    X /= 95.047; Y /= 100; Z /= 108.883;
-    const f = (t: number) => t > 0.008856 ? Math.pow(t, 1 / 3) : 7.787 * t + 16 / 116;
-    return { L: 116 * f(Y) - 16, a: 500 * (f(X) - f(Y)), b: 200 * (f(Y) - f(Z)) };
-  }
-
   /**
    * F3: Optimized — draw canvas ONCE, then sample all 5 points.
    * Returns array of colors for all requested points.
@@ -560,11 +564,5 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
       } catch { /* skip invalid point */ }
     }
     return results;
-  }
-
-  /** @deprecated Use extractColors() instead — kept for compatibility */
-  extractColor(x: number, y: number): { r: number, g: number, b: number } | null {
-    const results = this.extractColors([{ x, y }]);
-    return results.length > 0 ? results[0] : null;
   }
 }

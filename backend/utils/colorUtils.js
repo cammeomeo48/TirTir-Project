@@ -110,10 +110,12 @@ function deltaE00(lab1, lab2) {
   const R_T = -Math.sin(deg2rad * (2 * delta_theta)) * R_C;
 
   const dE = Math.sqrt(
-      Math.pow(delta_L_p / (kL * S_L), 2) +
-      Math.pow(delta_C_p / (kC * S_C), 2) +
-      Math.pow(delta_H_p / (kH * S_H), 2) +
-      R_T * (delta_C_p / (kC * S_C)) * (delta_H_p / (kH * S_H))
+      Math.max(0,
+          Math.pow(delta_L_p / (kL * S_L), 2) +
+          Math.pow(delta_C_p / (kC * S_C), 2) +
+          Math.pow(delta_H_p / (kH * S_H), 2) +
+          R_T * (delta_C_p / (kC * S_C)) * (delta_H_p / (kH * S_H))
+      )
   );
 
   return dE;

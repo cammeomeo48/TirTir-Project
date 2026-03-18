@@ -110,9 +110,24 @@
                   }
                 </svg>
               </div>
+
+              <!-- Issue #10: Multiple faces warning -->
+              @if (faceTracker.multipleDetected()) {
+                <div class="warning-banner" style="background: #ff4444; color: white; padding: 12px; margin-bottom: 10px; border-radius: 6px; position: absolute; top: 8px; left: 8px; right: 8px; z-index: 20; text-align: center; font-weight: 600;">
+                  ⚠️ Multiple faces detected. Please have only ONE person in the camera frame.
+                </div>
+              }
             }
 
-            @if (!isCameraActive) {
+            <!-- Issue #13: MediaPipe init error -->
+            @if (faceTracker.initError()) {
+              <div class="camera-off-placeholder" style="background: #fff3f3;">
+                <p style="color: #d9534f; font-weight: bold;">⚠️ {{ faceTracker.initError() }}</p>
+                <p>Please <strong>refresh the page</strong> to try again.</p>
+              </div>
+            }
+
+            @if (!isCameraActive && !faceTracker.initError()) {
               <div class="camera-off-placeholder">
                 <div class="cam-spinner"></div>
                 <p>Starting camera...</p>
@@ -152,11 +167,21 @@
                 <button class="skin-tab" [class.active]="selectedSkinType === 'Sensitive'" (click)="selectedSkinType = 'Sensitive'">Sensitive</button>
               </div>
             </div>
-            <button class="btn-scan" [disabled]="!isCameraActive || !lightingStatus().isValid || isProcessing" (click)="scanShade()">
+            <!-- Issue #12: More explicit disabled conditions -->
+            <button class="btn-scan" [disabled]="
+              !isCameraActive ||
+              !lightingStatus().isValid ||
+              isProcessing ||
+              colorHistory.length < 5 ||
+              faceTracker.multipleDetected()
+            " (click)="scanShade()">
               {{ isProcessing ? 'Analyzing...' : 'Scan Now' }}
             </button>
             @if (error) { <p class="error-msg">{{ error }}</p> }
             @if (isCameraActive && !lightingStatus().isValid) { <p class="tip-msg">{{ lightingStatus().message }}</p> }
+            @if (isCameraActive && colorHistory.length < 5 && faceTracker.isFaceDetected()) {
+              <p class="tip-msg">Hold still for 1-2 more seconds...</p>
+            }
           </div>
         </div>
 
@@ -237,9 +262,21 @@
         }
 
         <!-- Heuristic note -->
+        <!-- Issue #19: Clearer heuristic fallback message -->
         @if (routine()?.isHeuristicGenerated) {
-          <div class="heuristic-note">
-            Results based on algorithmic analysis · Full AI results coming soon
+          <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
+            <p style="margin: 0; color: #856404; font-weight: bold;">
+              ⚠️ AI routine generation unavailable
+            </p>
+            <p style="margin: 8px 0 0 0; color: #856404; font-size: 90%;">
+              Showing algorithmic recommendations based on your skin analysis.
+              If this persists, please try again in a few minutes.
+            </p>
+            <button
+              (click)="closeModal(); scanShade()"
+              style="margin-top: 8px; padding: 6px 12px; background: #ffc107; border: none; border-radius: 4px; cursor: pointer;">
+              🔄 Retry AI Routine
+            </button>
           </div>
         }
 
@@ -263,9 +300,24 @@
         <!-- ═══ TAB 1: SHADE MATCH ═══ -->
         <div *ngIf="activeTab() === 'shade'" class="shade-tab">
 
-          <!-- No match state -->
+          <!-- Issue #16: Contextual error states -->
           <div class="shade-empty" *ngIf="!bestMatch">
-            <p>No matching shade found. Please <strong>scan again</strong>.</p>
+            @if (shadeMatchError() === 'API') {
+              <p style="color: #d9534f; font-weight: bold;">
+                ⚠️ Shade matching service is temporarily unavailable.
+              </p>
+              <p>Please try again in a few moments, or browse shades manually.</p>
+              <button (click)="closeModal(); scanShade()" class="shade-retry-btn" style="margin-top: 8px;">🔄 Retry Scan</button>
+            } @else {
+              <p style="color: #f0ad4e; font-weight: bold;">
+                🔍 No exact shade match found for your skin tone.
+              </p>
+              @if (skinProfile()) {
+                <p>Your detected tone: {{ skinProfile()?.skinTone }}<br>
+                   Undertone: {{ skinProfile()?.undertone }}</p>
+              }
+              <p>Please <strong>scan again</strong> or browse all available shades.</p>
+            }
           </div>
 
           <!-- Primary match hero -->
