@@ -52,12 +52,12 @@
                     <td>
                         <div class="user-info">
                             <div class="avatar-placeholder">
-                                {{ customer.Name.charAt(0).toUpperCase() }}
+                                {{ (customer.name || '?').charAt(0).toUpperCase() }}
                             </div>
-                            <span class="user-name">{{ customer.Name }}</span>
+                            <span class="user-name">{{ customer.name || 'N/A' }}</span>
                         </div>
                     </td>
-                    <td>{{ customer.Email }}</td>
+                    <td>{{ customer.email || 'N/A' }}</td>
                     <td>
                         <span class="role-badge" [class.admin]="customer.role === 'admin'">
                             {{ customer.role || 'user' }}
@@ -65,9 +65,10 @@
                     </td>
                     <td>{{ formatDate(customer.createdAt) }}</td>
                     <td>
-                        <span class="status-badge" [class.active]="customer.status === 'active'"
-                            [class.inactive]="customer.status === 'inactive'">
-                            {{ customer.status || 'Active' }}
+                        <span class="status-badge"
+                            [class.active]="!customer.isBlocked"
+                            [class.inactive]="customer.isBlocked">
+                            {{ customer.isBlocked ? 'Blocked' : 'Active' }}
                         </span>
                     </td>
                     <td class="actions-col">

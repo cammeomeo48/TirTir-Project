@@ -77,7 +77,7 @@
 
                     <!-- VIEW mode -->
                     <ng-container *ngIf="editingId !== product._id">
-                        <td class="product-name">{{ product.Product_Name }}</td>
+                        <td class="product-name">{{ product.Name }}</td>
                         <td class="sku">{{ product.Product_ID }}</td>
                         <td><span class="category-badge">{{ product.Category }}</span></td>
                         <td class="price">${{ product.Price.toFixed(2) }}</td>
@@ -112,7 +112,7 @@
                     <!-- EDIT mode -->
                     <ng-container *ngIf="editingId === product._id">
                         <td>
-                            <input type="text" [(ngModel)]="editDraft.Product_Name" class="qe-input qe-name"
+                            <input type="text" [(ngModel)]="editDraft.Name" class="qe-input qe-name"
                                 placeholder="Product name" [disabled]="saving" />
                         </td>
                         <td class="sku">{{ product.Product_ID }}</td>
@@ -134,7 +134,7 @@
                         </td>
                         <td class="actions">
                             <button class="btn btn-sm btn-primary" (click)="saveEdit(product)"
-                                [disabled]="saving || !editDraft.Product_Name?.trim()">
+                                [disabled]="saving || !editDraft.Name?.trim()">
                                 {{ saving ? '...' : 'Save' }}
                             </button>
                             <button class="btn btn-sm btn-outline" (click)="cancelEdit()" [disabled]="saving">

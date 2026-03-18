@@ -6,8 +6,8 @@ import { ProductService } from '../../../core/services/product.service';
 
 interface Product {
     _id: string;
-    Product_Name: string;
-    Product_ID: string; // SKU
+    Name: string;           // DB field is 'Name' (not Product_Name)
+    Product_ID: string;     // SKU
     Category: string;
     Price: number;
     Thumbnail_Images: string[];
@@ -17,7 +17,7 @@ interface Product {
 
 // Shape for quick edit — only editable fields
 interface QuickEditDraft {
-    Product_Name: string;
+    Name: string;
     Price: number;
     stock: number;
     status: string;
@@ -56,7 +56,7 @@ export class ProductListComponent implements OnInit {
 
     // ─── Quick Edit ─────────────────────────────────────────────
     editingId: string | null = null;
-    editDraft: QuickEditDraft = { Product_Name: '', Price: 0, stock: 0, status: 'active' };
+    editDraft: QuickEditDraft = { Name: '', Price: 0, stock: 0, status: 'active' };
     saving = false;
     saveError: string | null = null;
 
@@ -110,8 +110,8 @@ export class ProductListComponent implements OnInit {
         if (this.searchQuery.trim()) {
             const query = this.searchQuery.toLowerCase();
             filtered = filtered.filter(p =>
-                p.Product_Name.toLowerCase().includes(query) ||
-                p.Product_ID.toLowerCase().includes(query)
+                (p.Name || '').toLowerCase().includes(query) ||
+                (p.Product_ID || '').toLowerCase().includes(query)
             );
         }
 
@@ -150,7 +150,7 @@ export class ProductListComponent implements OnInit {
     openEdit(product: Product): void {
         this.editingId = product._id;
         this.editDraft = {
-            Product_Name: product.Product_Name,
+            Name: product.Name,
             Price: product.Price,
             stock: product.stock,
             status: product.status || 'active'
@@ -162,19 +162,19 @@ export class ProductListComponent implements OnInit {
     }
 
     saveEdit(product: Product): void {
-        if (!this.editDraft.Product_Name?.trim() || this.editDraft.Price < 0) return;
+        if (!this.editDraft.Name?.trim() || this.editDraft.Price < 0) return;
         this.saving = true;
         this.saveError = null;
 
         const payload = {
-            Product_Name: this.editDraft.Product_Name.trim(),
+            Name: this.editDraft.Name.trim(),
             Price: Number(this.editDraft.Price),
             stock: Number(this.editDraft.stock),
             status: this.editDraft.status
         };
 
         this.productService.updateProduct(product._id, payload).subscribe({
-            next: () => {
+            next: (updated: any) => {
                 const idx = this.products.findIndex(p => p._id === product._id);
                 if (idx !== -1) {
                     this.products[idx] = { ...this.products[idx], ...payload };
@@ -228,8 +228,13 @@ export class ProductListComponent implements OnInit {
     }
 
     getMainImage(product: Product): string {
-        return product.Thumbnail_Images?.length > 0
+        const raw = product.Thumbnail_Images?.length > 0
             ? product.Thumbnail_Images[0]
-            : 'assets/placeholder-product.png';
+            : '';
+        if (!raw) return 'assets/placeholder-product.png';
+        // If already absolute URL (http/https), use as-is
+        if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+        // If relative path from backend uploads, prepend API base
+        return `http://localhost:5001${raw.startsWith('/') ? '' : '/'}${raw}`;
     }
 }

@@ -143,7 +143,7 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
   // Lighting & Validation
   lightingStatus = signal<{ isValid: boolean, message: string, type: 'success' | 'warning' | 'error' }>({
     isValid: false,
-    message: 'Đang khởi động camera...',
+    message: 'Starting camera...',
     type: 'warning'
   });
 
@@ -195,7 +195,7 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
         this.detectLoop();
       };
     } catch (err) {
-      this.error = 'Không truy cập được camera. Vui lòng cấp quyền camera.';
+      this.error = 'Cannot access camera. Please grant camera permissions.';
     }
   }
 
@@ -230,7 +230,7 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
     } else {
       this.lightingStatus.set({
         isValid: false,
-        message: 'Không tìm thấy khuôn mặt. Vui lòng nhìn thẳng vào camera.',
+        message: 'No face detected. Please look straight at the camera.',
         type: 'warning'
       });
       this.colorHistory = [];
@@ -262,8 +262,8 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
 
     const v = this.validateSkinColor(sm.r, sm.g, sm.b);
     this.lightingStatus.set(v.isValid
-      ? { isValid: true, message: 'Sẵn sàng quét', type: 'success' }
-      : { isValid: false, message: v.reason || 'Ánh sáng không đạt.', type: 'error' }
+      ? { isValid: true, message: 'Ready to scan', type: 'success' }
+      : { isValid: false, message: v.reason || 'Lighting not adequate.', type: 'error' }
     );
 
     // Derive live metrics from colour analysis
@@ -305,7 +305,7 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
       return;
     }
     if (this.colorHistory.length < 5) {
-      this.error = 'Chưa đủ dữ liệu. Giữ yên khuôn mặt thêm 2 giây.';
+      this.error = 'Not enough data. Hold still for 2 more seconds.';
       return;
     }
 
@@ -362,7 +362,7 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
             this.lowConfidence.set((analyze.data.confidence || 0) < 50);
 
             if (analyze.saved) {
-              this.showToast('✅ Kết quả đã được lưu vào hồ sơ của bạn');
+              this.showToast('✅ Results saved to your profile');
             }
           }
 
@@ -395,7 +395,7 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
           if (routine?.success && routine.data) {
             this.routine.set(routine.data);
           } else {
-            this.routineError.set('AI Routine không khả dụng lúc này. Vui lòng thử lại sau.');
+            this.routineError.set('AI Routine is unavailable at the moment. Please try again later.');
           }
 
           this.isLoadingRoutine.set(false);
@@ -403,7 +403,7 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
           this.showResultModal.set(true);
         },
         error: () => {
-          this.error = 'Không thể kết nối server. Vui lòng thử lại.';
+          this.error = 'Cannot connect to server. Please try again.';
           this.isProcessing = false;
           this.isLoadingRoutine.set(false);
         }
@@ -429,8 +429,8 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
       quantity: 1,
       shade: match.Shade_Name
     }).subscribe({
-      next: () => this.showToast(`✅ Đã thêm ${match.Product_Name} - ${match.Shade_Name} vào giỏ!`),
-      error: () => this.showToast('❌ Không thể thêm. Vui lòng thử lại.')
+      next: () => this.showToast(`✅ Added ${match.Product_Name} - ${match.Shade_Name} to cart!`),
+      error: () => this.showToast('❌ Failed to add. Please try again.')
     });
   }
 
@@ -440,8 +440,8 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
       productId: step.product.Product_ID,
       quantity: 1
     }).subscribe({
-      next: () => this.showToast(`Đã thêm ${step.product?.Name} vào giỏ!`),
-      error: () => this.showToast('Không thể thêm. Vui lòng thử lại.')
+      next: () => this.showToast(`Added ${step.product?.Name} to cart!`),
+      error: () => this.showToast('Failed to add. Please try again.')
     });
   }
 
@@ -454,13 +454,35 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
       );
     if (adds.length === 0) return;
     forkJoin(adds).subscribe({
-      next: () => this.showToast(`Đã thêm ${adds.length} sản phẩm vào giỏ hàng!`),
-      error: () => this.showToast('Có lỗi khi thêm vào giỏ.')
+      next: () => this.showToast(`Added ${adds.length} product(s) to cart!`),
+      error: () => this.showToast('Error adding to cart.')
     });
   }
 
   /** Skip/unskip a routine step */
   skippedSteps = signal<Set<string>>(new Set());
+
+  /**
+   * Returns adjusted evolution data based on how many steps are skipped.
+   * Each skipped step: hydration -3%, texture -2% (capped at -15%/-10%).
+   * Called reactively from template since it reads signals.
+   */
+  getAdjustedEvolution() {
+    const evo = this.routine()?.skinEvolution;
+    if (!evo) return null;
+    const skipCount = this.skippedSteps().size;
+    const hydrationPenalty = Math.min(15, skipCount * 3);
+    const texturePenalty   = Math.min(10, skipCount * 2);
+    return {
+      current: { ...evo.current },
+      predicted: {
+        hydration: Math.max(evo.current.hydration, evo.predicted.hydration - hydrationPenalty),
+        texture:   Math.max(evo.current.texture,   evo.predicted.texture   - texturePenalty)
+      },
+      skippedCount: skipCount,
+      isReduced: skipCount > 0
+    };
+  }
 
   toggleSkipStep(stepName: string) {
     const current = new Set(this.skippedSteps());
@@ -486,12 +508,12 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
 
   validateSkinColor(r: number, g: number, b: number): { isValid: boolean, reason?: string } {
     const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    if (lum <= 70) return { isValid: false, reason: 'Ánh sáng quá yếu. Vui lòng bật đèn hoặc ra chỗ sáng hơn.' };
-    if (lum > 230) return { isValid: false, reason: 'Ánh sáng quá chói. Vui lòng di chuyển ra xa nguồn sáng.' };
+    if (lum <= 70) return { isValid: false, reason: 'Too dark. Please turn on a light or move to a brighter spot.' };
+    if (lum > 230) return { isValid: false, reason: 'Too bright. Please move away from the light source.' };
     const lab = this.rgbToLab(r, g, b);
-    if (lab.L < 40) return { isValid: false, reason: 'Da quá tối. Di chuyển ra nơi sáng hơn.' };
-    if (lab.a < 5 || lab.a > 45) return { isValid: false, reason: 'Màu da bị ám. Kiểm tra lại ánh sáng.' };
-    if (lab.b < 5 || lab.b > 55) return { isValid: false, reason: 'Ánh sáng bị ám vàng/xanh. Kiểm tra lại.' };
+    if (lab.L < 40) return { isValid: false, reason: 'Skin appears too dark. Move to a brighter location.' };
+    if (lab.a < 5 || lab.a > 45) return { isValid: false, reason: 'Skin color off. Please adjust lighting.' };
+    if (lab.b < 5 || lab.b > 55) return { isValid: false, reason: 'Yellow/blue light tint detected. Please adjust lighting.' };
     return { isValid: true };
   }
 

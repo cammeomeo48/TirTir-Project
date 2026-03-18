@@ -77,8 +77,8 @@ export class CustomerListComponent implements OnInit {
         if (this.searchQuery.trim()) {
             const query = this.searchQuery.toLowerCase();
             filtered = filtered.filter(c =>
-                c.Name.toLowerCase().includes(query) ||
-                c.Email.toLowerCase().includes(query)
+                (c.name || '').toLowerCase().includes(query) ||
+                (c.email || '').toLowerCase().includes(query)
             );
         }
 

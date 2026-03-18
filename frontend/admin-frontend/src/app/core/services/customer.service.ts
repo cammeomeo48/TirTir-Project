@@ -13,16 +13,17 @@ export interface Address {
 
 export interface Customer {
     _id: string;
-    Name: string;
-    Email: string;
-    Phone?: string;
+    name: string;
+    email: string;
+    phone?: string;
     role: string;
     createdAt: string;
-    Addresses?: Address[];
+    addresses?: Address[];
     orders_count?: number;
     total_spent?: number;
     last_order_date?: string;
     status: 'active' | 'inactive';
+    isBlocked?: boolean;
 }
 
 @Injectable({

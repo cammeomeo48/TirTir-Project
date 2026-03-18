@@ -8,8 +8,8 @@
       <div class="instructions-card">
         <button class="instr-close" (click)="showInstructions.set(false)">✕</button>
         <div class="instr-brand">TirTir AI</div>
-        <h2 class="instr-title">Chuẩn bị trước khi quét</h2>
-        <p class="instr-sub">Để AI phân tích tông da chính xác nhất</p>
+        <h2 class="instr-title">Before You Start</h2>
+        <p class="instr-sub">Prepare for the most accurate AI skin tone analysis</p>
 
         <div class="instr-steps">
           <div class="instr-step">
@@ -19,8 +19,8 @@
               </svg>
             </div>
             <div class="instr-text">
-              <strong>Bật đèn</strong>
-              <span>Đảm bảo ánh sáng tự nhiên hoặc đèn phòng chiếu đều lên mặt</span>
+              <strong>Good Lighting</strong>
+              <span>Ensure natural light or room light evenly illuminates your face</span>
             </div>
           </div>
           <div class="instr-step">
@@ -30,8 +30,8 @@
               </svg>
             </div>
             <div class="instr-text">
-              <strong>Buộc tóc ra sau</strong>
-              <span>Để lộ rõ trán, gò má và cằm</span>
+              <strong>Tie Hair Back</strong>
+              <span>Expose forehead, cheekbones, and chin clearly</span>
             </div>
           </div>
           <div class="instr-step">
@@ -41,17 +41,17 @@
               </svg>
             </div>
             <div class="instr-text">
-              <strong>Nhìn thẳng vào camera</strong>
-              <span>Giữ khuôn mặt trong khung hình, không nghiêng đầu</span>
+              <strong>Look Straight at Camera</strong>
+              <span>Keep your face centered in frame, don't tilt your head</span>
             </div>
           </div>
         </div>
 
         <button class="btn-start-now" (click)="startFromInstructions()" [disabled]="isInitializingModel()">
           @if (isInitializingModel()) {
-            <span class="start-spinner"></span>Đang tải mô hình AI...
+            <span class="start-spinner"></span>Loading AI model...
           } @else {
-            Bắt đầu quét
+            Start Scan
           }
         </button>
       </div>
@@ -66,7 +66,7 @@
       <div class="sf-header">
         <div class="sf-header-left">
           <h1>Virtual Shade Finder</h1>
-          <p>AI phân tích tông da và gợi ý cushion phù hợp nhất</p>
+          <p>AI skin tone analysis & cushion shade recommendations</p>
         </div>
         <div class="sf-header-right">
           <div class="live-badge" [class.active]="isCameraActive && faceTracker.isFaceDetected()">
@@ -98,15 +98,15 @@
                   </defs>
                   <rect width="640" height="480" fill="rgba(0,0,0,0.42)" mask="url(#ovalMask2)"/>
                   <ellipse cx="320" cy="230" rx="155" ry="190" fill="none"
-                    [attr.stroke]="lightingStatus().type === 'success' ? '#FF3CAC' : lightingStatus().type === 'error' ? '#ef4444' : '#f59e0b'"
+                    [attr.stroke]="lightingStatus().type === 'success' ? '#E8111A' : lightingStatus().type === 'error' ? '#c40f16' : '#888'"
                     stroke-width="2" stroke-dasharray="8 4" class="oval-frame"
                     [class.pulse-pink]="lightingStatus().type === 'success'"/>
                   @if (faceTracker.isFaceDetected() && faceTracker.facePoints(); as pts) {
-                    <circle [attr.cx]="(1 - pts.forehead.x) * 640" [attr.cy]="pts.forehead.y * 480" r="4" fill="#FF3CAC" class="scan-dot"/>
-                    <circle [attr.cx]="(1 - pts.nose.x) * 640" [attr.cy]="pts.nose.y * 480" r="3" fill="#FF3CAC" class="scan-dot"/>
-                    <circle [attr.cx]="(1 - pts.leftCheek.x) * 640" [attr.cy]="pts.leftCheek.y * 480" r="5" fill="#FF3CAC" class="scan-dot"/>
-                    <circle [attr.cx]="(1 - pts.rightCheek.x) * 640" [attr.cy]="pts.rightCheek.y * 480" r="5" fill="#FF3CAC" class="scan-dot"/>
-                    <circle [attr.cx]="(1 - pts.chin.x) * 640" [attr.cy]="pts.chin.y * 480" r="3" fill="#FF3CAC" class="scan-dot"/>
+                    <circle [attr.cx]="(1 - pts.forehead.x) * 640" [attr.cy]="pts.forehead.y * 480" r="4" fill="#E8111A" class="scan-dot"/>
+                    <circle [attr.cx]="(1 - pts.nose.x) * 640" [attr.cy]="pts.nose.y * 480" r="3" fill="#E8111A" class="scan-dot"/>
+                    <circle [attr.cx]="(1 - pts.leftCheek.x) * 640" [attr.cy]="pts.leftCheek.y * 480" r="5" fill="#E8111A" class="scan-dot"/>
+                    <circle [attr.cx]="(1 - pts.rightCheek.x) * 640" [attr.cy]="pts.rightCheek.y * 480" r="5" fill="#E8111A" class="scan-dot"/>
+                    <circle [attr.cx]="(1 - pts.chin.x) * 640" [attr.cy]="pts.chin.y * 480" r="3" fill="#E8111A" class="scan-dot"/>
                   }
                 </svg>
               </div>
@@ -115,15 +115,15 @@
             @if (!isCameraActive) {
               <div class="camera-off-placeholder">
                 <div class="cam-spinner"></div>
-                <p>Đang khởi động camera...</p>
-                <p class="cam-hint">Vui lòng cho phép truy cập camera khi được hỏi</p>
+                <p>Starting camera...</p>
+                <p class="cam-hint">Please allow camera access when prompted</p>
               </div>
             }
 
             @if (isProcessing) {
               <div class="scanning-overlay">
                 <div class="scan-line"></div>
-                <p>Đang phân tích tông da...</p>
+                <p>Analyzing skin tone...</p>
               </div>
             }
 
@@ -143,17 +143,17 @@
 
           <div class="controls-bar">
             <div class="skin-type-row">
-              <span class="ctrl-label">Loại da</span>
+              <span class="ctrl-label">Skin Type</span>
               <div class="skin-tabs">
-                <button class="skin-tab" [class.active]="selectedSkinType === 'Normal'" (click)="selectedSkinType = 'Normal'">Thường</button>
-                <button class="skin-tab" [class.active]="selectedSkinType === 'Oily'" (click)="selectedSkinType = 'Oily'">Dầu</button>
-                <button class="skin-tab" [class.active]="selectedSkinType === 'Dry'" (click)="selectedSkinType = 'Dry'">Khô</button>
-                <button class="skin-tab" [class.active]="selectedSkinType === 'Combination'" (click)="selectedSkinType = 'Combination'">Hỗn hợp</button>
-                <button class="skin-tab" [class.active]="selectedSkinType === 'Sensitive'" (click)="selectedSkinType = 'Sensitive'">Nhạy cảm</button>
+                <button class="skin-tab" [class.active]="selectedSkinType === 'Normal'" (click)="selectedSkinType = 'Normal'">Normal</button>
+                <button class="skin-tab" [class.active]="selectedSkinType === 'Oily'" (click)="selectedSkinType = 'Oily'">Oily</button>
+                <button class="skin-tab" [class.active]="selectedSkinType === 'Dry'" (click)="selectedSkinType = 'Dry'">Dry</button>
+                <button class="skin-tab" [class.active]="selectedSkinType === 'Combination'" (click)="selectedSkinType = 'Combination'">Combination</button>
+                <button class="skin-tab" [class.active]="selectedSkinType === 'Sensitive'" (click)="selectedSkinType = 'Sensitive'">Sensitive</button>
               </div>
             </div>
             <button class="btn-scan" [disabled]="!isCameraActive || !lightingStatus().isValid || isProcessing" (click)="scanShade()">
-              {{ isProcessing ? 'Đang phân tích...' : 'Quét ngay' }}
+              {{ isProcessing ? 'Analyzing...' : 'Scan Now' }}
             </button>
             @if (error) { <p class="error-msg">{{ error }}</p> }
             @if (isCameraActive && !lightingStatus().isValid) { <p class="tip-msg">{{ lightingStatus().message }}</p> }
@@ -169,7 +169,7 @@
 
           @if (liveMetrics()) {
             <div class="metrics-list">
-              <p class="metrics-estimate-label">⚡ Ước tính từ phân tích màu <span class="estimate-badge">Tham khảo</span></p>
+              <p class="metrics-estimate-label">Estimated from color analysis <span class="estimate-badge">Reference</span></p>
               <div class="metric-row">
                 <div class="metric-label-row"><span>Moisture Level</span><span class="metric-val">~{{ liveMetrics()!.moisture }}%</span></div>
                 <div class="metric-track"><div class="metric-fill moisture" [style.width.%]="liveMetrics()!.moisture"></div></div>
@@ -187,7 +187,7 @@
                 <div class="metric-track"><div class="metric-fill evenness" [style.width.%]="liveMetrics()!.evenness"></div></div>
               </div>
             </div>
-            <p class="panel-note">Số liệu ước tính từ phân tích RGB · Kết quả chính xác hơn sau khi quét</p>
+            <p class="panel-note">Metrics estimated from RGB analysis · More accurate results after scanning</p>
           } @else {
             <div class="metrics-placeholder">
               <div class="placeholder-icon">
@@ -195,7 +195,7 @@
                   <circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/>
                 </svg>
               </div>
-              <p>Hướng mặt vào camera để bắt đầu phân tích</p>
+              <p>Look at camera to start analysis</p>
             </div>
           }
 
@@ -203,7 +203,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14">
               <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
             </svg>
-            Đứng cách camera 40–60cm, nhìn thẳng và giữ yên
+            Stand 40–60cm from camera, face straight and hold still
           </div>
         </div>
       </div>
@@ -220,7 +220,7 @@
         <!-- Header -->
         <div class="modal-top">
           <div class="modal-top-left">
-            <h3>Kết quả phân tích da</h3>
+            <h3>Skin Analysis Results</h3>
             <p class="modal-sub" *ngIf="skinProfile()">
               {{ skinProfile()!.skinType }} · {{ skinProfile()!.skinTone }} · {{ skinProfile()!.undertone }}
             </p>
@@ -232,14 +232,14 @@
         @if (lowConfidence()) {
           <div class="confidence-warning">
             <span class="warn-icon">⚠️</span>
-            <span>Độ tin cậy phân tích thấp (dưới 50%). Kết quả có thể chưa chính xác — hãy thử quét lại trong điều kiện ánh sáng tốt hơn.</span>
+            <span>Low analysis confidence (below 50%). Results may be inaccurate — try scanning again in better lighting.</span>
           </div>
         }
 
         <!-- Heuristic note -->
         @if (routine()?.isHeuristicGenerated) {
           <div class="heuristic-note">
-            <span>🔬</span> Kết quả dựa trên phân tích thuật toán · Kết quả AI đầy đủ sẽ khả dụng sớm
+            Results based on algorithmic analysis · Full AI results coming soon
           </div>
         }
 
@@ -265,7 +265,7 @@
 
           <!-- No match state -->
           <div class="shade-empty" *ngIf="!bestMatch">
-            <p>Không tìm được kết quả phù hợp. Vui lòng <strong>quét lại</strong>.</p>
+            <p>No matching shade found. Please <strong>scan again</strong>.</p>
           </div>
 
           <!-- Primary match hero -->
@@ -323,14 +323,14 @@
 
               <!-- CTA -->
               <button class="shade-cta-btn" (click)="addToCart(bestMatch)">
-                Thêm vào giỏ hàng
+                Add to Cart
               </button>
             </div>
           </div>
 
           <!-- Divider -->
           <div class="shade-divider" *ngIf="matchResults.length > 1">
-            <span>Các shade khác có thể phù hợp</span>
+            <span>Other shades that may suit you</span>
           </div>
 
           <!-- Alternates list -->
@@ -362,7 +362,7 @@
           </div>
 
           <div class="shade-retry-row">
-            <button class="shade-retry-btn" (click)="closeModal()">↺ Quét lại</button>
+            <button class="shade-retry-btn" (click)="closeModal()">↺ Scan Again</button>
           </div>
         </div>
 
@@ -373,12 +373,12 @@
           <!-- Loading -->
           <div class="routine-loading" *ngIf="isLoadingRoutine()">
             <div class="routine-skeleton" *ngFor="let i of [1,2,3,4]"></div>
-            <p class="loading-text">TirTir AI đang phân tích hồ sơ da của bạn...</p>
+            <p class="loading-text">TirTir AI is analyzing your skin profile...</p>
           </div>
 
           <!-- Error -->
           <div class="routine-error" *ngIf="!isLoadingRoutine() && !routine()">
-            <p>Không thể tải báo cáo phân tích. Vui lòng thử lại.</p>
+            <p>Unable to load analysis report. Please try again.</p>
           </div>
 
           <ng-container *ngIf="!isLoadingRoutine() && routine()">
@@ -406,7 +406,7 @@
                     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1.5">
                       <circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/>
                     </svg>
-                    <span>Ảnh phân tích</span>
+                    <span>Analysis Photo</span>
                   </div>
                   <!-- Scan overlay -->
                   <div class="rpt-scan-overlay">
@@ -447,7 +447,7 @@
                     <div class="rpt-bar-track">
                       <div class="rpt-bar-fill" [style.width.%]="routine()!.skinMetrics!.hydration" [class.high]="routine()!.skinMetrics!.hydration >= 70"></div>
                     </div>
-                    <p class="rpt-metric-desc">Độ ẩm sâu trong da và lớp bảo vệ bề mặt</p>
+                    <p class="rpt-metric-desc">Deep skin hydration and surface barrier protection</p>
                   </div>
 
                   <div class="rpt-metric-row">
@@ -458,7 +458,7 @@
                     <div class="rpt-bar-track">
                       <div class="rpt-bar-fill" [style.width.%]="routine()!.skinMetrics!.elasticity" [class.high]="routine()!.skinMetrics!.elasticity >= 70"></div>
                     </div>
-                    <p class="rpt-metric-desc">Độ đàn hồi và sức căng của collagen trong da</p>
+                    <p class="rpt-metric-desc">Skin elasticity and collagen tension level</p>
                   </div>
 
                   <div class="rpt-metric-row">
@@ -469,7 +469,7 @@
                     <div class="rpt-bar-track">
                       <div class="rpt-bar-fill" [style.width.%]="routine()!.skinMetrics!.pigmentation" [class.high]="routine()!.skinMetrics!.pigmentation >= 70"></div>
                     </div>
-                    <p class="rpt-metric-desc">Mức độ đồng đều tông màu và vùng thâm sạm</p>
+                    <p class="rpt-metric-desc">Skin tone evenness and dark spot presence</p>
                   </div>
 
                   <div class="rpt-metric-row">
@@ -480,7 +480,7 @@
                     <div class="rpt-bar-track">
                       <div class="rpt-bar-fill" [style.width.%]="routine()!.skinMetrics!.texture" [class.high]="routine()!.skinMetrics!.texture >= 70"></div>
                     </div>
-                    <p class="rpt-metric-desc">Độ mịn bề mặt, lỗ chân lông và kết cấu da</p>
+                    <p class="rpt-metric-desc">Surface smoothness, pore size, and skin texture</p>
                   </div>
                 </div>
 
@@ -489,7 +489,7 @@
                   <div class="rpt-sens-top">
                     <div>
                       <p class="rpt-sens-name">Sensitivity Index</p>
-                      <p class="rpt-sens-sub">Mức phản ứng với tác nhân môi trường</p>
+                      <p class="rpt-sens-sub">Reactivity level to environmental factors</p>
                     </div>
                     <div class="rpt-sens-right">
                       <span class="rpt-sens-pct">{{ routine()!.skinMetrics!.sensitivity }}%</span>
@@ -506,7 +506,7 @@
 
                 <!-- CTA -->
                 <button class="rpt-cta-btn" (click)="activeTab.set('routine')">
-                  Xem AI Routine cá nhân hóa <span class="rpt-cta-arrow">→</span>
+                  View Personalized AI Routine <span class="rpt-cta-arrow">→</span>
                 </button>
               </div>
             </div>
@@ -520,7 +520,7 @@
           <!-- Loading -->
           <div class="routine-loading" *ngIf="isLoadingRoutine()">
             <div class="routine-skeleton" *ngFor="let i of [1,2,3]"></div>
-            <p class="loading-text">Gemini AI đang tạo routine cá nhân hóa...</p>
+            <p class="loading-text">Gemini AI is generating your personalized routine...</p>
           </div>
 
           <ng-container *ngIf="!isLoadingRoutine() && routine()">
@@ -529,7 +529,7 @@
             <div class="routine-v2-header">
               <div class="routine-v2-header-info">
                 <h4>AI Morning Regimen</h4>
-                <p>{{ routine()!.skinType || skinProfile()?.skinType }} · {{ routine()!.routine.length }} bước</p>
+                <p>{{ routine()!.skinType || skinProfile()?.skinType }} · {{ routine()!.routine.length }} steps</p>
               </div>
               <button class="btn-add-all" (click)="addAllToCart()">
                 ADD ALL TO CART
@@ -551,8 +551,7 @@
 
             <!-- Empty routine state -->
             <div class="routine-empty" *ngIf="routine()!.routine.length === 0">
-              <div class="routine-empty-icon">💆</div>
-              <p>Routine đang được tải. AI đang ghép sản phẩm phù hợp...</p>
+              <p>Routine is loading. AI is matching suitable products...</p>
             </div>
 
             <!-- Product Cards Grid -->
@@ -561,8 +560,8 @@
                    [class.skipped]="skippedSteps().has(step.step)">
                 <div class="product-card-badge">{{ step.step }}</div>
                 <button class="btn-skip-step" (click)="toggleSkipStep(step.step)"
-                        [title]="skippedSteps().has(step.step) ? 'Khôi phục bước này' : 'Bỏ qua bước này'">
-                  {{ skippedSteps().has(step.step) ? '↩ Khôi phục' : '✕ Bỏ qua' }}
+                        [title]="skippedSteps().has(step.step) ? 'Restore this step' : 'Skip this step'">
+                  {{ skippedSteps().has(step.step) ? 'Restore' : 'Skip' }}
                 </button>
                 <div class="product-card-img-wrap">
                   <img
@@ -582,67 +581,75 @@
                     class="btn-card-add"
                     [disabled]="!step.product?.Product_ID || skippedSteps().has(step.step)"
                     (click)="addRoutineProductToCart(step)"
-                  >{{ step.product ? 'Thêm vào giỏ hàng' : 'Đang cập nhật sản phẩm' }}</button>
+                  >{{ step.product ? 'Add to Cart' : 'Updating product...' }}</button>
                 </div>
               </div>
             </div>
 
             <!-- Skin Evolution -->
-            <div class="evolution-section" *ngIf="routine()!.skinEvolution">
-              <h4 class="evolution-title">Your Skin Evolution</h4>
-              <p class="evolution-sub">Kết quả dự đoán sau 28 ngày sử dụng đều đặn</p>
-              <div class="evolution-grid">
-                <div class="evolution-card current">
-                  <span class="evo-label">CURRENT STATUS</span>
-                  <div class="evo-metrics-list">
-                    <div class="evo-metric">
-                      <div class="evo-metric-header">
-                        <span>Hydration</span>
-                        <span>{{ routine()!.skinEvolution!.current.hydration }}%</span>
+            <ng-container *ngIf="routine()!.skinEvolution && getAdjustedEvolution() as evo">
+              <div class="evolution-section">
+                <h4 class="evolution-title">Your Skin Evolution</h4>
+                <p class="evolution-sub">Predicted results after 28 days of consistent use</p>
+
+                <!-- Warning when steps are skipped -->
+                <div class="evolution-skip-note" *ngIf="evo.isReduced">
+                  {{ evo.skippedCount }} step(s) skipped — predicted improvement reduced accordingly
+                </div>
+
+                <div class="evolution-grid">
+                  <div class="evolution-card current">
+                    <span class="evo-label">CURRENT STATUS</span>
+                    <div class="evo-metrics-list">
+                      <div class="evo-metric">
+                        <div class="evo-metric-header">
+                          <span>Hydration</span>
+                          <span>{{ evo.current.hydration }}%</span>
+                        </div>
+                        <div class="evo-track"><div class="evo-fill" [style.width.%]="evo.current.hydration"></div></div>
                       </div>
-                      <div class="evo-track"><div class="evo-fill" [style.width.%]="routine()!.skinEvolution!.current.hydration"></div></div>
-                    </div>
-                    <div class="evo-metric">
-                      <div class="evo-metric-header">
-                        <span>Texture Smoothness</span>
-                        <span>{{ routine()!.skinEvolution!.current.texture }}%</span>
+                      <div class="evo-metric">
+                        <div class="evo-metric-header">
+                          <span>Texture Smoothness</span>
+                          <span>{{ evo.current.texture }}%</span>
+                        </div>
+                        <div class="evo-track"><div class="evo-fill" [style.width.%]="evo.current.texture"></div></div>
                       </div>
-                      <div class="evo-track"><div class="evo-fill" [style.width.%]="routine()!.skinEvolution!.current.texture"></div></div>
                     </div>
                   </div>
-                </div>
-                <div class="evolution-card predicted">
-                  <span class="evo-label">PREDICTED AFTER 28 DAYS</span>
-                  <div class="evo-metrics-list">
-                    <div class="evo-metric">
-                      <div class="evo-metric-header">
-                        <span>Hydration</span>
-                        <span class="evo-delta-inline">
-                          {{ routine()!.skinEvolution!.predicted.hydration }}%
-                          <em>(+{{ routine()!.skinEvolution!.predicted.hydration - routine()!.skinEvolution!.current.hydration }}%)</em>
-                        </span>
+                  <div class="evolution-card predicted">
+                    <span class="evo-label">PREDICTED AFTER 28 DAYS</span>
+                    <div class="evo-metrics-list">
+                      <div class="evo-metric">
+                        <div class="evo-metric-header">
+                          <span>Hydration</span>
+                          <span class="evo-delta-inline">
+                            {{ evo.predicted.hydration }}%
+                            <em>(+{{ evo.predicted.hydration - evo.current.hydration }}%)</em>
+                          </span>
+                        </div>
+                        <div class="evo-track"><div class="evo-fill predicted-fill" [style.width.%]="evo.predicted.hydration"></div></div>
                       </div>
-                      <div class="evo-track"><div class="evo-fill predicted-fill" [style.width.%]="routine()!.skinEvolution!.predicted.hydration"></div></div>
-                    </div>
-                    <div class="evo-metric">
-                      <div class="evo-metric-header">
-                        <span>Texture Smoothness</span>
-                        <span class="evo-delta-inline">
-                          {{ routine()!.skinEvolution!.predicted.texture }}%
-                          <em>(+{{ routine()!.skinEvolution!.predicted.texture - routine()!.skinEvolution!.current.texture }}%)</em>
-                        </span>
+                      <div class="evo-metric">
+                        <div class="evo-metric-header">
+                          <span>Texture Smoothness</span>
+                          <span class="evo-delta-inline">
+                            {{ evo.predicted.texture }}%
+                            <em>(+{{ evo.predicted.texture - evo.current.texture }}%)</em>
+                          </span>
+                        </div>
+                        <div class="evo-track"><div class="evo-fill predicted-fill" [style.width.%]="evo.predicted.texture"></div></div>
                       </div>
-                      <div class="evo-track"><div class="evo-fill predicted-fill" [style.width.%]="routine()!.skinEvolution!.predicted.texture"></div></div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
+            </ng-container>
 
             <!-- Expert advice -->
             <div class="expert-advice" *ngIf="routine()!.advice">
               <p>{{ routine()!.advice }}</p>
-              <span class="advice-note">Routine này được tối ưu theo điều kiện môi trường và sức khoẻ da hiện tại của bạn.</span>
+              <span class="advice-note">This routine is optimized for your current skin condition and environment.</span>
             </div>
 
             <!-- Bottom actions -->

@@ -24,13 +24,14 @@ export class UserListComponent implements OnInit {
 
   loadUsers(): void {
     this.loading = true;
-    this.userService.getAllUsers().subscribe({
-      next: (data) => {
-        this.users = data;
+    this.userService.getAdminUsers().subscribe({
+      next: (data: any) => {
+        // getAdminUsers returns a plain array of staff/admin users
+        this.users = Array.isArray(data) ? data : (data.users || data.data || []);
         this.loading = false;
       },
       error: (err) => {
-        this.error = 'Failed to load users';
+        this.error = 'Failed to load staff users';
         this.loading = false;
       }
     });

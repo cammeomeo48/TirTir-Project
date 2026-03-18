@@ -110,19 +110,19 @@
                         <tr *ngFor="let item of order.items">
                             <td>
                                 <div class="product-info">
-                                    <img *ngIf="item.Product?.Thumbnail_Images?.[0]"
-                                        [src]="item.Product.Thumbnail_Images[0]" [alt]="item.Product?.Product_Name"
+                                    <img *ngIf="item.image"
+                                        [src]="item.image" [alt]="item.name"
                                         class="product-image" />
                                     <div class="product-details">
-                                        <p class="product-name">{{ item.Product?.Product_Name || 'Unknown Product' }}
-                                        </p>
+                                        <p class="product-name">{{ item.name || 'Unknown Product' }}</p>
+                                        <p class="product-shade" *ngIf="item.shade" style="font-size:0.8rem;color:#888">Shade: {{ item.shade }}</p>
                                     </div>
                                 </div>
                             </td>
-                            <td>{{ item.Product?.Product_ID || 'N/A' }}</td>
-                            <td class="text-center">{{ item.Quantity }}</td>
-                            <td class="text-right">{{ formatPrice(item.Price) }}</td>
-                            <td class="text-right">{{ formatPrice(getItemSubtotal(item)) }}</td>
+                            <td>{{ item.product || 'N/A' }}</td>
+                            <td class="text-center">{{ item.quantity }}</td>
+                            <td class="text-right">{{ formatPrice(item.price) }}</td>
+                            <td class="text-right">{{ formatPrice(item.price * item.quantity) }}</td>
                         </tr>
                     </tbody>
                 </table>

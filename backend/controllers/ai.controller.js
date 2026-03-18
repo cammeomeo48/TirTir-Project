@@ -319,21 +319,26 @@ exports.recommendRoutine = async (req, res) => {
             keywordScore = Math.min(keywordScore, 10); // cap at 10
             if (keywordScore === 0) return 0; // Not a candidate at all
 
-            // ── Skin type match (0-15) ──────────────────────────────────────
+            // ── Skin type match (0-30, or -20 penalty) — DOMINANT signal ──────
             let skinTypeScore = 0;
             const targetSkinLower = (product.Skin_Type_Target || '').toLowerCase();
             const userSkinLower = (skinType || '').toLowerCase();
 
             if (targetSkinLower) {
                 if (targetSkinLower.includes(userSkinLower)) {
-                    skinTypeScore = 15; // Exact skin type match
-                } else if (targetSkinLower.includes('all') || targetSkinLower.includes('every')) {
-                    skinTypeScore = 8;  // Suitable for all skin types
+                    skinTypeScore = 30; // Exact match — highest priority
+                } else if (
+                    targetSkinLower.includes('all') ||
+                    targetSkinLower.includes('every') ||
+                    targetSkinLower.includes('any')
+                ) {
+                    skinTypeScore = 15; // Suitable for all skin types
                 } else {
-                    skinTypeScore = 0;  // Explicitly for different skin type
+                    // Designed for a DIFFERENT skin type — heavy penalty
+                    skinTypeScore = -20;
                 }
             } else {
-                skinTypeScore = 5; // No target specified — assume general suitability
+                skinTypeScore = 5; // No target specified — assume general
             }
 
             // ── Concern match (0-20) — the most important differentiator ────
@@ -386,13 +391,21 @@ exports.recommendRoutine = async (req, res) => {
             const candidates = products
                 .filter(p => !usedIds.has(p._id.toString()))
                 .map(p => ({ product: p, score: scoreProduct(p, stepCategory) }))
-                .filter(c => c.score > 0)
+                .filter(c => c.score > 0)            // Discard wrong-skin-type products (negative score)
                 .sort((a, b) => b.score - a.score);
 
             if (candidates.length > 0) {
-                console.log(`    [Score] ${stepCategory}: Top 3 → ${candidates.slice(0, 3).map(c => `${c.product.Name} (${c.score})`).join(' | ')}`);
+                console.log(`    [Score] ${stepCategory}/${skinType}: Top 3 → ${candidates.slice(0, 3).map(c => `${c.product.Name} (${c.score})`).join(' | ')}`);
                 return candidates[0].product;
             }
+
+            // Relaxed fallback: allow all-skin-type products even if score was filtered
+            const relaxed = products
+                .filter(p => !usedIds.has(p._id.toString()))
+                .map(p => ({ product: p, score: scoreProduct(p, stepCategory) }))
+                .filter(c => c.score > -5) // Allow "all skin types" which has score >= 5
+                .sort((a, b) => b.score - a.score);
+            if (relaxed.length > 0) return relaxed[0].product;
 
             // Last resort for Cushion: match by Category directly
             if (stepCategory === 'Cushion') {
@@ -401,34 +414,61 @@ exports.recommendRoutine = async (req, res) => {
             return null;
         };
 
-        // 4. Prepare Prompt for Gemini — include actual product list
-        const productListStr = products.map(p =>
-            `- "${p.Name}" (${p.Category}${p.Description_Short ? ', ' + p.Description_Short.substring(0, 60) : ''})`
-        ).join('\n');
+        // 4. Build product list for Gemini — annotate with skin type suitability
+        //    Partition into: (a) products that match user's skin type, (b) all-skin-type, (c) others
+        const buildProductAnnotation = (p) => {
+            const target = (p.Skin_Type_Target || '').toLowerCase();
+            const userSkin = (skinType || '').toLowerCase();
+            let suitability = '';
+            if (target.includes(userSkin)) suitability = ` [RECOMMENDED for ${skinType}]`;
+            else if (target.includes('all') || target.includes('every') || !target) suitability = ' [Suitable for all skin types]';
+            else suitability = ` [Designed for ${p.Skin_Type_Target} — less ideal]`;
+            return `- "${p.Name}" (${p.Category}${p.Main_Concern ? ', targets: ' + p.Main_Concern : ''}${p.Description_Short ? ', ' + p.Description_Short.substring(0, 50) : ''})${suitability}`;
+        };
+
+        // Sort: skin-type-matched first, then all-skin, then others
+        const sortedProducts = [...products].sort((a, b) => {
+            const score = (p) => {
+                const t = (p.Skin_Type_Target || '').toLowerCase();
+                const u = (skinType || '').toLowerCase();
+                if (t.includes(u)) return 2;
+                if (t.includes('all') || !t) return 1;
+                return 0;
+            };
+            return score(b) - score(a);
+        });
+
+        const productListStr = sortedProducts.map(p => buildProductAnnotation(p)).join('\n');
 
         const prompt = `
-You are a professional licensed dermatologist and skincare advisor for TirTir — a premium Korean beauty brand.
+You are a licensed dermatologist and skincare advisor for TirTir — a premium Korean beauty brand.
 
-A customer's skin has been analyzed by our AI scanner. Create a personalized skincare routine.
+A customer's skin has been analyzed. Create a PERSONALIZED skincare routine.
 
 CUSTOMER SKIN PROFILE:
-- Skin Type: ${skinType}
+- Skin Type: ${skinType} ← CRITICAL: All recommended products MUST be suitable for ${skinType} skin
 - Skin Tone: ${skinTone}
 - Undertone: ${undertone || 'Not detected'}
 - Detected Concerns: ${concerns && concerns.length > 0 ? concerns.join(', ') : 'None'}
 ${shadeMatchProduct ? `- Shade Match Result: ${sanitizeForPrompt(shadeMatchProduct.Product_Name)} (${sanitizeForPrompt(shadeMatchProduct.Shade_Name)} ${sanitizeForPrompt(shadeMatchProduct.Shade_Code)}) — use THIS product for the Cushion step` : ''}
 
-AVAILABLE TIRTIR PRODUCTS:
+AVAILABLE TIRTIR PRODUCTS (sorted by suitability for ${skinType} skin):
 ${productListStr}
 
 ROUTINE STEP CATEGORIES (use exactly these values for "step"): Cleanser, Toner, Serum, Cream, Sunscreen, Cushion
 
+CRITICAL RULES:
+1. ONLY select products marked [RECOMMENDED for ${skinType}] or [Suitable for all skin types]
+2. DO NOT select products marked [Designed for X — less ideal] unless there is absolutely no alternative
+3. Each product must directly address ${skinType} skin needs
+4. For ${skinType} skin specifically: ${skinType === 'Oily' ? 'prefer lightweight, oil-free, mattifying products' : skinType === 'Dry' ? 'prefer deeply hydrating, nourishing, barrier-repair products' : skinType === 'Sensitive' ? 'prefer gentle, fragrance-free, soothing products' : skinType === 'Combination' ? 'prefer balancing products, lightweight hydration' : 'prefer well-balanced, gentle products'}
+
 INSTRUCTIONS:
-1. Select 3 to 5 routine steps from the categories above.
-2. For each step, pick ONE product from the list above that best fits. Put its exact name in "product_name".
-3. Provide a clinical reason and application tip for this skin type.
-4. Write a dermatologist_note: a 2-sentence clinical assessment.
-5. Write expert_advice: a 1-2 sentence routine summary.
+1. Select 3 to 5 routine steps.
+2. For each step, pick ONE product from the list. Use its EXACT name in "product_name".
+3. Provide a clinical reason specific to ${skinType} skin.
+4. Write a dermatologist_note: 2-sentence clinical assessment.
+5. Write expert_advice: 1-2 sentence routine summary mentioning ${skinType} skin.
 6. Estimate current skin metrics (0-100) and predict improvement after 28 days.
 7. Return ONLY a raw JSON object — no Markdown, no code blocks:
 
@@ -437,7 +477,7 @@ INSTRUCTIONS:
     {
       "step": "Cleanser",
       "product_name": "Exact product name from the list above",
-      "reason": "Clinical reason",
+      "reason": "Clinical reason specific to ${skinType} skin",
       "application_tip": "How to apply correctly"
     }
   ],
@@ -606,9 +646,9 @@ INSTRUCTIONS:
             skinType,
         };
 
-        // === PHASE C: CACHE WRITE — 24h TTL ===
-        await setCache(cacheKey, responseData, 86400);
-        console.log(`💾 Cached routine for [${skinTone}/${undertone}/${skinType}]`);
+        // === PHASE C: CACHE WRITE — 2h TTL (shorter to allow re-testing) ===
+        await setCache(cacheKey, responseData, 7200);
+        console.log(`Cached routine for [${skinTone}/${undertone}/${skinType}]`);
 
         res.json({ success: true, data: responseData, fromCache: false });
 
