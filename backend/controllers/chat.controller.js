@@ -42,10 +42,14 @@ exports.chatWithBot = async (req, res) => {
 
     try {
         console.log(`[CHAT] Sending request to ${CHATBOT_SERVICE_URL}/chat with message: "${message.trim()}"`);
+        const sessionId = req.user?._id?.toString() || `guest:${req.ip || 'unknown'}`;
 
         const response = await axios.post(
             `${CHATBOT_SERVICE_URL}/chat`,
-            { message: message.trim() },
+            {
+                message: message.trim(),
+                session_id: sessionId,
+            },
             {
                 timeout: 5000,
                 headers: {

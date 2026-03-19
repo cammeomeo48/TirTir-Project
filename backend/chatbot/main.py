@@ -114,6 +114,7 @@ app.add_middleware(
 
 class ChatRequest(BaseModel):
     message: str
+    session_id: str | None = None
 
 
 class ChatResponse(BaseModel):
@@ -155,7 +156,11 @@ async def chat(body: ChatRequest, request: Request):
 
     start = time.time()
     try:
-        result = chatbot.process(body.message.strip())
+        fallback_session = request.client.host if request.client else None
+        result = chatbot.process(
+            body.message.strip(),
+            session_id=body.session_id or fallback_session
+        )
     except Exception as e:
         logger.exception("Chatbot processing failed")
         return ChatResponse(success=False, error=str(e))

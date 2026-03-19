@@ -304,9 +304,9 @@ export class ChatService {
 
     getQuickReplies(): Observable<QuickReply[]> {
         return of([
-            { label: 'Tư vấn loại da', value: 'Tư vấn cushion cho da nhạy cảm' },
-            { label: 'Mã giảm giá', value: 'Có mã giảm giá nào không?' },
-            { label: 'Kiểm tra đơn', value: 'Làm sao để kiểm tra đơn hàng?' }
+            { label: 'Tư vấn loại da', value: 'toi muon tu van san pham theo loai da', icon: '🧴' },
+            { label: 'Mã giảm giá', value: 'co ma giam gia nao dang ap dung khong', icon: '🏷️' },
+            { label: 'Kiểm tra đơn', value: 'toi muon kiem tra don hang cua toi', icon: '📦' }
         ]);
     }
 }

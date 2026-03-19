@@ -98,7 +98,7 @@ export class ChatConversationComponent implements OnInit, AfterViewChecked {
     }
 
     sendQuickReply(reply: QuickReply) {
-        this.newMessage = reply.label;
+        this.newMessage = reply.value;
         this.sendMessage();
     }
 
