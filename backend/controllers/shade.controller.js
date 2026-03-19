@@ -28,13 +28,18 @@ exports.findBestMatch = async (req, res) => {
         const shades = await Shade.find({ Shade_Type: 'Cushion' });
         
         // 1. Determine User Undertone (Heuristic)
-        // Skin usually has b > a (Yellow > Red). 
-        // High b/a ratio (> 1.5) -> Warm. Low (< 1.2) -> Cool. Middle -> Neutral.
+        // LAB a* > 0 = red/magenta, b* > 0 = yellow.
+        // Use signed difference of normalised channels to avoid divide-by-zero.
+        // a_n / b_n are already signed, so compare directly.
         let userUndertone = 'Neutral';
-        if (userLab.a !== 0) {
-            const ratio = userLab.b / userLab.a;
-            if (ratio > 1.5) userUndertone = 'Warm';
-            else if (ratio < 1.2) userUndertone = 'Cool';
+        const a_n = userLab.a - 128; // centre around 0
+        const b_n = userLab.b - 128;
+        if (Math.abs(a_n) < 2 && Math.abs(b_n) < 2) {
+            userUndertone = 'Neutral'; // near achromatic — no clear undertone
+        } else if (b_n > 5 && b_n > a_n) {
+            userUndertone = 'Warm';   // yellow dominates
+        } else if (a_n > 5 && a_n > b_n) {
+            userUndertone = 'Cool';   // red/pink dominates
         }
 
         // 2. Oxidation Simulation (Target Shift)

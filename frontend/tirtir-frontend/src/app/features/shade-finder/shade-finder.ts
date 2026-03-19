@@ -448,9 +448,20 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
     return `${this.backendBase}/${path.startsWith('/') ? path.slice(1) : path}`;
   }
 
-  /** Compute match percentage from matchScore */
+  /**
+   * Convert deltaE-based matchScore to a human-readable match percentage.
+   * deltaE 2000 perceptual scale:
+   *   0-1   → imperceptible difference → 100%
+   *   1-2   → barely perceptible       → ~95%
+   *   2-5   → noticeable               → ~85–70%
+   *   5-10  → clearly different        → ~60–40%
+   *   10+   → different colours        → <40%
+   * Formula: 100 * e^(-deltaE / 7) capped to [0, 100].
+   */
   matchPercent(score: number): number {
-    return Math.max(0, Math.min(100, Math.round(100 - score * 3)));
+    // score is matchScore = deltaE + undertone/brightness penalties
+    // Use the deltaE portion (score) in an exponential decay
+    return Math.max(0, Math.min(100, Math.round(100 * Math.exp(-score / 7))));
   }
 
   addToCart(match: ShadeMatch) {

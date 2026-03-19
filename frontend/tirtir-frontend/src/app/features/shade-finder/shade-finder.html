@@ -194,7 +194,7 @@
 
           @if (liveMetrics()) {
             <div class="metrics-list">
-              <p class="metrics-estimate-label">Estimated from color analysis <span class="estimate-badge">Reference</span></p>
+              <p class="metrics-estimate-label">Live color estimates <span class="estimate-badge">Not AI</span></p>
               <div class="metric-row">
                 <div class="metric-label-row"><span>Moisture Level</span><span class="metric-val">~{{ liveMetrics()!.moisture }}%</span></div>
                 <div class="metric-track"><div class="metric-fill moisture" [style.width.%]="liveMetrics()!.moisture"></div></div>
@@ -212,7 +212,7 @@
                 <div class="metric-track"><div class="metric-fill evenness" [style.width.%]="liveMetrics()!.evenness"></div></div>
               </div>
             </div>
-            <p class="panel-note">Metrics estimated from RGB analysis · More accurate results after scanning</p>
+            <p class="panel-note">Rough estimates from live RGB — accurate analysis available after scanning</p>
           } @else {
             <div class="metrics-placeholder">
               <div class="placeholder-icon">

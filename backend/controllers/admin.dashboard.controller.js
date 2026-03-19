@@ -8,6 +8,50 @@ const { ORDER_STATUS } = require('../constants');
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const formatYmd = (d) => new Date(d).toISOString().slice(0, 10);
 
+/**
+ * Shared top-products aggregation used by both getOverview and getTopProducts.
+ * Product.Name is the correct field (not Product_Name — verified in product model).
+ * @param {object} orderMatch - MongoDB match stage filter
+ * @param {number} limit - max results
+ */
+const _getTopProductsAgg = async (orderMatch, limit = 10) => {
+    const top = await Order.aggregate([
+        { $match: orderMatch },
+        { $unwind: '$items' },
+        {
+            $group: {
+                _id: '$items.product',
+                name: { $first: '$items.name' },
+                image: { $first: '$items.image' },
+                totalSold: { $sum: '$items.quantity' },
+                totalRevenue: { $sum: { $multiply: ['$items.price', '$items.quantity'] } }
+            }
+        },
+        { $sort: { totalSold: -1 } },
+        { $limit: limit }
+    ]);
+
+    const populated = await Product.populate(top, {
+        path: '_id',
+        select: 'Name Product_ID Thumbnail_Images'  // 'Name' not 'Product_Name'
+    });
+
+    return populated
+        .filter((i) => i._id)
+        .map((i) => ({
+            product: {
+                _id: i._id._id.toString(),
+                name: i._id.Name || i.name,  // Product.Name is the correct field
+                sku: i._id.Product_ID,
+                mainImage: Array.isArray(i._id.Thumbnail_Images)
+                    ? i._id.Thumbnail_Images[0]
+                    : i._id.Thumbnail_Images || i.image
+            },
+            salesCount: i.totalSold,
+            revenue: i.totalRevenue
+        }));
+};
+
 function parseRange({ range = '30d', from, to }) {
     const now = new Date();
 
@@ -193,29 +237,9 @@ exports.getOverview = async (req, res) => {
             console.warn('[Overview] customerGrowth failed:', e.message);
         }
 
-        // Optional: Top products
+        // Optional: Top products — reuse shared helper to avoid duplicate logic
         try {
-            const limit = 10;
-            const top = await Order.aggregate([
-                { $match: orderMatch },
-                { $unwind: '$items' },
-                { $group: { _id: '$items.product', name: { $first: '$items.name' }, image: { $first: '$items.image' }, totalSold: { $sum: '$items.quantity' }, totalRevenue: { $sum: { $multiply: ['$items.price', '$items.quantity'] } } } },
-                { $sort: { totalSold: -1 } },
-                { $limit: limit }
-            ]);
-            const populated = await Product.populate(top, { path: '_id', select: 'Product_Name Product_ID Thumbnail_Images' });
-            topProducts = populated
-                .filter((i) => i._id)
-                .map((i) => ({
-                    product: {
-                        _id: i._id._id.toString(),
-                        name: i._id.Product_Name || i.name,
-                        sku: i._id.Product_ID,
-                        mainImage: Array.isArray(i._id.Thumbnail_Images) ? i._id.Thumbnail_Images[0] : i._id.Thumbnail_Images
-                    },
-                    salesCount: i.totalSold,
-                    revenue: i.totalRevenue
-                }));
+            topProducts = await _getTopProductsAgg(orderMatch, 10);
         } catch (e) {
             console.warn('[Overview] topProducts failed:', e.message);
         }
@@ -316,52 +340,9 @@ exports.getRevenueChart = async (req, res) => {
 // GET /api/admin/dashboard/top-products
 exports.getTopProducts = async (req, res) => {
     try {
-        const limit = parseInt(req.query.limit) || 10;
-
-        const topProducts = await Order.aggregate([
-            { $match: { status: { $ne: ORDER_STATUS.CANCELLED } } },
-            { $unwind: '$items' },
-            {
-                $group: {
-                    _id: '$items.product',
-                    name: { $first: '$items.name' },
-                    category: { $first: '$items.category' }, // Note: items in order might not have category, need lookup if needed
-                    price: { $first: '$items.price' },
-                    image: { $first: '$items.image' },
-                    totalSold: { $sum: '$items.quantity' },
-                    totalRevenue: { $sum: { $multiply: ['$items.price', '$items.quantity'] } }
-                }
-            },
-            { $sort: { totalSold: -1 } },
-            { $limit: limit }
-        ]);
-
-        // Optional: Populate more details if needed, but for now aggregate is faster
-        // If we really need category and it's not in order items, we might need a $lookup
-        // But let's check order model items. It has name, price, shade, image. No category.
-        // Let's do a lookup to get current product category if needed.
-
-        const topProductsWithDetails = await Product.populate(topProducts, {
-            path: '_id',
-            select: 'Product_Name Product_ID Category Thumbnail_Images'
-        });
-
-        // Format to match frontend interface: {product: {...}, salesCount, revenue}
-        const formatted = topProductsWithDetails
-            .filter(item => item._id) // Filter out products that might have been deleted
-            .map(item => ({
-                product: {
-                    _id: item._id._id.toString(),
-                    name: item._id.Product_Name || item.name,
-                    sku: item._id.Product_ID,
-                    mainImage: item._id.Thumbnail_Images && item._id.Thumbnail_Images.length > 0
-                        ? item._id.Thumbnail_Images[0]
-                        : item.image
-                },
-                salesCount: item.totalSold,
-                revenue: item.totalRevenue
-            }));
-
+        const limit = Math.min(parseInt(req.query.limit) || 10, 50);
+        const orderMatch = { status: { $ne: ORDER_STATUS.CANCELLED } };
+        const formatted = await _getTopProductsAgg(orderMatch, limit);
         res.json(formatted);
     } catch (error) {
         console.error("Top Products Error:", error);

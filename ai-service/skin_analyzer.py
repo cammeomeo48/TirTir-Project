@@ -77,11 +77,34 @@ class SkinAnalyzer:
             logger.error(f"Failed to decode base64 image: {e}")
             return None
 
+    def _preprocess(self, image: np.ndarray) -> np.ndarray:
+        """
+        Normalize input image before analysis:
+        1. Resize to a fixed width (640px) to keep landmark coordinates consistent.
+        2. Apply CLAHE (Contrast Limited Adaptive Histogram Equalization) on the
+           L-channel in LAB space to reduce the impact of uneven lighting.
+        The returned image is still BGR, same as input.
+        """
+        # 1. Resize — keep aspect ratio, max width 640
+        h, w = image.shape[:2]
+        if w > 640:
+            scale = 640 / w
+            image = cv2.resize(image, (640, int(h * scale)), interpolation=cv2.INTER_AREA)
+
+        # 2. CLAHE on L channel to normalize brightness/contrast
+        lab = cv2.cvtColor(image, cv2.COLOR_BGR2Lab)
+        l, a, b = cv2.split(lab)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        l = clahe.apply(l)
+        lab = cv2.merge([l, a, b])
+        return cv2.cvtColor(lab, cv2.COLOR_Lab2BGR)
+
     def analyze(self, image: np.ndarray) -> dict:
         """
         Run full skin analysis on an OpenCV BGR image.
         Returns dict: { skinTone, undertone, skinType, concerns, confidence, debug_values }
         """
+        image = self._preprocess(image)
         h, w, _ = image.shape
         rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
@@ -134,12 +157,17 @@ class SkinAnalyzer:
             skin_tone = "Deep"
 
         # --- Determine Undertone ---
-        a_norm = a - 128
-        b_norm = b - 128
-        if b_norm > 5 and b_norm > a_norm:
-            undertone = "Warm"
-        elif a_norm > 5 and a_norm > b_norm:
-            undertone = "Cool"
+        # LAB a* > 128 = red/magenta, b* > 128 = yellow (both centred at 128).
+        # Use signed deviations and a dead-zone (±3) to avoid near-neutral flipping.
+        a_norm = a - 128  # positive = red/pink
+        b_norm = b - 128  # positive = yellow/warm
+        UNDERTONE_THRESHOLD = 3.0  # dead-zone: within ±3 = Neutral
+        if abs(a_norm) < UNDERTONE_THRESHOLD and abs(b_norm) < UNDERTONE_THRESHOLD:
+            undertone = "Neutral"
+        elif b_norm > UNDERTONE_THRESHOLD and b_norm > a_norm:
+            undertone = "Warm"   # yellow dominates
+        elif a_norm > UNDERTONE_THRESHOLD and a_norm > b_norm:
+            undertone = "Cool"   # red/pink dominates
         else:
             undertone = "Neutral"
 
@@ -163,24 +191,41 @@ class SkinAnalyzer:
         }
 
     def _determine_skin_type(self, concerns: list, image: np.ndarray, landmarks: list, h: int, w: int) -> str:
-        """Derive skin type from multiple analysis signals instead of binary Oily/Normal."""
+        """
+        Derive skin type from multiple analysis signals.
+        Signals used (in priority order):
+          1. Oily + Redness         → Combination
+          2. Oily only              → Oily
+          3. Redness only           → Sensitive
+          4. Low HSV saturation     → Dry  (replaces the Dark Circles proxy which had weak correlation)
+          5. Low surface variance   → Dry  (dry skin appears very smooth/matte)
+          6. Default                → Normal
+        """
         has_oily = "Oily Skin" in concerns
         has_redness = "Sensitive/Redness" in concerns
-        has_dry_indicators = "Dark Circles" in concerns  # often correlated with dryness
 
         def get_coords(idx: int) -> tuple[int, int]:
             pt = landmarks[idx]
             return int(pt.x * w), int(pt.y * h)
 
-        # Check forehead dryness: low saturation in HSV
+        # Signal: forehead dryness via low HSV saturation
         fh_coords = [get_coords(idx) for idx in self.rois["forehead"]]
         cx = int(sum(c[0] for c in fh_coords) / len(fh_coords))
         cy = int(sum(c[1] for c in fh_coords) / len(fh_coords))
-        fh_patch = image[max(0, cy - 20):min(h, cy + 20), max(0, cx - 20):min(w, cx + 20)]
+        pad = 20
+        fh_patch = image[max(0, cy - pad):min(h, cy + pad), max(0, cx - pad):min(w, cx + pad)]
+
         low_saturation = False
+        low_variance = False
         if fh_patch.size > 0:
-            s_fh = cv2.split(cv2.cvtColor(fh_patch, cv2.COLOR_BGR2HSV))[1]
-            low_saturation = float(np.mean(s_fh)) < 40  # low saturation = dry appearance
+            hsv_fh = cv2.cvtColor(fh_patch, cv2.COLOR_BGR2HSV)
+            s_fh = cv2.split(hsv_fh)[1]
+            v_fh = cv2.split(hsv_fh)[2]
+            mean_s = float(np.mean(s_fh))
+            # Low saturation (<35) = desaturated/matte skin → likely dry
+            low_saturation = mean_s < 35
+            # Low value variance on forehead = very smooth, no shine → likely dry (not oily)
+            low_variance = float(np.std(v_fh)) < 12 and not has_oily
 
         if has_oily and has_redness:
             return "Combination"
@@ -188,7 +233,7 @@ class SkinAnalyzer:
             return "Oily"
         elif has_redness:
             return "Sensitive"
-        elif low_saturation or has_dry_indicators:
+        elif low_saturation or low_variance:
             return "Dry"
         else:
             return "Normal"
@@ -233,8 +278,13 @@ class SkinAnalyzer:
             concerns.append("Dark Circles")
 
         # 3. PORES — Laplacian variance on cheeks
+        # Threshold calibrated against typical webcam images at 640px width:
+        #   < 300  → smooth skin / soft focus
+        #   300–700 → normal texture
+        #   > 700  → visible pore texture
         cheeks_gray = cv2.cvtColor(cheeks_bgr, cv2.COLOR_BGR2GRAY)
-        if cv2.Laplacian(cheeks_gray, cv2.CV_64F).var() > 1500:
+        laplacian_var = cv2.Laplacian(cheeks_gray, cv2.CV_64F).var()
+        if laplacian_var > 700:
             concerns.append("Visible Pores")
 
         # 4. OILY SKIN — Specular highlights on forehead

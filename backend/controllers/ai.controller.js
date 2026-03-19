@@ -47,7 +47,7 @@ const geminiCircuit = {
     }
 };
 
-const GEMINI_MODEL = 'gemini-1.5-flash'; // Stable model with higher quota
+const GEMINI_MODEL = 'gemini-1.5-flash'; // Free tier supported
 
 const initializeGemini = () => {
     const apiKey = process.env.GEMINI_API_KEY;
@@ -498,14 +498,29 @@ INSTRUCTIONS:
                 const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
                 const result = await model.generateContent(prompt);
                 const response = await result.response;
-                const text = response.text().replace(/```json|```/g, '').trim();
+                // Strip markdown code fences Gemini sometimes wraps around JSON
+                const rawText = response.text().replace(/```json\s*|```\s*/g, '').trim();
 
-                recommendationData = JSON.parse(text);
-                geminiCircuit.recordSuccess();
-                console.log('✅ Gemini response parsed successfully');
+                try {
+                    recommendationData = JSON.parse(rawText);
+                    geminiCircuit.recordSuccess();
+                    console.log('✅ Gemini response parsed successfully');
+                } catch (parseError) {
+                    // Log the actual text so it can be debugged
+                    console.error('❌ Gemini JSON parse failed:', parseError.message);
+                    console.error('   Raw Gemini output (first 500 chars):', rawText.substring(0, 500));
+                    geminiCircuit.recordFailure();
+                    recommendationData = null;
+                }
 
             } catch (aiError) {
-                console.error('Gemini Generation Error:', aiError.message || aiError);
+                const errMsg = aiError?.message || String(aiError);
+                // Distinguish quota/rate-limit errors from network/other errors
+                if (errMsg.includes('429') || errMsg.includes('quota') || errMsg.includes('RESOURCE_EXHAUSTED')) {
+                    console.warn('⚠️ Gemini quota/rate-limit hit — falling back to heuristic:', errMsg);
+                } else {
+                    console.error('❌ Gemini Generation Error:', errMsg);
+                }
                 geminiCircuit.recordFailure();
                 recommendationData = null;
             }

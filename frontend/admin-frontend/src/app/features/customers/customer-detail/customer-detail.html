@@ -16,7 +16,7 @@
             <div class="header-left">
                 <a [routerLink]="['/customers']" class="back-link">← Back to Customers</a>
                 <div class="title-row">
-                    <h1>{{ customer.Name }}</h1>
+                    <h1>{{ customer.name }}</h1>
                     <button (click)="toggleStatus()" class="status-toggle-btn"
                         [class.active]="customer.status === 'active'" [disabled]="updating">
                         {{ customer.status === 'active' ? 'Deactivate' : 'Activate' }}
@@ -32,11 +32,11 @@
                 <h2>Contact Information</h2>
                 <div class="info-row">
                     <span class="label">Email</span>
-                    <span class="value">{{ customer.Email }}</span>
+                    <span class="value">{{ customer.email }}</span>
                 </div>
                 <div class="info-row">
                     <span class="label">Phone</span>
-                    <span class="value">{{ customer.Phone || 'Not provided' }}</span>
+                    <span class="value">{{ customer.phone || 'Not provided' }}</span>
                 </div>
                 <div class="info-row">
                     <span class="label">Status</span>
@@ -65,8 +65,8 @@
             <!-- Addresses -->
             <div class="info-card">
                 <h2>Addresses</h2>
-                <div *ngIf="customer.Addresses && customer.Addresses.length > 0; else noAddress">
-                    <div *ngFor="let addr of customer.Addresses; let i = index" class="address-item">
+                <div *ngIf="customer.addresses && customer.addresses.length > 0; else noAddress">
+                    <div *ngFor="let addr of customer.addresses; let i = index" class="address-item">
                         <div class="address-header">Address {{ i + 1 }}</div>
                         <p>{{ addr.Street }}</p>
                         <p>{{ addr.City }}, {{ addr.State }} {{ addr.Zip_Code }}</p>
