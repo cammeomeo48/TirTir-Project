@@ -1,6 +1,6 @@
 import { Injectable, inject, signal, computed, effect } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject, tap, catchError, throwError } from 'rxjs';
+import { Observable, BehaviorSubject, forkJoin, tap, catchError, throwError } from 'rxjs';
 import { Cart, AddToCartRequest } from '../models';
 import { environment } from '../../../environments/environment';
 import { AuthService } from './auth.service';
@@ -12,6 +12,8 @@ export class CartService {
     private apiUrl = `${environment.apiUrl}/cart`;
     private http = inject(HttpClient);
     private authService = inject(AuthService);
+
+    private readonly PENDING_CART_KEY = 'tirtir_pending_cart';
 
     // Cart state management
     private cartSubject = new BehaviorSubject<Cart | null>(null);
@@ -25,11 +27,54 @@ export class CartService {
         // Reactively load/clear cart based on auth state
         effect(() => {
             if (this.authService.isAuthenticated()) {
-                this.loadCart();
+                this.flushPendingItems();
             } else {
                 this.cartSubject.next(null);
                 this.cartCountSignal.set(0);
             }
+        });
+    }
+
+    // ── Pending cart (guest → login flow) ──────────────────────────────────
+
+    /** Save items so they survive the redirect to /login */
+    savePendingItems(items: AddToCartRequest[]): void {
+        localStorage.setItem(this.PENDING_CART_KEY, JSON.stringify(items));
+    }
+
+    getPendingItems(): AddToCartRequest[] {
+        try {
+            return JSON.parse(localStorage.getItem(this.PENDING_CART_KEY) || '[]');
+        } catch {
+            return [];
+        }
+    }
+
+    clearPendingItems(): void {
+        localStorage.removeItem(this.PENDING_CART_KEY);
+    }
+
+    /**
+     * Called on login: add any pending guest items to the server cart, then load.
+     * If there are no pending items, falls straight through to loadCart().
+     */
+    private flushPendingItems(): void {
+        const pending = this.getPendingItems();
+        if (pending.length === 0) {
+            this.loadCart();
+            return;
+        }
+        this.clearPendingItems();
+        const adds = pending.map(item =>
+            this.http.post<Cart>(`${this.apiUrl}/add`, item)
+        );
+        forkJoin(adds).subscribe({
+            next: (carts) => {
+                const last = carts[carts.length - 1];
+                this.cartSubject.next(last);
+                this.updateCartCount(last);
+            },
+            error: () => this.loadCart()
         });
     }
 

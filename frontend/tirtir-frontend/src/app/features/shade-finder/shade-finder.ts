@@ -2,11 +2,12 @@ import { Component, ElementRef, ViewChild, OnDestroy, OnInit, signal } from '@an
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { forkJoin, of, take } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import { FaceTrackerService } from '../../core/services/face-tracker.service';
 import { CartService } from '../../core/services/cart.service';
+import { AuthService } from '../../core/services/auth.service';
 import { ColorService } from '../../core/services/color.service';
 import { environment } from '../../../environments/environment';
 
@@ -164,6 +165,8 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
     public faceTracker: FaceTrackerService,
     private http: HttpClient,
     private cartService: CartService,
+    private authService: AuthService,
+    private router: Router,
     private colorService: ColorService
   ) { }
 
@@ -466,6 +469,12 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
 
   addToCart(match: ShadeMatch) {
     if (!match.Product_ID) return;
+    if (!this.authService.isAuthenticated()) {
+      this.cartService.savePendingItems([{ productId: match.Product_ID, quantity: 1, shade: match.Shade_Name }]);
+      this.showToast('Please login to add to cart — your selection has been saved!');
+      this.router.navigate(['/login'], { queryParams: { returnUrl: '/shade-finder' } });
+      return;
+    }
     this.cartService.addToCart({
       productId: match.Product_ID,
       quantity: 1,
@@ -478,6 +487,12 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
 
   addRoutineProductToCart(step: RoutineStep) {
     if (!step.product?.Product_ID) return;
+    if (!this.authService.isAuthenticated()) {
+      this.cartService.savePendingItems([{ productId: step.product.Product_ID, quantity: 1 }]);
+      this.showToast('Please login to add to cart — your selection has been saved!');
+      this.router.navigate(['/login'], { queryParams: { returnUrl: '/shade-finder' } });
+      return;
+    }
     this.cartService.addToCart({
       productId: step.product.Product_ID,
       quantity: 1
@@ -489,12 +504,19 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
 
   addAllToCart() {
     const steps = this.routine()?.routine ?? [];
-    const adds = steps
+    const items = steps
       .filter(s => s.product?.Product_ID && !this.skippedSteps().has(s.step))
-      .map(s =>
-        this.cartService.addToCart({ productId: s.product!.Product_ID, quantity: 1 })
-      );
-    if (adds.length === 0) return;
+      .map(s => ({ productId: s.product!.Product_ID, quantity: 1 }));
+    if (items.length === 0) return;
+
+    if (!this.authService.isAuthenticated()) {
+      this.cartService.savePendingItems(items);
+      this.showToast(`Please login to add to cart — ${items.length} product(s) have been saved!`);
+      this.router.navigate(['/login'], { queryParams: { returnUrl: '/shade-finder' } });
+      return;
+    }
+
+    const adds = items.map(item => this.cartService.addToCart(item));
     forkJoin(adds).subscribe({
       next: () => this.showToast(`Added ${adds.length} product(s) to cart!`),
       error: () => this.showToast('Error adding to cart.')
