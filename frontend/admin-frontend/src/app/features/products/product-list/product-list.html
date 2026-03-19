@@ -46,11 +46,7 @@
         <button class="btn btn-primary" (click)="loadProducts()">Retry</button>
     </div>
 
-    <!-- Delete Error Banner -->
-    <div *ngIf="deleteError" class="action-error-banner">
-        {{ deleteError }}
-        <button (click)="deleteError = null">✕</button>
-    </div>
+
 
     <!-- Products Table -->
     <div *ngIf="!loading && !error" class="table-container">
@@ -62,87 +58,47 @@
                     <th>SKU</th>
                     <th>Category</th>
                     <th>Price</th>
-                    <th>Stock</th>
+                    <th>Stock Qty</th>
                     <th>Status</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
-                <tr *ngFor="let product of getPaginatedProducts()" [class.editing]="editingId === product._id">
-
-                    <!-- Thumbnail (luôn hiển thị) -->
+                <tr *ngFor="let product of getPaginatedProducts()">
+                    <!-- Thumbnail -->
                     <td>
-                        <img [src]="getMainImage(product)" [alt]="product.Name" class="product-image" />
+                        <img [src]="getMainImage(product)" [alt]="product.Name" class="product-image" onerror="this.src='/placeholder-product.svg';" />
                     </td>
+                    <td class="product-name">{{ product.Name }}</td>
+                    <td class="sku">{{ product.Product_ID }}</td>
+                    <td><span class="category-badge">{{ product.Category }}</span></td>
+                    <td class="price">{{ product.Price | currency:'USD' }}</td>
+                    <td class="stock">{{ product.Stock_Quantity || 0 }}</td>
+                    <td>
+                        <span [class]="'badge badge-' + getStockStatus(product.Stock_Quantity || 0)">
+                            {{ getStockLabel(product.Stock_Quantity || 0) }}
+                        </span>
+                    </td>
+                    <td class="actions">
+                        <!-- Idle State -->
+                        <ng-container *ngIf="getRowState(product).status === 'idle'">
+                            <a class="view-link" [routerLink]="['/products/edit', product._id || product.id]">Edit</a>
+                            <button class="btn-text-danger" (click)="requestDelete(product)">Delete</button>
+                        </ng-container>
 
-                    <!-- VIEW mode -->
-                    <ng-container *ngIf="editingId !== product._id">
-                        <td class="product-name">{{ product.Name }}</td>
-                        <td class="sku">{{ product.Product_ID }}</td>
-                        <td><span class="category-badge">{{ product.Category }}</span></td>
-                        <td class="price">${{ product.Price.toFixed(2) }}</td>
-                        <td class="stock">{{ product.stock }}</td>
-                        <td>
-                            <span [class]="'status-badge ' + getStockStatus(product.stock)">
-                                {{ getStockLabel(product.stock) }}
-                            </span>
-                        </td>
-                        <td class="actions">
-                            <button class="btn btn-sm btn-outline" (click)="openEdit(product)" title="Quick Edit">
-                                Quick Edit
-                            </button>
-                            <button class="btn btn-sm btn-outline" [routerLink]="['/products/edit', product._id]"
-                                title="Full Edit">
-                                Full Edit
-                            </button>
-                            <!-- Inline delete confirm -->
-                            <ng-container *ngIf="pendingDeleteId !== product._id">
-                                <button class="btn btn-sm btn-danger" (click)="requestDelete(product)" title="Delete">
-                                    Delete
-                                </button>
-                            </ng-container>
-                            <ng-container *ngIf="pendingDeleteId === product._id">
-                                <span style="font-size:12px;color:#b71c1c;font-weight:600;">Sure?</span>
-                                <button class="btn btn-sm btn-danger" (click)="confirmDelete(product)">Yes</button>
-                                <button class="btn btn-sm btn-outline" (click)="cancelDelete()">No</button>
-                            </ng-container>
-                        </td>
-                    </ng-container>
+                        <!-- Confirming Delete -->
+                        <ng-container *ngIf="getRowState(product).status === 'confirm-delete'">
+                            <span class="confirm-text">Are you sure?</span>
+                            <button class="btn-text-danger bold" (click)="confirmDelete(product)">Yes, Delete</button>
+                            <button class="btn-text-muted" (click)="cancelDelete(product)">Cancel</button>
+                            <div *ngIf="getRowState(product).error" class="row-error">{{ getRowState(product).error }}</div>
+                        </ng-container>
 
-                    <!-- EDIT mode -->
-                    <ng-container *ngIf="editingId === product._id">
-                        <td>
-                            <input type="text" [(ngModel)]="editDraft.Name" class="qe-input qe-name"
-                                placeholder="Product name" [disabled]="saving" />
-                        </td>
-                        <td class="sku">{{ product.Product_ID }}</td>
-                        <td><span class="category-badge">{{ product.Category }}</span></td>
-                        <td>
-                            <input type="number" [(ngModel)]="editDraft.Price" class="qe-input qe-price" min="0"
-                                step="0.01" [disabled]="saving" />
-                        </td>
-                        <td>
-                            <input type="number" [(ngModel)]="editDraft.stock" class="qe-input qe-stock" min="0"
-                                [disabled]="saving" />
-                        </td>
-                        <td>
-                            <select [(ngModel)]="editDraft.status" class="qe-select" [disabled]="saving">
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
-                                <option value="draft">Draft</option>
-                            </select>
-                        </td>
-                        <td class="actions">
-                            <button class="btn btn-sm btn-primary" (click)="saveEdit(product)"
-                                [disabled]="saving || !editDraft.Name?.trim()">
-                                {{ saving ? '...' : 'Save' }}
-                            </button>
-                            <button class="btn btn-sm btn-outline" (click)="cancelEdit()" [disabled]="saving">
-                                Cancel
-                            </button>
-                            <div *ngIf="saveError" style="font-size:12px;color:#b71c1c;margin-top:4px;">{{ saveError }}</div>
-                        </td>
-                    </ng-container>
+                        <!-- Deleting -->
+                        <ng-container *ngIf="getRowState(product).status === 'deleting'">
+                            <span class="confirm-text">Deleting...</span>
+                        </ng-container>
+                    </td>
                 </tr>
             </tbody>
         </table>

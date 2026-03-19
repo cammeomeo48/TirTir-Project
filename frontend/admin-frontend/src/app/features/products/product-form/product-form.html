@@ -62,10 +62,10 @@
 
                     <div class="form-group">
                         <label for="stock">Stock Quantity *</label>
-                        <input id="stock" type="number" formControlName="stock" class="form-input" placeholder="0" />
-                        <span *ngIf="productForm.get('stock')?.touched && productForm.get('stock')?.invalid"
+                        <input id="stock" type="number" formControlName="Stock_Quantity" class="form-input" placeholder="0" />
+                        <span *ngIf="productForm.get('Stock_Quantity')?.touched && productForm.get('Stock_Quantity')?.invalid"
                             class="error-text">
-                            {{ getFieldError('stock') }}
+                            {{ getFieldError('Stock_Quantity') }}
                         </span>
                     </div>
                 </div>
@@ -111,7 +111,7 @@
     </form>
 
     <!-- ─── SHADE / VARIANT MANAGER (Edit Mode only) ─────────── -->
-    <div class="shade-manager" *ngIf="isEditMode">
+    <div class="shade-manager" *ngIf="isEditMode && shouldShowVariants">
         <div class="shade-manager-header">
             <h2>Color Shades / Variants</h2>
             <button type="button" class="btn btn-sm btn-outline" (click)="openAddShade()" *ngIf="!showAddShade">

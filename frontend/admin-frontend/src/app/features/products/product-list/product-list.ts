@@ -3,24 +3,17 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ProductService } from '../../../core/services/product.service';
+import { environment } from '../../../../environments/environment';
 
 interface Product {
-    _id: string;
-    Name: string;           // DB field is 'Name' (not Product_Name)
-    Product_ID: string;     // SKU
+    _id?: string;
+    id?: string;
+    Name: string;
+    Product_ID: string;
     Category: string;
     Price: number;
-    Thumbnail_Images: string[];
-    stock: number;
-    status?: string;
-}
-
-// Shape for quick edit — only editable fields
-interface QuickEditDraft {
-    Name: string;
-    Price: number;
-    stock: number;
-    status: string;
+    Thumbnail_Images?: string;
+    Stock_Quantity?: number;
 }
 
 @Component({
@@ -46,7 +39,8 @@ export class ProductListComponent implements OnInit {
     selectedCategory = '';
     selectedStockStatus = '';
 
-    categories = ['All', 'Makeup', 'Skincare'];
+    // Categories derived from loaded products — populated in loadProducts()
+    categories: string[] = ['All'];
     stockStatuses = [
         { value: '', label: 'All Stock Levels' },
         { value: 'in-stock', label: 'In Stock (>20)' },
@@ -54,15 +48,9 @@ export class ProductListComponent implements OnInit {
         { value: 'out-of-stock', label: 'Out of Stock (0)' }
     ];
 
-    // ─── Quick Edit ─────────────────────────────────────────────
-    editingId: string | null = null;
-    editDraft: QuickEditDraft = { Name: '', Price: 0, stock: 0, status: 'active' };
-    saving = false;
-    saveError: string | null = null;
-
-    // ─── Delete Confirm ─────────────────────────────────────────
-    pendingDeleteId: string | null = null;
-    deleteError: string | null = null;
+    // ─── Row-Scoped Action State ────────────────────────────────
+    // Tracks state per product ID: 'confirm-delete', 'deleting', etc.
+    rowState: { [id: string]: { status: 'idle' | 'confirm-delete' | 'deleting', error?: string } } = {};
 
     constructor(
         private productService: ProductService,
@@ -74,10 +62,16 @@ export class ProductListComponent implements OnInit {
         this.route.queryParams.subscribe(params => {
             const q = params['q'];
             const stock = params['stock'];
+            const filter = params['filter']; // Dashboard sometimes sends '?filter=low-stock'
             const category = params['category'];
 
             if (typeof q === 'string') this.searchQuery = q;
             if (typeof stock === 'string') this.selectedStockStatus = stock;
+            if (typeof filter === 'string') {
+                if (filter === 'low-stock' || filter === 'out-of-stock') {
+                    this.selectedStockStatus = filter;
+                }
+            }
             if (typeof category === 'string') this.selectedCategory = category;
 
             if (this.products.length > 0) this.applyFilters();
@@ -89,10 +83,14 @@ export class ProductListComponent implements OnInit {
     loadProducts(): void {
         this.loading = true;
         this.error = null;
+        this.rowState = {}; // reset specific states
 
         this.productService.getAllProducts().subscribe({
             next: (data: any) => {
                 this.products = Array.isArray(data) ? data : (data.products || data.data || []);
+                // Derive categories dynamically from real DB data
+                const catSet = new Set<string>(this.products.map((p: any) => p.Category).filter(Boolean));
+                this.categories = ['All', ...Array.from(catSet).sort()];
                 this.applyFilters();
                 this.loading = false;
             },
@@ -121,9 +119,9 @@ export class ProductListComponent implements OnInit {
 
         if (this.selectedStockStatus) {
             switch (this.selectedStockStatus) {
-                case 'in-stock': filtered = filtered.filter(p => p.stock > 20); break;
-                case 'low-stock': filtered = filtered.filter(p => p.stock > 0 && p.stock <= 20); break;
-                case 'out-of-stock': filtered = filtered.filter(p => p.stock === 0); break;
+                case 'in-stock': filtered = filtered.filter(p => (p.Stock_Quantity || 0) > 20); break;
+                case 'low-stock': filtered = filtered.filter(p => (p.Stock_Quantity || 0) > 0 && (p.Stock_Quantity || 0) <= 20); break;
+                case 'out-of-stock': filtered = filtered.filter(p => (p.Stock_Quantity || 0) === 0); break;
             }
         }
 
@@ -145,71 +143,50 @@ export class ProductListComponent implements OnInit {
         if (page >= 1 && page <= this.totalPages) this.currentPage = page;
     }
 
-    // ─── Quick Edit ─────────────────────────────────────────────
 
-    openEdit(product: Product): void {
-        this.editingId = product._id;
-        this.editDraft = {
-            Name: product.Name,
-            Price: product.Price,
-            stock: product.stock,
-            status: product.status || 'active'
-        };
-    }
-
-    cancelEdit(): void {
-        this.editingId = null;
-    }
-
-    saveEdit(product: Product): void {
-        if (!this.editDraft.Name?.trim() || this.editDraft.Price < 0) return;
-        this.saving = true;
-        this.saveError = null;
-
-        const payload = {
-            Name: this.editDraft.Name.trim(),
-            Price: Number(this.editDraft.Price),
-            stock: Number(this.editDraft.stock),
-            status: this.editDraft.status
-        };
-
-        this.productService.updateProduct(product._id, payload).subscribe({
-            next: (updated: any) => {
-                const idx = this.products.findIndex(p => p._id === product._id);
-                if (idx !== -1) {
-                    this.products[idx] = { ...this.products[idx], ...payload };
-                    this.applyFilters();
-                }
-                this.saving = false;
-                this.editingId = null;
-            },
-            error: (err: any) => {
-                this.saveError = err.error?.message || 'Failed to update product. Please try again.';
-                this.saving = false;
-            }
-        });
-    }
 
     // ─── Delete ──────────────────────────────────────────────────
-    requestDelete(product: Product): void {
-        this.pendingDeleteId = product._id;
-        this.deleteError = null;
+    getRowState(p: Product) {
+        const id = p._id || p.id || '';
+        if (!this.rowState[id]) {
+            this.rowState[id] = { status: 'idle' };
+        }
+        return this.rowState[id];
     }
 
-    cancelDelete(): void {
-        this.pendingDeleteId = null;
+    requestDelete(p: Product): void {
+        const id = p._id || p.id || '';
+        if (id) {
+            this.getRowState(p).status = 'confirm-delete';
+            this.getRowState(p).error = undefined;
+        }
+    }
+
+    cancelDelete(p: Product): void {
+        const id = p._id || p.id || '';
+        if (id) {
+            this.getRowState(p).status = 'idle';
+            this.getRowState(p).error = undefined;
+        }
     }
 
     confirmDelete(product: Product): void {
-        this.deleteError = null;
-        this.productService.deleteProduct(product._id).subscribe({
+        const id = product._id || product.id;
+        if (!id) return;
+        const state = this.getRowState(product);
+        state.status = 'deleting';
+        state.error = undefined;
+
+        this.productService.deleteProduct(id).subscribe({
             next: () => {
-                this.pendingDeleteId = null;
-                this.loadProducts();
+                // Remove from local arrays
+                this.products = this.products.filter(p => (p._id || p.id) !== id);
+                this.applyFilters();
+                delete this.rowState[id];
             },
             error: (err: any) => {
-                this.deleteError = err.error?.message || 'Failed to delete product';
-                this.pendingDeleteId = null;
+                state.status = 'confirm-delete'; // Back to confirm mode to show error
+                state.error = err.error?.message || 'Failed to delete product';
             }
         });
     }
@@ -228,13 +205,12 @@ export class ProductListComponent implements OnInit {
     }
 
     getMainImage(product: Product): string {
-        const raw = product.Thumbnail_Images?.length > 0
-            ? product.Thumbnail_Images[0]
-            : '';
-        if (!raw) return 'assets/placeholder-product.png';
-        // If already absolute URL (http/https), use as-is
-        if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
-        // If relative path from backend uploads, prepend API base
-        return `http://localhost:5001${raw.startsWith('/') ? '' : '/'}${raw}`;
+        const raw = product.Thumbnail_Images || '';
+        if (!raw) return '/assets/placeholder-product.svg';
+        if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('data:')) return raw;
+        
+        const backendBase = environment.apiUrl.replace('/api/v1', '');
+        const clean = raw.startsWith('/') ? raw.slice(1) : raw;
+        return `${backendBase}/${clean}`;
     }
 }

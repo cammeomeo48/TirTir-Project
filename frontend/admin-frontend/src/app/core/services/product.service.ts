@@ -12,7 +12,9 @@ export class ProductService {
     constructor(private http: HttpClient) { }
 
     getAllProducts(): Observable<any> {
-        return this.http.get(`${this.apiUrl}/products`);
+        // Admin panel must see ALL products from DB, not paginated (default limit=12).
+        // Pass a large limit to disable effective pagination on the admin fetch.
+        return this.http.get(`${this.apiUrl}/products?limit=1000&page=1`);
     }
 
     getProductById(id: string): Observable<any> {

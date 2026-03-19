@@ -4,6 +4,7 @@ import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { ProductService } from '../../../core/services/product.service';
+import { environment } from '../../../../environments/environment';
 import { ShadeService, Shade } from '../../../core/services/shade.service';
 
 @Component({
@@ -22,7 +23,11 @@ export class ProductFormComponent implements OnInit {
     error: string | null = null;
     imagePreview: string | null = null;
 
-    categories = ['Makeup', 'Skincare'];
+    categories = ['Makeup', 'Skincare', 'Gift Card'];
+
+    get shouldShowVariants(): boolean {
+        return this.productForm.get('Category')?.value !== 'Gift Card';
+    }
 
     // ─── Shade Management ──────────────────────────────────────
     shades: Shade[] = [];
@@ -62,9 +67,9 @@ export class ProductFormComponent implements OnInit {
             Product_ID: ['', [Validators.required]],
             Category: ['Makeup', [Validators.required]],
             Price: [0, [Validators.required, Validators.min(0)]],
-            stock: [0, [Validators.required, Validators.min(0)]],
+            Stock_Quantity: [0, [Validators.required, Validators.min(0)]],
             Description: [''],
-            Thumbnail_Images: [[]]
+            Thumbnail_Images: ['']
         });
     }
 
@@ -77,12 +82,14 @@ export class ProductFormComponent implements OnInit {
                     Product_ID: product.Product_ID,
                     Category: product.Category,
                     Price: product.Price,
-                    stock: product.stock || product.Stock_Quantity,
+                    Stock_Quantity: product.Stock_Quantity || product.stock || 0,
                     Description: product.Description || product.Description_Short || '',
-                    Thumbnail_Images: product.Thumbnail_Images || []
+                    Thumbnail_Images: typeof product.Thumbnail_Images === 'string' ? product.Thumbnail_Images : (Array.isArray(product.Thumbnail_Images) ? product.Thumbnail_Images[0] : '')
                 });
-                if (product.Thumbnail_Images && product.Thumbnail_Images.length > 0) {
-                    this.imagePreview = this.resolveImageUrl(product.Thumbnail_Images[0]);
+                
+                const thumb = this.productForm.get('Thumbnail_Images')?.value;
+                if (thumb) {
+                    this.imagePreview = this.resolveImageUrl(thumb);
                 }
                 this.loading = false;
             },
@@ -193,7 +200,7 @@ export class ProductFormComponent implements OnInit {
                 next: (response: any) => {
                     this.uploadingImage = false;
                     if (response.success) {
-                        this.productForm.patchValue({ Thumbnail_Images: [response.data.url] });
+                        this.productForm.patchValue({ Thumbnail_Images: response.data.url });
                     }
                 },
                 error: () => {
@@ -207,7 +214,10 @@ export class ProductFormComponent implements OnInit {
     resolveImageUrl(path: string): string {
         if (!path) return '';
         if (path.startsWith('data:') || path.startsWith('http')) return path;
-        return `http://localhost:5001${path.startsWith('/') ? path : '/' + path}`;
+        
+        const backendBase = environment.apiUrl.replace('/api/v1', '');
+        const clean = path.startsWith('/') ? path.slice(1) : path;
+        return `${backendBase}/${clean}`;
     }
 
     // ─── Submit ────────────────────────────────────────────────
@@ -219,7 +229,7 @@ export class ProductFormComponent implements OnInit {
         }
         this.loading = true;
         this.error = null;
-        const productData = { ...this.productForm.value, Name: this.productForm.value.Product_Name, Stock_Quantity: this.productForm.value.stock };
+        const productData = { ...this.productForm.value, Name: this.productForm.value.Product_Name };
         const save$ = this.isEditMode && this.productId
             ? this.productService.updateProduct(this.productId, productData)
             : this.productService.addProduct(productData);
