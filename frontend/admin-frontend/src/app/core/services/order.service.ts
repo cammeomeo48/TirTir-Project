@@ -11,22 +11,14 @@ import { environment } from '../../../environments/environment';
  */
 
 export interface OrderItem {
-    // Uppercase fields (legacy schema stored in DB)
-    Product?: {
+    Product: {
         _id: string;
         Product_Name: string;
         Product_ID: string;
         Thumbnail_Images: string | string[];
     };
-    Quantity?: number;
-    Price?: number;
-    // Lowercase fields returned by current backend API
-    product?: string;
-    name?: string;
-    image?: string;
-    shade?: string;
-    quantity?: number;
-    price?: number;
+    Quantity: number;
+    Price: number;
 }
 
 export interface Order {

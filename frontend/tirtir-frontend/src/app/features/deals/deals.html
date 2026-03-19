@@ -30,8 +30,8 @@
 
                 <div class="deal-footer">
                     <div class="deal-price-info">
-                        <span class="old-price">${{ deal.originalPrice }}</span>
-                        <span class="new-price">${{ deal.price }}</span>
+                        <span class="old-price">${{ deal.originalPrice | number:'1.2-2' }}</span>
+                        <span class="new-price">${{ deal.price | number:'1.2-2' }}</span>
                     </div>
                     <button class="buy-combo-btn" (click)="buyCombo(deal)">BUY COMBO</button>
                 </div>
@@ -49,7 +49,7 @@
                 </div>
                 <div class="modal-info">
                     <h3>{{ selectedProduct.name }}</h3>
-                    <p class="individual-price">Individual Price: <span>${{ selectedProduct.price }}</span></p>
+                    <p class="individual-price">Individual Price: <span>${{ selectedProduct.price | number:'1.2-2' }}</span></p>
                     <p class="modal-desc">Part of the premium bundle set. Save more when buying the combo!</p>
                     <a [routerLink]="['/products', selectedProduct.slug]" class="view-detail-link"
                         (click)="closePrice()">View Detail Page</a>

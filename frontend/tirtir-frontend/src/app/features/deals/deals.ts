@@ -56,10 +56,28 @@ export class DealsComponent implements OnInit {
     }
 
     createCategoryDeals(products: ProductData[]) {
-        const makeup = products.filter(p => (p as any).Category?.toLowerCase() === 'makeup' || (p as any).category?.toLowerCase() === 'makeup').slice(0, 3);
-        const skincare = products.filter(p => (p as any).Category?.toLowerCase() === 'skincare' || (p as any).category?.toLowerCase() === 'skincare').slice(0, 3);
+        const makeupCategories = ['makeup', 'cushion', 'lip', 'tint', 'primer', 'balm', 'fixer'];
+        
+        const uniqueMakeupNames = new Set<string>();
+        const makeup = products.filter(p => {
+            const cat = ((p as any).category || (p as any).Category || '').toLowerCase();
+            const name = (p.name || '').toLowerCase();
+            if (makeupCategories.includes(cat) && !name.includes('gift card') && p.price >= 15) {
+                if (!uniqueMakeupNames.has(name)) {
+                    uniqueMakeupNames.add(name);
+                    return true;
+                }
+            }
+            return false;
+        }).slice(0, 3);
+        
+        const skincareCategories = ['skincare', 'cleanser', 'toner', 'cream', 'serum', 'mask', 'sunscreen', 'ampoule', 'facial-oil', 'eye-cream'];
+        const skincare = products.filter(p => {
+            const cat = ((p as any).category || (p as any).Category || '').toLowerCase();
+            const name = (p.name || '').toLowerCase();
+            return skincareCategories.includes(cat) && !name.includes('gift card');
+        }).slice(0, 3);
 
-        // Use all products if specific categories are empty
         const sourceMakeup = makeup.length >= 2 ? makeup : products.slice(0, 2);
         const sourceSkincare = skincare.length >= 2 ? skincare : products.slice(2, 5);
 
@@ -68,8 +86,8 @@ export class DealsComponent implements OnInit {
             category: 'MAKEUP',
             description: 'Everything you need for a flawless daily look.',
             products: sourceMakeup,
-            originalPrice: Math.round(sourceMakeup.reduce((sum, p) => sum + p.price, 0)),
-            price: Math.round(sourceMakeup.reduce((sum, p) => sum + p.price, 0) * 0.85),
+            originalPrice: sourceMakeup.reduce((sum, p) => sum + p.price, 0),
+            price: sourceMakeup.reduce((sum, p) => sum + p.price, 0) * 0.85,
             discount: 15
         };
 
@@ -78,9 +96,9 @@ export class DealsComponent implements OnInit {
             category: 'SKINCARE',
             description: 'The ultimate 3-step routine for glass skin.',
             products: sourceSkincare,
-            originalPrice: Math.round(sourceSkincare.reduce((sum, p) => sum + p.price, 0)),
-            price: Math.round(sourceSkincare.reduce((sum, p) => sum + p.price, 0) * 0.75),
-            discount: 25
+            originalPrice: sourceSkincare.reduce((sum, p) => sum + p.price, 0),
+            price: sourceSkincare.reduce((sum, p) => sum + p.price, 0) * 0.85,
+            discount: 15
         };
 
         this.deals = [makeupDeal, skincareDeal];
