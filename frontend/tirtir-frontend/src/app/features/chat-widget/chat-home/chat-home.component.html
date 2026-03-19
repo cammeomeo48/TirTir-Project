@@ -13,18 +13,18 @@
             </div>
             <div class="brand-text">
                 <strong>티르티르 글로벌</strong>
-                <p>Thank you for reaching out to TIRTIR Global Customer Service Team❤️</p>
-                <p>How may we assist you today?✨</p>
+                <p>{{ langService.t('home.greeting') }}</p>
+                <p>{{ langService.t('home.question') }}</p>
             </div>
         </div>
 
         <button class="start-chat-btn" (click)="onStartChat()">
-            Start a chat
+            {{ langService.t('home.startChat') }}
             <i class="fas fa-paper-plane"></i>
         </button>
     </div>
 
     <div class="powered-by">
-        <i class="fas fa-smile"></i> Powered by Channel Talk
+        <i class="fas fa-smile"></i> {{ langService.t('home.poweredBy') }}
     </div>
 </div>

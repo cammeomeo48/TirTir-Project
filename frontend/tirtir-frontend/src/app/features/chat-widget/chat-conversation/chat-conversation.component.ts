@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { ChatService, ChatMessage, QuickReply } from '../../../core/services/chat.service';
 import { CartService } from '../../../core/services/cart.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { LanguageService } from '../../../core/services/language.service';
 
 @Component({
     selector: 'app-chat-conversation',
@@ -27,7 +28,8 @@ export class ChatConversationComponent implements OnInit, AfterViewChecked {
     constructor(
         private chatService: ChatService,
         private cartService: CartService,
-        private toastService: ToastService
+        private toastService: ToastService,
+        public langService: LanguageService
     ) { }
 
     ngOnInit() {
@@ -37,22 +39,27 @@ export class ChatConversationComponent implements OnInit, AfterViewChecked {
             this.scrollToBottom();
         });
 
-        this.chatService.initiateChat().subscribe(response => {
-            // Handle session init if needed
-        });
-
         this.chatService.getQuickReplies().subscribe(replies => {
             this.quickReplies = replies;
         });
 
-        // Initial bot message if empty
-        if (this.messages.length === 0) {
-            this.messages.push({
-                text: 'Thank you for reaching out to TIRTIR Global Customer Service Team❤️. How may we assist you today?✨',
-                sender: 'bot',
-                timestamp: new Date()
-            });
-        }
+        // Load history first; only show welcome message if no prior history exists
+        this.chatService.loadHistory().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+            next: () => {
+                if (this.messages.length === 0) {
+                    this.chatService.initWithWelcome(
+                        'Thank you for reaching out to TIRTIR Global Customer Service Team❤️. How may we assist you today?✨'
+                    );
+                }
+            },
+            error: () => {
+                if (this.messages.length === 0) {
+                    this.chatService.initWithWelcome(
+                        'Thank you for reaching out to TIRTIR Global Customer Service Team❤️. How may we assist you today?✨'
+                    );
+                }
+            }
+        });
     }
 
     ngAfterViewChecked() {

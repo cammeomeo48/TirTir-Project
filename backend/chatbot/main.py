@@ -137,11 +137,12 @@ async def health_check():
 
 @app.post("/chat", response_model=ChatResponse, dependencies=[Depends(verify_api_key)])
 @limiter.limit("30/minute")
-async def chat(request: ChatRequest, req: Request):
+async def chat(body: ChatRequest, request: Request):
     """
     Process a Vietnamese beauty query and return a structured bot response.
     Model is loaded at startup — sub-millisecond inference, no spawn overhead.
     Rate limit: 30 requests/minute per IP.
+    NOTE: slowapi requires the Starlette Request param to be named `request`.
     """
     if chatbot is None:
         raise HTTPException(
@@ -149,12 +150,12 @@ async def chat(request: ChatRequest, req: Request):
             detail="Chatbot model not available. Ensure chatbot_products.csv exists in the backend/chatbot directory."
         )
 
-    if not request.message or not request.message.strip():
+    if not body.message or not body.message.strip():
         raise HTTPException(status_code=400, detail="message field is required and cannot be empty")
 
     start = time.time()
     try:
-        result = chatbot.process(request.message.strip())
+        result = chatbot.process(body.message.strip())
     except Exception as e:
         logger.exception("Chatbot processing failed")
         return ChatResponse(success=False, error=str(e))
