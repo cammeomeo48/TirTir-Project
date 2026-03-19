@@ -17,16 +17,9 @@ export class DashboardComponent implements OnInit {
     overviewError: string | null = null;
 
     // Derived view models for charts/tables
-    revenueSeries: OverviewRevenuePoint[] = [];
-    trafficSeries: OverviewTrafficPoint[] = [];
     topProducts: TopProduct[] = [];
     recentOrders: any[] = [];
     lowStockItems: any[] = [];
-    customerGrowthSeries: { month: string; count: number }[] = [];
-
-    maxRevenue = 1;
-    maxViews = 1;
-    maxCustomerGrowth = 1;
 
     constructor(
         private dashboardService: DashboardService,
@@ -34,9 +27,7 @@ export class DashboardComponent implements OnInit {
     ) { }
 
     get showCartRecovery(): boolean {
-        const cr = this.overview?.cartRecovery;
-        if (!cr) return false;
-        return (cr.recoveredCount ?? 0) > 0 || (cr.recoveredRevenue ?? 0) > 0;
+        return false; // Removed from General per requirements
     }
 
     ngOnInit(): void {
@@ -51,16 +42,9 @@ export class DashboardComponent implements OnInit {
         this.dashboardService.getOverview('30d').subscribe({
             next: (data) => {
                 this.overview = data;
-                this.revenueSeries = Array.isArray(data?.revenueSeries) ? data.revenueSeries : [];
-                this.trafficSeries = Array.isArray(data?.traffic?.viewsSeries) ? data.traffic.viewsSeries : [];
                 this.topProducts = Array.isArray(data?.topProducts) ? data.topProducts.slice(0, 10) : [];
                 this.recentOrders = Array.isArray(data?.recentOrders) ? data.recentOrders.slice(0, 5) : [];
                 this.lowStockItems = Array.isArray(data?.lowStockAlerts) ? data.lowStockAlerts.slice(0, 5) : [];
-                this.customerGrowthSeries = Array.isArray(data?.customerGrowthSeries) ? data.customerGrowthSeries : [];
-
-                this.maxRevenue = Math.max(...this.revenueSeries.map(d => d.revenue), 1);
-                this.maxViews = Math.max(...this.trafficSeries.map(d => d.views), 1);
-                this.maxCustomerGrowth = Math.max(...this.customerGrowthSeries.map(d => d.count), 1);
                 this.overviewLoading = false;
             },
             error: (err: any) => {
@@ -72,17 +56,6 @@ export class DashboardComponent implements OnInit {
     }
 
     // ── Helpers ─────────────────────────────────────────────────
-    getBarHeight(revenue: number): string {
-        return `${Math.round((revenue / this.maxRevenue) * 100)}%`;
-    }
-
-    getViewsBarHeight(views: number): string {
-        return `${Math.round((views / this.maxViews) * 100)}%`;
-    }
-
-    getGrowthBarHeight(count: number): string {
-        return `${Math.round((count / this.maxCustomerGrowth) * 100)}%`;
-    }
 
     formatDate(date: string): string {
         return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
@@ -116,9 +89,6 @@ export class DashboardComponent implements OnInit {
     }
 
     // ── Click-through navigation ────────────────────────────────
-    goToAnalytics(): void {
-        this.router.navigate(['/analytics']);
-    }
 
     goToProducts(): void {
         this.router.navigate(['/products']);
