@@ -27,20 +27,20 @@ exports.findBestMatch = async (req, res) => {
         // Filter: Only recommend Cushions (exclude Lipsticks, Skincare, etc.)
         const shades = await Shade.find({ Shade_Type: 'Cushion' });
         
-        // 1. Determine User Undertone (Heuristic)
-        // LAB a* > 0 = red/magenta, b* > 0 = yellow.
-        // Use signed difference of normalised channels to avoid divide-by-zero.
-        // a_n / b_n are already signed, so compare directly.
+        // 1. Determine User Undertone
+        // colorUtils.js returns STANDARD LAB (D65 illuminant):
+        //   a is already centred at 0  (positive = red/pink, negative = green)
+        //   b is already centred at 0  (positive = yellow/warm, negative = blue)
+        // Typical skin tone values: a ≈ 5–20, b ≈ 10–35
         let userUndertone = 'Neutral';
-        const a_n = userLab.a - 128; // centre around 0
-        const b_n = userLab.b - 128;
-        if (Math.abs(a_n) < 2 && Math.abs(b_n) < 2) {
-            userUndertone = 'Neutral'; // near achromatic — no clear undertone
-        } else if (b_n > 5 && b_n > a_n) {
-            userUndertone = 'Warm';   // yellow dominates
-        } else if (a_n > 5 && a_n > b_n) {
-            userUndertone = 'Cool';   // red/pink dominates
+        const a_n = userLab.a; // no offset needed — standard LAB
+        const b_n = userLab.b;
+        if (b_n > 10 && b_n > a_n * 1.2) {
+            userUndertone = 'Warm';   // yellow strongly dominates
+        } else if (a_n > 10 && a_n > b_n * 0.9) {
+            userUndertone = 'Cool';   // red/pink dominates over yellow
         }
+        // else: balanced → Neutral
 
         // 2. Oxidation Simulation (Target Shift)
         // If Oily, we want a shade that STARTS lighter (higher L).
