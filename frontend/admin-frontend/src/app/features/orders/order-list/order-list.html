@@ -61,10 +61,10 @@
                         <th>Order ID</th>
                         <th>Customer</th>
                         <th>Date</th>
-                        <th class="text-center">Items</th>
-                        <th class="text-right">Total</th>
+                        <th>Items</th>
+                        <th>Total</th>
                         <th>Status</th>
-                        <th class="text-right">Actions</th>
+                        <th class="text-center">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -77,14 +77,14 @@
                             <div class="customer-email">{{ order.user?.email || '' }}</div>
                         </td>
                         <td class="date-cell">{{ formatDate(order.createdAt) }}</td>
-                        <td class="text-center">{{ order.items?.length || 0 }}</td>
+                        <td>{{ order.items?.length || 0 }}</td>
                         <td class="total-cell">{{ formatPrice(order.totalAmount ?? 0) }}</td>
                         <td>
                             <span class="status-badge" [ngClass]="getStatusClass(order.status)">
                                 {{ order.status }}
                             </span>
                         </td>
-                        <td class="text-right">
+                        <td class="text-center">
                             <a [routerLink]="['/orders', order._id]" class="link-btn">View</a>
                         </td>
                     </tr>
