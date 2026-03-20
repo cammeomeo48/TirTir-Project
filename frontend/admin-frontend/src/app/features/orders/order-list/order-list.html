@@ -73,8 +73,13 @@
                             <code class="order-id" [title]="order._id">{{ order._id | slice:0:12 }}…</code>
                         </td>
                         <td class="customer-cell">
-                            <div class="customer-name">{{ order.user?.name || 'N/A' }}</div>
-                            <div class="customer-email">{{ order.user?.email || '' }}</div>
+                            <a [routerLink]="['/customers', order.user?._id]" class="customer-link" *ngIf="order.user?._id; else noUser">
+                                <div class="customer-name">{{ order.user?.name || 'N/A' }}</div>
+                                <div class="customer-email">{{ order.user?.email || '' }}</div>
+                            </a>
+                            <ng-template #noUser>
+                                <div class="customer-name">N/A</div>
+                            </ng-template>
                         </td>
                         <td class="date-cell">{{ formatDate(order.createdAt) }}</td>
                         <td>{{ order.items?.length || 0 }}</td>

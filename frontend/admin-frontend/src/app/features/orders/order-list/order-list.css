@@ -164,12 +164,24 @@
     min-width: 0;
 }
 
+.customer-link {
+    text-decoration: none;
+    display: block;
+    min-width: 0;
+}
+
 .customer-name {
     font-weight: 500;
     color: var(--text-primary, #2d3748);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    transition: color 0.15s;
+}
+
+.customer-link:hover .customer-name {
+    color: var(--secondary, #c0392b);
+    text-decoration: underline;
 }
 
 .customer-email {

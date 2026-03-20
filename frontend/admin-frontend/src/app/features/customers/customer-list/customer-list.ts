@@ -24,6 +24,7 @@ export class CustomerListComponent implements OnInit {
 
     // Filters
     searchQuery = '';
+    /** '' = All, 'active' = !isBlocked, 'blocked' = isBlocked */
     selectedStatus = '';
 
     sortMode: 'newest' | 'none' = 'none';
@@ -37,19 +38,29 @@ export class CustomerListComponent implements OnInit {
         this.route.queryParams.subscribe(params => {
             const sort = params['sort'];
             this.sortMode = sort === 'newest' ? 'newest' : 'none';
-            if (this.customers.length > 0) this.applyFilters();
+            this.loadCustomers();
         });
-        this.loadCustomers();
     }
 
     loadCustomers(): void {
         this.loading = true;
         this.error = null;
 
-        this.customerService.getAllCustomers().subscribe({
+        const params: any = {
+            page: this.currentPage,
+            limit: this.pageSize,
+            role: 'user'
+        };
+
+        if (this.searchQuery.trim()) {
+            params.search = this.searchQuery.trim();
+        }
+
+        this.customerService.getAllCustomers(params).subscribe({
             next: (data: any) => {
-                // Handle array or wrapped response
+                // Backend returns { users, page, pages, total, roleFilter }
                 this.customers = Array.isArray(data) ? data : (data.users || data.data || []);
+                this.totalPages = data.pages || 1;
                 this.applyFilters();
                 this.loading = false;
             },
@@ -67,47 +78,41 @@ export class CustomerListComponent implements OnInit {
         // Sort newest first when deep-linked from General
         if (this.sortMode === 'newest') {
             filtered.sort((a: any, b: any) => {
-                const ta = new Date(a.createdAt || a.Created_At || 0).getTime();
-                const tb = new Date(b.createdAt || b.Created_At || 0).getTime();
+                const ta = new Date(a.createdAt || 0).getTime();
+                const tb = new Date(b.createdAt || 0).getTime();
                 return tb - ta;
             });
         }
 
-        // Search filter
-        if (this.searchQuery.trim()) {
-            const query = this.searchQuery.toLowerCase();
-            filtered = filtered.filter(c =>
-                (c.name || '').toLowerCase().includes(query) ||
-                (c.email || '').toLowerCase().includes(query)
-            );
-        }
-
-        // Status filter
-        if (this.selectedStatus) {
-            filtered = filtered.filter(c => c.status === this.selectedStatus);
+        // Status filter — uses isBlocked (boolean) from backend User model
+        if (this.selectedStatus === 'active') {
+            filtered = filtered.filter(c => !c.isBlocked);
+        } else if (this.selectedStatus === 'blocked') {
+            filtered = filtered.filter(c => c.isBlocked);
         }
 
         this.filteredCustomers = filtered;
-        this.totalPages = Math.ceil(filtered.length / this.pageSize);
-        this.currentPage = 1;
     }
 
     onSearch(): void {
-        this.applyFilters();
+        this.currentPage = 1;
+        this.loadCustomers();
     }
 
-    onStatusChange(): void {
-        this.applyFilters();
-    }
+    onStatusChange(): void { this.applyFilters(); }
 
     get paginatedCustomers(): Customer[] {
-        const startIndex = (this.currentPage - 1) * this.pageSize;
-        return this.filteredCustomers.slice(startIndex, startIndex + this.pageSize);
+        // Since we switched to server-side search/pagination, 
+        // the `customers` array is already the current page.
+        // But the `selectedStatus` filter is still client-side here.
+        // Let's keep it client-side for now as it's simpler.
+        return this.filteredCustomers;
     }
 
     changePage(page: number): void {
         if (page >= 1 && page <= this.totalPages) {
             this.currentPage = page;
+            this.loadCustomers();
         }
     }
 
