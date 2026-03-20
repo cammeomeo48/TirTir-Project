@@ -69,11 +69,11 @@
                             {{ log.action }}
                         </span>
                     </td>
-                    <td class="change-cell" [class.positive]="log.quantity > 0" [class.negative]="log.quantity < 0">
-                        {{ log.quantity > 0 ? '+' : '' }}{{ log.quantity }}
+                    <td class="change-cell" [class.positive]="log.change_type === 'Increase'" [class.negative]="log.change_type === 'Decrease'">
+                        {{ log.change_type === 'Increase' ? '+' : '-' }}{{ log.changeAmount }}
                     </td>
-                    <td>{{ log.newStock }}</td>
-                    <td>{{ log.user?.name || 'System' }}</td>
+                    <td>{{ log.balance_after }}</td>
+                    <td>{{ log.performedBy?.name || 'System' }}</td>
                     <td class="reason-cell" [title]="log.reason">{{ log.reason || '-' }}</td>
                 </tr>
             </tbody>

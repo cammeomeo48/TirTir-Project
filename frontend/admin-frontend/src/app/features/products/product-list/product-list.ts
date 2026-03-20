@@ -43,8 +43,8 @@ export class ProductListComponent implements OnInit {
     categories: string[] = ['All'];
     stockStatuses = [
         { value: '', label: 'All Stock Levels' },
-        { value: 'in-stock', label: 'In Stock (>20)' },
-        { value: 'low-stock', label: 'Low Stock (1-20)' },
+        { value: 'in-stock', label: 'In Stock (≥ 10)' },
+        { value: 'low-stock', label: 'Low Stock (1–9)' },
         { value: 'out-of-stock', label: 'Out of Stock (0)' }
     ];
 
@@ -119,8 +119,8 @@ export class ProductListComponent implements OnInit {
 
         if (this.selectedStockStatus) {
             switch (this.selectedStockStatus) {
-                case 'in-stock': filtered = filtered.filter(p => (p.Stock_Quantity || 0) > 20); break;
-                case 'low-stock': filtered = filtered.filter(p => (p.Stock_Quantity || 0) > 0 && (p.Stock_Quantity || 0) <= 20); break;
+                case 'in-stock': filtered = filtered.filter(p => (p.Stock_Quantity || 0) >= 10); break;
+                case 'low-stock': filtered = filtered.filter(p => (p.Stock_Quantity || 0) > 0 && (p.Stock_Quantity || 0) < 10); break;
                 case 'out-of-stock': filtered = filtered.filter(p => (p.Stock_Quantity || 0) === 0); break;
             }
         }
@@ -194,13 +194,13 @@ export class ProductListComponent implements OnInit {
     // ─── Helpers ─────────────────────────────────────────────────
     getStockStatus(stock: number): string {
         if (stock === 0) return 'out-of-stock';
-        if (stock <= 20) return 'low-stock';
+        if (stock < 10) return 'low-stock';
         return 'in-stock';
     }
 
     getStockLabel(stock: number): string {
         if (stock === 0) return 'Out of Stock';
-        if (stock <= 20) return 'Low Stock';
+        if (stock < 10) return 'Low Stock';
         return 'In Stock';
     }
 

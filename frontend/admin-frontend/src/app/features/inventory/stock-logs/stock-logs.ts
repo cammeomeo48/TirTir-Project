@@ -43,7 +43,7 @@ export class StockLogsComponent implements OnInit {
 
         this.inventoryService.getStockLogs(filters).subscribe({
             next: (data) => {
-                this.logs = Array.isArray(data) ? data : (data.logs || []);
+                this.logs = Array.isArray(data) ? data : [];
                 this.loading = false;
             },
             error: (err) => {
