@@ -328,3 +328,70 @@
     .shade-add-grid { grid-template-columns: 1fr; }
     .shades-grid { grid-template-columns: 1fr; }
 }
+
+/* Sectional Layout Extensions */
+.form-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+.form-section {
+    padding-bottom: 24px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.form-section:last-child {
+    border-bottom: none;
+}
+
+.form-section h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    color: #111;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+}
+
+.form-row-flexible {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 32px;
+}
+
+.description-section {
+    border-bottom: none;
+}
+
+.media-section {
+    border-bottom: none;
+    border-left: 1px solid #f0f0f0;
+    padding-left: 32px;
+}
+
+.image-upload-area.has-error {
+    border-color: #e74c3c;
+    background-color: #fff8f8;
+}
+
+@media (max-width: 992px) {
+    .form-grid-3 {
+        grid-template-columns: 1fr 1fr;
+    }
+    .form-row-flexible {
+        grid-template-columns: 1fr;
+    }
+    .media-section {
+        border-left: none;
+        padding-left: 0;
+        padding-top: 24px;
+        border-top: 1px solid #f0f0f0;
+    }
+}

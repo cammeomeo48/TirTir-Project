@@ -23,7 +23,9 @@ export class ProductFormComponent implements OnInit {
     error: string | null = null;
     imagePreview: string | null = null;
 
-    categories = ['Makeup', 'Skincare', 'Gift Card'];
+    categories = ['Makeup', 'Skincare', 'Gift Card', 'Cushion', 'Tint', 'Serum', 'Lotion', 'Toner', 'Cleanser', 'Sunscreen', 'Mask'];
+    statuses = ['Active', 'Inactive', 'Archived'];
+
 
     get shouldShowVariants(): boolean {
         return this.productForm.get('Category')?.value !== 'Gift Card';
@@ -64,12 +66,13 @@ export class ProductFormComponent implements OnInit {
     initForm(): void {
         this.productForm = this.fb.group({
             Product_Name: ['', [Validators.required, Validators.minLength(3)]],
-            Product_ID: ['', [Validators.required]],
+            Product_ID: ['', [Validators.required, Validators.pattern(/^[A-Z0-0\-_]+$/)]],
             Category: ['Makeup', [Validators.required]],
-            Price: [0, [Validators.required, Validators.min(0)]],
+            Price: [0, [Validators.required, Validators.min(0.01)]],
             Stock_Quantity: [0, [Validators.required, Validators.min(0)]],
+            Status: ['Active', [Validators.required]],
             Description: [''],
-            Thumbnail_Images: ['']
+            Thumbnail_Images: ['', this.isEditMode ? [] : [Validators.required]]
         });
     }
 
@@ -83,7 +86,8 @@ export class ProductFormComponent implements OnInit {
                     Category: product.Category,
                     Price: product.Price,
                     Stock_Quantity: product.Stock_Quantity || product.stock || 0,
-                    Description: product.Description || product.Description_Short || '',
+                    Status: product.Status || 'Active',
+                    Description: product.Full_Description || product.Description_Short || product.Description || '',
                     Thumbnail_Images: typeof product.Thumbnail_Images === 'string' ? product.Thumbnail_Images : (Array.isArray(product.Thumbnail_Images) ? product.Thumbnail_Images[0] : '')
                 });
                 
@@ -223,20 +227,35 @@ export class ProductFormComponent implements OnInit {
     // ─── Submit ────────────────────────────────────────────────
 
     onSubmit(): void {
-        if (this.productForm.invalid) {
-            Object.keys(this.productForm.controls).forEach(key => this.productForm.controls[key].markAsTouched());
+        if (this.productForm.invalid || this.uploadingImage) {
+            Object.keys(this.productForm.controls).forEach(key => {
+                const control = this.productForm.get(key);
+                control?.markAsTouched();
+            });
+            if (this.uploadingImage) this.error = 'Please wait for image upload to complete';
             return;
         }
+
         this.loading = true;
         this.error = null;
-        const productData = { ...this.productForm.value, Name: this.productForm.value.Product_Name };
+
+        const formValues = this.productForm.value;
+        const productData = {
+            ...formValues,
+            Name: formValues.Product_Name,
+            Description_Short: formValues.Description,
+            Full_Description: formValues.Description,
+            Description: formValues.Description
+        };
+
         const save$ = this.isEditMode && this.productId
             ? this.productService.updateProduct(this.productId, productData)
             : this.productService.addProduct(productData);
+
         save$.subscribe({
             next: () => this.router.navigate(['/products']),
             error: (err: any) => {
-                this.error = this.isEditMode ? 'Failed to update product' : 'Failed to create product';
+                this.error = err.error?.message || (this.isEditMode ? 'Failed to update product' : 'Failed to create product');
                 this.loading = false;
             }
         });
@@ -246,9 +265,13 @@ export class ProductFormComponent implements OnInit {
 
     getFieldError(field: string): string {
         const control = this.productForm.get(field);
-        if (control?.hasError('required')) return `${field} is required`;
-        if (control?.hasError('minlength')) return `${field} is too short`;
-        if (control?.hasError('min')) return `${field} must be greater than 0`;
+        if (control?.hasError('required')) return `Field is required`;
+        if (control?.hasError('minlength')) return `Minimum 3 characters required`;
+        if (control?.hasError('min')) {
+            const minAttr = control.getError('min');
+            return `Value must be at least ${minAttr.min}`;
+        }
+        if (control?.hasError('pattern')) return `Invalid format (Letters, numbers, dash, underscore only)`;
         return '';
     }
 }
