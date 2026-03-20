@@ -110,11 +110,11 @@
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="city">City <span class="required">*</span></label>
-                        <select id="city" formControlName="city" class="form-control">
+                        <label for="city">City / Province <span class="required">*</span></label>
+                        <select id="city" formControlName="city" class="form-control" (change)="onProvinceChange($event)">
                             <option value="">Select City</option>
-                            @for (city of cities; track city) {
-                            <option [value]="city">{{ city }}</option>
+                            @for (province of provinces; track province.id) {
+                            <option [value]="province.id + '|' + province.full_name">{{ province.full_name }}</option>
                             }
                         </select>
                         @if (addressForm.get('city')?.invalid && addressForm.get('city')?.touched) {
@@ -124,10 +124,10 @@
 
                     <div class="form-group">
                         <label for="district">District <span class="required">*</span></label>
-                        <select id="district" formControlName="district" class="form-control">
+                        <select id="district" formControlName="district" class="form-control" (change)="onDistrictChange($event)">
                             <option value="">Select District</option>
-                            @for (district of districts; track district) {
-                            <option [value]="district">{{ district }}</option>
+                            @for (district of districts; track district.id) {
+                            <option [value]="district.id + '|' + district.full_name">{{ district.full_name }}</option>
                             }
                         </select>
                         @if (addressForm.get('district')?.invalid && addressForm.get('district')?.touched) {
@@ -140,8 +140,8 @@
                     <label for="ward">Ward <span class="required">*</span></label>
                     <select id="ward" formControlName="ward" class="form-control">
                         <option value="">Select Ward</option>
-                        @for (ward of wards; track ward) {
-                        <option [value]="ward">{{ ward }}</option>
+                        @for (ward of wards; track ward.id) {
+                        <option [value]="ward.id + '|' + ward.full_name">{{ ward.full_name }}</option>
                         }
                     </select>
                     @if (addressForm.get('ward')?.invalid && addressForm.get('ward')?.touched) {

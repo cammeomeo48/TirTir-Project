@@ -115,7 +115,7 @@ export class ChatService {
                 // Extract just the messages array for consumers
                 catchError(() => of({ success: false, data: [] as ChatMessage[] })),
             ).pipe(
-                tap(() => {}),
+                tap(() => { }),
                 catchError(() => of([] as ChatMessage[]))
             ) as Observable<ChatMessage[]>;
         } else {

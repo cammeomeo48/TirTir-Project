@@ -63,7 +63,7 @@ exports.createOrder = async (req, res) => {
 // ─── Shared order-creation logic (works with or without session) ─────────────
 async function _createOrderLogic(req, session) {
     const userId = req.user.id;
-    const { shippingAddress, paymentMethod } = req.body;
+    const { shippingAddress, paymentMethod, saveToAddressBook } = req.body;
 
     const cartQuery = Cart.findOne({ user: userId }).populate('items.product');
     const cart = session ? await cartQuery.session(session) : await cartQuery;
@@ -138,6 +138,24 @@ async function _createOrderLogic(req, session) {
     const cartDeleteQuery = Cart.findOneAndDelete({ user: userId });
     session ? await cartDeleteQuery.session(session) : await cartDeleteQuery;
 
+    if (saveToAddressBook && shippingAddress) {
+        const User = require('../models/user.model');
+        const updateAddressQuery = User.findByIdAndUpdate(userId, {
+            $push: {
+                addresses: {
+                    fullName: shippingAddress.fullName,
+                    phone: shippingAddress.phone,
+                    street: shippingAddress.address,
+                    city: shippingAddress.city,
+                    district: shippingAddress.district,
+                    ward: shippingAddress.ward,
+                    isDefault: false
+                }
+            }
+        });
+        session ? await updateAddressQuery.session(session) : await updateAddressQuery;
+    }
+
     // ── Real-time: notify admins of new order ─────────────────────────────────
     emitToAdmins('new_order', {
         type: 'new_order',
@@ -170,14 +188,16 @@ exports.getMyOrders = async (req, res) => {
 // 3. CHI TIẾT ĐƠN HÀNG
 exports.getOrderById = async (req, res) => {
     try {
-        const order = await Order.findById(req.params.id).populate('user', 'name email');
+        const order = await Order.findById(req.params.id)
+            .populate('user', 'name email');
 
         if (!order) {
             return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
         }
 
         // Security: Check if the order belongs to the requesting user (unless admin)
-        if (order.user._id.toString() !== req.user.id && req.user.role !== 'admin') {
+        const orderUserId = order.user ? (order.user._id || order.user).toString() : null;
+        if (orderUserId !== req.user.id && req.user.role !== 'admin') {
             return res.status(403).json({ message: "Bạn không có quyền xem đơn hàng này" });
         }
 
@@ -356,7 +376,7 @@ exports.updateOrderStatus = async (req, res) => {
                 'order',
                 notifMap[status].title,
                 notifMap[status].message,
-                `/account/orders`
+                `/account/orders/${order._id}`
             );
         }
         // ──────────────────────────────────────────────────────────────────────

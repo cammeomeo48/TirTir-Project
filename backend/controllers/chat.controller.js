@@ -51,7 +51,7 @@ exports.chatWithBot = async (req, res) => {
                 session_id: sessionId,
             },
             {
-                timeout: 5000,
+                timeout: 30000,
                 headers: {
                     'Content-Type': 'application/json',
                     ...(AI_SERVICE_API_KEY && { 'X-API-Key': AI_SERVICE_API_KEY })
@@ -94,11 +94,11 @@ exports.chatWithBot = async (req, res) => {
     } catch (error) {
         // ── Detailed diagnostics — always log so nothing is swallowed ──────────
         console.error('[CHAT] AI SERVICE ERROR DETAILS:', {
-            code:        error.code,
-            message:     error.message,
-            targetUrl:   `${CHATBOT_SERVICE_URL}/chat`,
-            httpStatus:  error.response?.status,
-            httpBody:    error.response?.data,
+            code: error.code,
+            message: error.message,
+            targetUrl: `${CHATBOT_SERVICE_URL}/chat`,
+            httpStatus: error.response?.status,
+            httpBody: error.response?.data,
         });
 
         // Network error → chatbot service not running

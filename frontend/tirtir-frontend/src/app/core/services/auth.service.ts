@@ -47,10 +47,15 @@ export class AuthService {
                     this.currentUserSubject.next(user);
                     this.isAuthenticatedSignal.set(true);
                 },
-                error: () => {
-                    // Token is invalid, clear it
-                    this.clearToken();
-                    this.isAuthenticatedSignal.set(false);
+                error: (err) => {
+                    // Only clear token if it's explicitly an auth invalidation error (e.g. expired)
+                    // and not just a temporary 401/network glitch or backend restarting.
+                    if (err && err.status === 401) {
+                        this.clearToken();
+                        this.isAuthenticatedSignal.set(false);
+                    } else if (err && err.status !== 500) {
+                        this.isAuthenticatedSignal.set(false);
+                    }
                 },
             });
         }

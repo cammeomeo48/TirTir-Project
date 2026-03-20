@@ -10,12 +10,29 @@
                 <h2 class="section-heading">SHIPPING INFORMATION</h2>
                 <form [formGroup]="checkoutForm" (ngSubmit)="onSubmit()" class="premium-form">
                     <div class="form-grid">
+
+                        <div class="form-field full" *ngIf="savedAddresses.length > 0">
+                            <label>SAVED ADDRESSES</label>
+                            <select class="form-select address-select field-input" [ngModel]="selectedAddressId" (ngModelChange)="onSelectAddress($event)" [ngModelOptions]="{standalone: true}">
+                                <option value="new">+ Enter a new address</option>
+                                <option *ngFor="let addr of savedAddresses" [value]="addr._id">
+                                    {{ addr.fullName }} ({{ addr.phone }}) - {{ addr.street }}, {{ addr.city }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="form-field full" *ngIf="selectedAddressId === 'new'">
+                            <label class="checkbox-label" style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 0.9rem; margin-bottom: 15px;">
+                                <input type="checkbox" formControlName="saveToAddressBook" style="width: auto; margin: 0;" />
+                                <span>Save this address to my Address Book for future use</span>
+                            </label>
+                        </div>
+
                         <div class="form-field full">
                             <label>FULL NAME</label>
                             <input type="text" formControlName="fullName" placeholder="Legal full name"
                                 class="field-input" [class.error]="getFieldError('fullName')" />
-                            <span *ngIf="getFieldError('fullName')" class="field-error">{{ getFieldError('fullName')
-                                }}</span>
+                            <span *ngIf="getFieldError('fullName')" class="field-error">{{ getFieldError('fullName') }}</span>
                         </div>
 
                         <div class="form-field">
@@ -26,30 +43,43 @@
                         </div>
 
                         <div class="form-field">
-                            <label>CITY / REGION</label>
-                            <input type="text" formControlName="city" placeholder="Your city" class="field-input"
-                                [class.error]="getFieldError('city')" />
+                            <label>CITY / PROVINCE</label>
+                            <select id="city" formControlName="city" class="form-select field-input" [class.error]="getFieldError('city')" (change)="onProvinceChange($event)">
+                                <option value="">Select City / Province</option>
+                                <option *ngFor="let province of provinces" [value]="province.id + '|' + province.full_name">
+                                    {{ province.full_name }}
+                                </option>
+                            </select>
                             <span *ngIf="getFieldError('city')" class="field-error">{{ getFieldError('city') }}</span>
                         </div>
 
                         <div class="form-field full">
-                            <label>SHIPPING ADDRESS</label>
+                            <label>SHIPPING ADDRESS (STREET)</label>
                             <input type="text" formControlName="address" placeholder="Street, apartment, etc."
                                 class="field-input" [class.error]="getFieldError('address')" />
-                            <span *ngIf="getFieldError('address')" class="field-error">{{ getFieldError('address')
-                                }}</span>
+                            <span *ngIf="getFieldError('address')" class="field-error">{{ getFieldError('address') }}</span>
                         </div>
 
                         <div class="form-field">
-                            <label>WARD / COMMUNE <span class="optional">(optional)</span></label>
-                            <input type="text" formControlName="ward" placeholder="e.g. Phường Bến Nghé"
-                                class="field-input" />
+                            <label>DISTRICT</label>
+                            <select id="district" formControlName="district" class="form-select field-input" [class.error]="getFieldError('district')" (change)="onDistrictChange($event)">
+                                <option value="">Select District</option>
+                                <option *ngFor="let district of districts" [value]="district.id + '|' + district.full_name">
+                                    {{ district.full_name }}
+                                </option>
+                            </select>
+                            <span *ngIf="getFieldError('district')" class="field-error">{{ getFieldError('district') }}</span>
                         </div>
 
                         <div class="form-field">
-                            <label>DISTRICT <span class="optional">(optional)</span></label>
-                            <input type="text" formControlName="district" placeholder="e.g. Quận 1"
-                                class="field-input" />
+                            <label>WARD / COMMUNE</label>
+                            <select id="ward" formControlName="ward" class="form-select field-input" [class.error]="getFieldError('ward')">
+                                <option value="">Select Ward</option>
+                                <option *ngFor="let ward of wards" [value]="ward.id + '|' + ward.full_name">
+                                    {{ ward.full_name }}
+                                </option>
+                            </select>
+                            <span *ngIf="getFieldError('ward')" class="field-error">{{ getFieldError('ward') }}</span>
                         </div>
 
                         <div class="form-field full">

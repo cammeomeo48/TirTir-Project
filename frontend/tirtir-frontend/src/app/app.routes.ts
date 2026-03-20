@@ -25,6 +25,8 @@ export const routes: Routes = [
     // Cart & Checkout (protected)
     { path: 'cart', component: CartComponent, canActivate: [authGuard] },
     { path: 'checkout', component: CheckoutComponent, canActivate: [authGuard] },
+    { path: 'checkout/success', loadComponent: () => import('./features/checkout/success/success').then(m => m.OrderSuccessComponent), canActivate: [authGuard] },
+    { path: 'checkout/failure', loadComponent: () => import('./features/checkout/failure/failure').then(m => m.OrderFailureComponent), canActivate: [authGuard] },
     { path: 'order-confirmation/:id', component: OrderConfirmationComponent, canActivate: [authGuard] },
     // Account (protected) - Profile with nested routes
     {
@@ -49,6 +51,10 @@ export const routes: Routes = [
             {
                 path: 'orders',
                 component: OrderHistoryComponent
+            },
+            {
+                path: 'orders/:id',
+                loadComponent: () => import('./features/account/order-detail/order-detail.component').then(m => m.OrderDetailComponent)
             },
             {
                 path: 'notifications',

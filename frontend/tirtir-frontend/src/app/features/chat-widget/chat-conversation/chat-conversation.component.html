@@ -22,7 +22,7 @@
             </div>
             <div class="bubble">
                 <p>{{ msg.text }}</p>
-                
+
                 <!-- Product Recommendation Card -->
                 <ng-container *ngIf="msg.productData">
                     <div class="product-card">
@@ -31,11 +31,16 @@
                             <h4>{{ msg.productData.name }}</h4>
                             <p class="price">₫{{ (msg.productData.price || 0) | number:'1.0-0' }}</p>
                             <p class="description">{{ msg.productData.desc }}</p>
-                            <div class="product-actions" style="display: flex; gap: 8px; margin-top: 8px; align-items: center;">
-                                <a [href]="'/products/' + msg.productData.slug" class="view-product-btn" style="flex: 1; text-align: center;">
+                            <div class="product-actions"
+                                style="display: flex; gap: 8px; margin-top: 8px; align-items: center;">
+                                <a [href]="'/products/' + msg.productData.slug" class="view-product-btn"
+                                    style="flex: 1; text-align: center;">
                                     Xem chi tiết
                                 </a>
-                                <button class="add-to-cart-btn" (click)="addToCart(msg.productData)" style="flex: 1; background: #000; color: #fff; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: background 0.3s;" onmouseover="this.style.background='#333'" onmouseout="this.style.background='#000'">
+                                <button class="add-to-cart-btn" (click)="addToCart(msg.productData)"
+                                    style="flex: 1; background: #000; color: #fff; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: background 0.3s;"
+                                    onmouseover="this.style.background='#333'"
+                                    onmouseout="this.style.background='#000'">
                                     <i class="fas fa-cart-plus"></i> Thêm vào giỏ
                                 </button>
                             </div>
@@ -61,7 +66,8 @@
 
     <div class="input-area">
         <button class="attach-btn"><i class="fas fa-plus"></i></button>
-        <input type="text" [placeholder]="langService.t('conversation.inputPlaceholder')" [(ngModel)]="newMessage" (keyup.enter)="sendMessage()">
+        <input type="text" [placeholder]="langService.t('conversation.inputPlaceholder')" [(ngModel)]="newMessage"
+            (keyup.enter)="sendMessage()">
         <button class="send-btn" [disabled]="!newMessage.trim()" (click)="sendMessage()">
             <i class="fas fa-paper-plane"></i>
         </button>

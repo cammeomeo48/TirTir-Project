@@ -32,7 +32,7 @@ const OrderSchema = new mongoose.Schema({
     },
     paymentMethod: {
         type: String,
-        enum: ['MOMO', 'VNPAY'],
+        enum: ['MOMO', 'VNPAY', 'CARD'],
         required: true
     },
     status: {
@@ -41,6 +41,14 @@ const OrderSchema = new mongoose.Schema({
         default: ORDER_STATUS.PENDING
     },
     // ─── GHN Shipping Integration ────────────────────────────────────────────
+    trackingNumber: {
+        type: String,
+        default: null
+    },
+    expectedDeliveryDate: {
+        type: Date,
+        default: null
+    },
     ghnOrderCode: {
         type: String,
         default: null  // Populated when Admin marks order as Shipped

@@ -34,7 +34,8 @@ export interface Order {
 
 export interface CreateOrderRequest {
     shippingAddress: ShippingAddress;
-    paymentMethod: PaymentMethod;
+    paymentMethod: PaymentMethod | string;
+    saveToAddressBook?: boolean;
 }
 
 export interface CreateOrderResponse {

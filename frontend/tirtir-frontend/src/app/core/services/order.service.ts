@@ -48,6 +48,9 @@ export class OrderService {
 
         if (error.error?.message) {
             errorMessage = error.error.message;
+            if (error.error.errors && Array.isArray(error.error.errors)) {
+                errorMessage += ': ' + error.error.errors.map((e: any) => e.msg).join(', ');
+            }
         } else if (error.message) {
             errorMessage = error.message;
         }

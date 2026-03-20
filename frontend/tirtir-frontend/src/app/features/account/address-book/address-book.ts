@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { UserService } from '../../../core/services/user.service';
 import { Address } from '../../../core/models';
+import { LocationService, LocationItem } from '../../../core/services/location.service';
 
 @Component({
     selector: 'app-address-book',
@@ -14,6 +15,7 @@ import { Address } from '../../../core/models';
 export class AddressBookComponent implements OnInit {
     private userService = inject(UserService);
     private fb = inject(FormBuilder);
+    private locationService = inject(LocationService);
 
     addresses: Address[] = [];
     loading = false;
@@ -26,34 +28,53 @@ export class AddressBookComponent implements OnInit {
     editingAddressId: string | null = null;
     addressForm!: FormGroup;
 
-    // Vietnamese address data (simplified for MVP)
-    cities = [
-        'TP. Hồ Chí Minh',
-        'Hà Nội',
-        'Đà Nẵng',
-        'Cần Thơ',
-        'Hải Phòng',
-        'Biên Hòa',
-        'Nha Trang',
-        'Huế'
-    ];
-
-    districts = [
-        'Quận 1', 'Quận 2', 'Quận 3', 'Quận 4', 'Quận 5',
-        'Quận 6', 'Quận 7', 'Quận 8', 'Quận 9', 'Quận 10',
-        'Quận 11', 'Quận 12', 'Quận Tân Bình', 'Quận Bình Thạnh',
-        'Quận Phú Nhuận', 'Quận Thủ Đức', 'Quận Gò Vấp'
-    ];
-
-    wards = [
-        'Phường 1', 'Phường 2', 'Phường 3', 'Phường 4',
-        'Phường 5', 'Phường 6', 'Phường 7', 'Phường 8',
-        'Phường Bến Nghé', 'Phường Bến Thành', 'Phường Đa Kao'
-    ];
+    // Dynamic location data from API
+    provinces: LocationItem[] = [];
+    districts: LocationItem[] = [];
+    wards: LocationItem[] = [];
 
     ngOnInit(): void {
         this.initForm();
         this.loadAddresses();
+        this.loadProvinces();
+    }
+
+    loadProvinces(): void {
+        this.locationService.getProvinces().subscribe(data => {
+            this.provinces = data;
+        });
+    }
+
+    onProvinceChange(event: Event): void {
+        const select = event.target as HTMLSelectElement;
+        const val = select.value;
+        if (!val) {
+            this.districts = [];
+            this.wards = [];
+            this.addressForm.patchValue({ district: '', ward: '' });
+            return;
+        }
+        const provinceId = val.split('|')[0];
+        this.locationService.getDistricts(provinceId).subscribe(data => {
+            this.districts = data;
+            this.wards = [];
+            this.addressForm.patchValue({ district: '', ward: '' });
+        });
+    }
+
+    onDistrictChange(event: Event): void {
+        const select = event.target as HTMLSelectElement;
+        const val = select.value;
+        if (!val) {
+            this.wards = [];
+            this.addressForm.patchValue({ ward: '' });
+            return;
+        }
+        const districtId = val.split('|')[0];
+        this.locationService.getWards(districtId).subscribe(data => {
+            this.wards = data;
+            this.addressForm.patchValue({ ward: '' });
+        });
     }
 
     initForm(): void {
@@ -97,7 +118,34 @@ export class AddressBookComponent implements OnInit {
         this.showForm = true;
         this.editMode = true;
         this.editingAddressId = address._id || null;
-        this.addressForm.patchValue(address);
+        
+        // Find the province to extract ID so we can fetch districts
+        const p = this.provinces.find(prov => prov.full_name === address.city || prov.name === address.city);
+        
+        const initialPatch = {
+            ...address,
+            city: p ? `${p.id}|${p.full_name}` : '',
+            district: '',
+            ward: ''
+        };
+        this.addressForm.patchValue(initialPatch);
+
+        if (p) {
+            this.locationService.getDistricts(p.id).subscribe(dData => {
+                this.districts = dData;
+                const d = this.districts.find(dist => dist.full_name === address.district || dist.name === address.district);
+                if (d) {
+                    this.addressForm.patchValue({ district: `${d.id}|${d.full_name}` });
+                    this.locationService.getWards(d.id).subscribe(wData => {
+                        this.wards = wData;
+                        const w = this.wards.find(ward => ward.full_name === address.ward || ward.name === address.ward);
+                        if (w) {
+                            this.addressForm.patchValue({ ward: `${w.id}|${w.full_name}` });
+                        }
+                    });
+                }
+            });
+        }
     }
 
     closeForm(): void {
@@ -105,6 +153,8 @@ export class AddressBookComponent implements OnInit {
         this.editMode = false;
         this.editingAddressId = null;
         this.addressForm.reset();
+        this.districts = [];
+        this.wards = [];
     }
 
     onSubmit(): void {
@@ -117,7 +167,18 @@ export class AddressBookComponent implements OnInit {
         this.successMessage = '';
         this.errorMessage = '';
 
-        const formData = this.addressForm.value;
+        const rawVal = this.addressForm.value;
+        const cityParts = (rawVal.city || '').split('|');
+        const districtParts = (rawVal.district || '').split('|');
+        const wardParts = (rawVal.ward || '').split('|');
+
+        // Extract just the full string names to send to DB
+        const formData = {
+            ...rawVal,
+            city: cityParts.length > 1 ? cityParts[1] : cityParts[0],
+            district: districtParts.length > 1 ? districtParts[1] : districtParts[0],
+            ward: wardParts.length > 1 ? wardParts[1] : wardParts[0]
+        };
 
         if (this.editMode && this.editingAddressId) {
             // Update existing address

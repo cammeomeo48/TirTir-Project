@@ -37,8 +37,8 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
     .shop-btn{display:inline-block;padding:16px 32px;background:#111;color:#fff;text-decoration:none;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;transition:background 0.2s}
     .shop-btn:hover{background:#333}
     .orders-list{display:grid;gap:20px}
-    .order-card{background:#fff;padding:30px;border:1px solid #e0e0e0;cursor:pointer;transition:all 0.3s}
-    .order-card:hover{border-color:#111;box-shadow:0 10px 30px rgba(0,0,0,0.05)}
+    .order-card{background:#fff;padding:30px;border:1px solid #e0e0e0;cursor:pointer;transition:all 0.3s ease}
+    .order-card:hover{border-color:#111;transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,0,0,0.06)}
     .order-header{display:flex;justify-content:space-between;margin-bottom:15px}
     .order-id{font-size:14px;font-weight:800;color:#111;text-transform:uppercase}
     .order-status{padding:4px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px}
