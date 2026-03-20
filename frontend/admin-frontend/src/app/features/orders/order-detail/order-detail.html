@@ -1,91 +1,133 @@
 <div class="order-detail-container">
+    <!-- Loading -->
     <div *ngIf="loading" class="loading-state">
         <div class="spinner"></div>
         <p>Loading order details...</p>
     </div>
 
+    <!-- Error -->
     <div *ngIf="error && !loading" class="error-state">
         <p>{{ error }}</p>
-        <a [routerLink]="['/orders']" class="back-btn">Back to Orders</a>
+        <a [routerLink]="['/orders']" class="btn btn-primary">Back to Orders</a>
     </div>
 
+    <!-- Content -->
     <div *ngIf="order && !loading" class="order-content">
-        <div class="page-header">
+
+        <!-- Page Header (hidden on print) -->
+        <div class="page-header no-print">
             <div class="header-left">
                 <a [routerLink]="['/orders']" class="back-link">← Back to Orders</a>
-                <h1>Order {{ order._id }}</h1>
-                <p>Placed on {{ formatDate(order.createdAt) }}</p>
+                <div class="header-title-row">
+                    <h1>Order <span class="order-id-mono">{{ order._id | slice:0:16 }}…</span></h1>
+                    <span class="status-badge" [ngClass]="getStatusClass(order.status)">{{ order.status }}</span>
+                </div>
+                <p class="header-sub">Placed on {{ formatDate(order.createdAt) }}</p>
             </div>
-            <button (click)="printInvoice()" class="btn btn-outline">
-                Print Invoice
-            </button>
+            <button (click)="printInvoice()" class="btn btn-outline">🖨 Print Invoice</button>
         </div>
 
+        <!-- Print Header (visible only on print) -->
+        <div class="print-header print-only">
+            <div class="print-store-name">TirTir Admin — Order Invoice</div>
+            <div class="print-order-id">Order ID: {{ order._id }}</div>
+            <div class="print-date">Date: {{ formatDate(order.createdAt) }}</div>
+            <div class="print-status">Status: {{ order.status }} &nbsp;|&nbsp; Payment: {{ order.paymentMethod }}</div>
+        </div>
+
+        <!-- Info Cards Grid -->
         <div class="order-grid">
-            <!-- Order Summary Card -->
+
+            <!-- Order Summary -->
             <div class="info-card">
-                <h2>Order Summary</h2>
+                <div class="card-header"><h2>Order Summary</h2></div>
                 <div class="info-row">
-                    <span class="label">Order ID:</span>
-                    <span class="value">{{ order._id }}</span>
+                    <span class="label">Order ID</span>
+                    <span class="value mono">{{ order._id }}</span>
                 </div>
                 <div class="info-row">
-                    <span class="label">Status:</span>
-                    <span class="status-badge" [ngClass]="getStatusClass(order.status)">
-                        {{ order.status }}
+                    <span class="label">Status</span>
+                    <span class="status-badge" [ngClass]="getStatusClass(order.status)">{{ order.status }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Payment Method</span>
+                    <span class="value">{{ order.paymentMethod || 'Not specified' }}</span>
+                </div>
+                <div class="info-row" *ngIf="order.paymentStatus">
+                    <span class="label">Payment Status</span>
+                    <span class="status-badge"
+                        [class.payment-paid]="order.paymentStatus === 'Paid'"
+                        [class.payment-pending]="order.paymentStatus !== 'Paid'">
+                        {{ order.paymentStatus }}
                     </span>
                 </div>
                 <div class="info-row">
-                    <span class="label">Payment Method:</span>
-                    <span class="value">{{ order.paymentMethod || 'Not specified' }}</span>
-                </div>
-                <div class="info-row">
-                    <span class="label">Order Date:</span>
+                    <span class="label">Order Date</span>
                     <span class="value">{{ formatDate(order.createdAt) }}</span>
+                </div>
+                <div class="info-row" *ngIf="order.ghnOrderCode">
+                    <span class="label">GHN Tracking</span>
+                    <span class="value mono">{{ order.ghnOrderCode }}</span>
                 </div>
             </div>
 
             <!-- Customer Information -->
             <div class="info-card">
-                <h2>Customer Information</h2>
+                <div class="card-header"><h2>Customer</h2></div>
                 <div class="info-row">
-                    <span class="label">Name:</span>
+                    <span class="label">Name</span>
                     <span class="value">{{ order.user?.name || 'N/A' }}</span>
                 </div>
                 <div class="info-row">
-                    <span class="label">Email:</span>
+                    <span class="label">Email</span>
                     <span class="value">{{ order.user?.email || 'N/A' }}</span>
                 </div>
             </div>
 
             <!-- Shipping Address -->
             <div class="info-card">
-                <h2>Shipping Address</h2>
-                <div class="address" *ngIf="order.shippingAddress">
-                    <p><strong>{{ order.shippingAddress.fullName }}</strong></p>
-                    <p>{{ order.shippingAddress.address }}</p>
-                    <p>{{ order.shippingAddress.city }}</p>
-                    <p>{{ order.shippingAddress.phone }}</p>
-                </div>
-                <p *ngIf="!order.shippingAddress" class="no-data">No shipping address provided</p>
+                <div class="card-header"><h2>Shipping Address</h2></div>
+                <ng-container *ngIf="order.shippingAddress; else noAddress">
+                    <div class="info-row">
+                        <span class="label">Recipient</span>
+                        <span class="value">{{ order.shippingAddress.fullName }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Phone</span>
+                        <span class="value">{{ order.shippingAddress.phone }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Address</span>
+                        <span class="value">{{ order.shippingAddress.address }}</span>
+                    </div>
+                    <div class="info-row" *ngIf="order.shippingAddress.district">
+                        <span class="label">District</span>
+                        <span class="value">{{ order.shippingAddress.district }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">City</span>
+                        <span class="value">{{ order.shippingAddress.city }}</span>
+                    </div>
+                </ng-container>
+                <ng-template #noAddress>
+                    <p class="no-data">No shipping address provided</p>
+                </ng-template>
             </div>
 
-            <!-- Update Status -->
-            <div class="info-card">
-                <h2>Update Status</h2>
+            <!-- Update Status (no-print) -->
+            <div class="info-card no-print">
+                <div class="card-header"><h2>Update Status</h2></div>
                 <div class="status-update-form">
-                    <select [(ngModel)]="selectedStatus" class="status-select">
-                        <option *ngFor="let status of statusOptions" [value]="status">
-                            {{ status }}
-                        </option>
+                    <select [(ngModel)]="selectedStatus" class="form-control">
+                        <option *ngFor="let status of statusOptions" [value]="status">{{ status }}</option>
                     </select>
-                    <textarea [(ngModel)]="statusNote" placeholder="Add a note (optional)" class="status-note"
-                        rows="3"></textarea>
-                    <button (click)="updateStatus()" [disabled]="updating || selectedStatus === order.status"
-                        class="update-btn">
+                    <textarea [(ngModel)]="statusNote" placeholder="Add a note (optional)"
+                        class="form-control status-note" rows="3"></textarea>
+                    <button (click)="updateStatus()"
+                        [disabled]="updating || selectedStatus === order.status"
+                        class="btn btn-primary update-btn">
                         {{ updating ? 'Updating...' : 'Update Status' }}
                     </button>
-                    <!-- Inline feedback -->
                     <div *ngIf="updateSuccess" class="update-success">✅ Status updated successfully.</div>
                     <div *ngIf="updateError" class="update-error">{{ updateError }}</div>
                 </div>
@@ -93,53 +135,65 @@
         </div>
 
         <!-- Order Items -->
-        <div class="items-section">
-            <h2>Order Items</h2>
+        <div class="section-card items-section">
+            <div class="card-header"><h2>Order Items</h2></div>
             <div class="items-table-container">
                 <table class="items-table">
                     <thead>
                         <tr>
                             <th>Product</th>
                             <th>SKU</th>
-                            <th class="text-center">Quantity</th>
-                            <th class="text-right">Price</th>
+                            <th class="text-center">Qty</th>
+                            <th class="text-right">Unit Price</th>
                             <th class="text-right">Subtotal</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr *ngFor="let item of order.items">
-                            <td>
-                                <div class="product-info">
-                                    <img *ngIf="$any(item).image"
-                                        [src]="$any(item).image" [alt]="$any(item).name"
-                                        class="product-image" />
-                                    <div class="product-details">
-                                        <p class="product-name">{{ $any(item).name || 'Unknown Product' }}</p>
-                                        <p class="product-shade" *ngIf="$any(item).shade" style="font-size:0.8rem;color:#888">Shade: {{ $any(item).shade }}</p>
-                                    </div>
+                            <td class="product-cell">
+                                <img *ngIf="$any(item).image"
+                                    [src]="resolveImage($any(item).image)"
+                                    [alt]="$any(item).name"
+                                    class="product-thumb"
+                                    onerror="this.style.display='none'" />
+                                <div class="product-details">
+                                    <span class="product-name">{{ $any(item).name || 'Unknown Product' }}</span>
+                                    <span class="product-shade" *ngIf="$any(item).shade">
+                                        Shade: {{ $any(item).shade }}
+                                    </span>
                                 </div>
                             </td>
-                            <td>{{ $any(item).product || 'N/A' }}</td>
+                            <td class="mono sku-cell">{{ $any(item).product || '—' }}</td>
                             <td class="text-center">{{ $any(item).quantity || item.Quantity }}</td>
-                            <td class="text-right">{{ formatPrice($any(item).price || item.Price) }}</td>
-                            <td class="text-right">{{ formatPrice(($any(item).price || item.Price || 0) * ($any(item).quantity || item.Quantity || 0)) }}</td>
+                            <td class="text-right tabular">{{ formatPrice($any(item).price || item.Price) }}</td>
+                            <td class="text-right tabular">
+                                {{ formatPrice(($any(item).price || item.Price || 0) * ($any(item).quantity || item.Quantity || 0)) }}
+                            </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
 
-            <!-- Order Total -->
-            <div class="order-total">
-                <div class="total-row">
-                    <span>Total:</span>
-                    <span class="total-amount">{{ formatPrice(order.totalAmount ?? order.Total_Price ?? 0) }}</span>
+            <!-- Payment Summary -->
+            <div class="payment-summary">
+                <div class="summary-row">
+                    <span class="summary-label">Items Subtotal</span>
+                    <span class="summary-value tabular">{{ formatPrice(itemsSubtotal) }}</span>
+                </div>
+                <div class="summary-divider"></div>
+                <div class="summary-row total-row">
+                    <span class="summary-label">Order Total</span>
+                    <span class="summary-value total-amount tabular">
+                        {{ formatPrice(order.totalAmount ?? order.Total_Price ?? 0) }}
+                    </span>
                 </div>
             </div>
         </div>
 
-        <!-- Status Timeline -->
-        <div class="timeline-section" *ngIf="order.status_history && order.status_history.length > 0">
-            <h2>Order Timeline</h2>
+        <!-- Status Timeline (shown only if data exists) -->
+        <div class="section-card timeline-section"
+            *ngIf="order.status_history && order.status_history.length > 0">
+            <div class="card-header"><h2>Order Timeline</h2></div>
             <div class="timeline">
                 <div class="timeline-item" *ngFor="let history of order.status_history">
                     <div class="timeline-marker" [ngClass]="getStatusClass(history.status)"></div>
@@ -151,5 +205,6 @@
                 </div>
             </div>
         </div>
-    </div>
+
+    </div><!-- /order-content -->
 </div>

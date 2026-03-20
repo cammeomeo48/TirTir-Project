@@ -1,12 +1,13 @@
 <div class="order-list-container">
     <div class="page-header">
-        <div class="header-left">
+        <div class="header-content">
             <h1>Orders</h1>
-            <p>Manage and track customer orders</p>
+            <p class="subtitle">Manage and track customer orders</p>
         </div>
     </div>
 
-    <div class="filters-section">
+    <!-- Filters Bar -->
+    <div class="filters-bar">
         <div class="search-box">
             <input type="text" [(ngModel)]="searchQuery" (input)="onSearchChange()"
                 placeholder="Search by order ID or customer..." class="search-input" />
@@ -25,70 +26,84 @@
             <option value="90days">Last 90 Days</option>
         </select>
 
-        <button (click)="exportData()" class="btn-export">
-            Export to Excel
-        </button>
+        <span class="count-info" *ngIf="!loading">{{ filteredOrders.length }} orders</span>
+
+        <button (click)="exportData()" class="btn-export">Export to Excel</button>
     </div>
 
+    <!-- Loading state -->
     <div *ngIf="loading" class="loading-state">
         <div class="spinner"></div>
         <p>Loading orders...</p>
     </div>
 
+    <!-- Error state -->
     <div *ngIf="error && !loading" class="error-state">
         <p>{{ error }}</p>
         <button (click)="loadOrders()" class="retry-btn">Retry</button>
     </div>
 
-    <div *ngIf="!loading && !error" class="orders-table-container">
-        <table class="orders-table">
-            <thead>
-                <tr>
-                    <th>Order ID</th>
-                    <th>Customer</th>
-                    <th>Date</th>
-                    <th>Items</th>
-                    <th>Total</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr *ngFor="let order of getPaginatedOrders()" class="order-row">
-                    <td class="order-id">{{ order._id }}</td>
-                    <td class="customer-info">
-                        <div class="customer-name">{{ order.user?.name || 'N/A' }}</div>
-                        <div class="customer-email">{{ order.user?.email || 'N/A' }}</div>
-                    </td>
-                    <td>{{ formatDate(order.createdAt) }}</td>
-                    <td class="text-center">{{ order.items?.length || 0 }}</td>
-                    <td class="price">{{ formatPrice(order.totalAmount ?? 0) }}</td>
-                    <td>
-                        <span class="status-badge" [ngClass]="getStatusClass(order.status)">
-                            {{ order.status }}
-                        </span>
-                    </td>
-                    <td class="actions">
-                        <a [routerLink]="['/orders', order._id]" class="btn btn-sm btn-primary" title="View Details">
-                            View
-                        </a>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+    <!-- Orders table -->
+    <div *ngIf="!loading && !error" class="table-card">
+        <div class="table-container">
+            <table class="orders-table">
+                <colgroup>
+                    <col style="width: 200px">
+                    <col>
+                    <col style="width: 130px">
+                    <col style="width: 70px">
+                    <col style="width: 110px">
+                    <col style="width: 130px">
+                    <col style="width: 80px">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Customer</th>
+                        <th>Date</th>
+                        <th class="text-center">Items</th>
+                        <th class="text-right">Total</th>
+                        <th>Status</th>
+                        <th class="text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let order of getPaginatedOrders()" class="order-row">
+                        <td class="order-id-cell">
+                            <code class="order-id" [title]="order._id">{{ order._id | slice:0:12 }}…</code>
+                        </td>
+                        <td class="customer-cell">
+                            <div class="customer-name">{{ order.user?.name || 'N/A' }}</div>
+                            <div class="customer-email">{{ order.user?.email || '' }}</div>
+                        </td>
+                        <td class="date-cell">{{ formatDate(order.createdAt) }}</td>
+                        <td class="text-center">{{ order.items?.length || 0 }}</td>
+                        <td class="total-cell">{{ formatPrice(order.totalAmount ?? 0) }}</td>
+                        <td>
+                            <span class="status-badge" [ngClass]="getStatusClass(order.status)">
+                                {{ order.status }}
+                            </span>
+                        </td>
+                        <td class="text-right">
+                            <a [routerLink]="['/orders', order._id]" class="link-btn">View</a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
+        <!-- Empty state -->
         <div *ngIf="filteredOrders.length === 0" class="empty-state">
             <p>No orders found</p>
             <small>Try adjusting your filters</small>
         </div>
 
+        <!-- Pagination -->
         <div *ngIf="totalPages > 1" class="pagination">
             <button (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1" class="page-btn">
                 Previous
             </button>
-            <span class="page-info">
-                Page {{ currentPage }} of {{ totalPages }}
-            </span>
+            <span class="page-info">Page {{ currentPage }} of {{ totalPages }}</span>
             <button (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages" class="page-btn">
                 Next
             </button>

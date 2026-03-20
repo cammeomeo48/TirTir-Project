@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { OrderService, Order, StatusHistory } from '../../../core/services/order.service';
+import { environment } from '../../../../environments/environment';
 
 @Component({
     selector: 'app-order-detail',
@@ -76,6 +77,9 @@ export class OrderDetailComponent implements OnInit {
             next: (updatedOrder: any) => {
                 if (this.order) {
                     this.order.status = updatedOrder.status;
+                    if (updatedOrder.status_history) {
+                        this.order.status_history = updatedOrder.status_history;
+                    }
                 }
                 this.statusNote = '';
                 this.updating = false;
@@ -115,7 +119,24 @@ export class OrderDetailComponent implements OnInit {
     }
 
     getItemSubtotal(item: any): number {
-        return (item.Price || 0) * (item.Quantity || 0);
+        return (item.price || item.Price || 0) * (item.quantity || item.Quantity || 0);
+    }
+
+    /** Computed sum of all item line totals */
+    get itemsSubtotal(): number {
+        if (!this.order?.items) return 0;
+        return this.order.items.reduce((sum: number, item: any) => {
+            return sum + (item.price || item.Price || 0) * (item.quantity || item.Quantity || 0);
+        }, 0);
+    }
+
+    /** Resolve image URL using same pattern as Inventory page */
+    resolveImage(path: string): string {
+        if (!path) return '';
+        if (path.startsWith('http') || path.startsWith('data:')) return path;
+        const base = environment.apiUrl.replace('/api/v1', '');
+        const clean = path.startsWith('/') ? path.slice(1) : path;
+        return `${base}/${clean}`;
     }
 
     printInvoice(): void {

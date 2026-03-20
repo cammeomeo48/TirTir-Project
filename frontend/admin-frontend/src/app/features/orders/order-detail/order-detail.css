@@ -1,261 +1,233 @@
+/* ── Layout ─────────────────────────────────────────────────────── */
 .order-detail-container {
-    padding: 2rem;
+    padding: var(--spacing-lg, 2rem);
 }
 
 .loading-state,
 .error-state {
     text-align: center;
     padding: 4rem 2rem;
+    color: var(--text-secondary, #718096);
 }
 
 .spinner {
-    border: 3px solid #f3f4f6;
-    border-top: 3px solid #667eea;
+    border: 3px solid var(--border-color, #e2e8f0);
+    border-top-color: var(--secondary, #c0392b);
     border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    animation: spin 1s linear infinite;
+    width: 36px;
+    height: 36px;
+    animation: spin 0.8s linear infinite;
     margin: 0 auto 1rem;
 }
 
-@keyframes spin {
-    0% {
-        transform: rotate(0deg);
-    }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-    100% {
-        transform: rotate(360deg);
-    }
-}
-
+/* ── Page Header ────────────────────────────────────────────────── */
 .page-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 2rem;
+    margin-bottom: var(--spacing-lg, 2rem);
 }
 
-.header-left {
-    flex: 1;
-}
+.header-left { flex: 1; }
 
 .back-link {
-    color: #667eea;
-    text-decoration: none;
-    font-size: 0.9rem;
     display: inline-block;
-    margin-bottom: 0.5rem;
-    transition: color 0.2s;
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+    color: var(--secondary, #c0392b);
+    text-decoration: none;
 }
 
-.back-link:hover {
-    color: #5a67d8;
+.back-link:hover { text-decoration: underline; }
+
+.header-title-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
 }
 
 .page-header h1 {
-    font-size: 2rem;
-    font-weight: 600;
-    color: #1a202c;
-    margin: 0 0 0.25rem 0;
-}
-
-.page-header p {
-    color: #718096;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary, #1a202c);
     margin: 0;
 }
 
-.print-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    color: #4a5568;
-    cursor: pointer;
-    font-size: 0.95rem;
-    transition: all 0.2s;
+.order-id-mono {
+    font-family: 'Courier New', monospace;
+    font-size: 1.1rem;
+    font-weight: 400;
+    color: var(--text-secondary, #718096);
 }
 
-.print-btn:hover {
-    background: #f7fafc;
-    border-color: #cbd5e0;
+.header-sub {
+    font-size: 0.85rem;
+    color: var(--text-secondary, #718096);
+    margin: 0;
 }
 
+/* ── Grid ───────────────────────────────────────────────────────── */
 .order-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--spacing-md, 1.5rem);
+    margin-bottom: var(--spacing-lg, 2rem);
+}
+
+/* ── Cards ──────────────────────────────────────────────────────── */
+.info-card,
+.section-card {
+    background: var(--bg-surface, white);
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: var(--border-radius, 6px);
 }
 
 .info-card {
-    background: white;
-    border-radius: 12px;
-    padding: 1.5rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 0;
 }
 
-.info-card h2 {
-    font-size: 1.125rem;
+.section-card {
+    padding: 0;
+    margin-bottom: var(--spacing-lg, 2rem);
+}
+
+.card-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+
+.card-header h2 {
+    font-size: 0.9rem;
     font-weight: 600;
-    color: #1a202c;
-    margin: 0 0 1rem 0;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid #e2e8f0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary, #718096);
+    margin: 0;
 }
 
+/* ── Info Rows ──────────────────────────────────────────────────── */
 .info-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.75rem 0;
-    border-bottom: 1px solid #f7fafc;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--bg-base, #f8fafc);
+    font-size: 0.875rem;
 }
 
-.info-row:last-child {
-    border-bottom: none;
+.info-row:last-child { border-bottom: none; }
+
+.label {
+    color: var(--text-secondary, #718096);
+    font-size: 0.82rem;
+    flex-shrink: 0;
+    margin-right: 12px;
 }
 
-.info-row .label {
-    color: #718096;
-    font-size: 0.9rem;
-}
-
-.info-row .value {
-    color: #2d3748;
+.value {
+    color: var(--text-primary, #2d3748);
     font-weight: 500;
+    text-align: right;
+    word-break: break-all;
 }
 
-.status-badge {
-    display: inline-block;
-    padding: 0.375rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 500;
-    text-transform: capitalize;
-}
-
-.status-pending {
-    background: #fef5e7;
-    color: #d68910;
-}
-
-.status-processing {
-    background: #ebf8ff;
-    color: #2c5282;
-}
-
-.status-shipped {
-    background: #e3f9e5;
-    color: #2f7c31;
-}
-
-.status-delivered {
-    background: #d4edda;
-    color: #155724;
-}
-
-.status-cancelled {
-    background: #fce8e8;
-    color: #c53030;
-}
-
-.address {
-    color: #2d3748;
-    line-height: 1.6;
-}
-
-.address p {
-    margin: 0.25rem 0;
+.mono {
+    font-family: 'Courier New', monospace;
+    font-size: 0.78rem;
+    word-break: break-all;
 }
 
 .no-data {
-    color: #a0aec0;
+    padding: 12px 20px;
+    color: var(--text-secondary, #a0aec0);
     font-style: italic;
+    font-size: 0.85rem;
     margin: 0;
 }
 
+/* ── Status Badges ──────────────────────────────────────────────── */
+.status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: capitalize;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+.status-pending   { background: #fef5e7; color: #d68910; border-color: rgba(214,137,16,.2); }
+.status-processing { background: #ebf8ff; color: #2c5282; border-color: rgba(44,82,130,.2); }
+.status-shipped   { background: #faf5ff; color: #6b46c1; border-color: rgba(107,70,193,.2); }
+.status-delivered { background: #f0fff4; color: #276749; border-color: rgba(39,103,73,.2); }
+.status-cancelled { background: #fff5f5; color: #c53030; border-color: rgba(197,48,48,.2); }
+.payment-paid     { background: #f0fff4; color: #276749; border-color: rgba(39,103,73,.2); }
+.payment-pending  { background: #fef5e7; color: #d68910; border-color: rgba(214,137,16,.2); }
+
+/* ── Update Status Form ─────────────────────────────────────────── */
 .status-update-form {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 10px;
+    padding: 16px 20px;
 }
 
-.status-select {
-    padding: 0.75rem 1rem;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    font-size: 0.95rem;
+.form-control {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: var(--border-radius, 6px);
+    font-size: 0.875rem;
+    font-family: inherit;
     background: white;
-    cursor: pointer;
-    transition: all 0.2s;
+    transition: border-color 0.2s;
 }
 
-.status-select:focus {
+.form-control:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: var(--secondary, #c0392b);
 }
 
 .status-note {
-    padding: 0.75rem 1rem;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    font-family: inherit;
     resize: vertical;
-    transition: all 0.2s;
-}
-
-.status-note:focus {
-    outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    min-height: 72px;
 }
 
 .update-btn {
-    padding: 0.75rem 1.5rem;
-    background: #667eea;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.95rem;
-    font-weight: 500;
-    transition: all 0.2s;
+    align-self: flex-start;
 }
 
-.update-btn:hover:not(:disabled) {
-    background: #5a67d8;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(102, 126, 234, 0.2);
+.update-success {
+    font-size: 0.82rem;
+    color: #276749;
+    background: #f0fff4;
+    border: 1px solid rgba(39,103,73,.2);
+    border-radius: 4px;
+    padding: 6px 10px;
 }
 
-.update-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+.update-error {
+    font-size: 0.82rem;
+    color: #c53030;
+    background: #fff5f5;
+    border: 1px solid rgba(197,48,48,.2);
+    border-radius: 4px;
+    padding: 6px 10px;
 }
 
-.items-section {
-    background: white;
-    border-radius: 12px;
-    padding: 1.5rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    margin-bottom: 2rem;
-}
-
-.items-section h2 {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: #1a202c;
-    margin: 0 0 1.5rem 0;
+/* ── Items Table ────────────────────────────────────────────────── */
+.items-section .card-header {
+    padding: 14px 20px;
 }
 
 .items-table-container {
     overflow-x: auto;
-    margin-bottom: 1.5rem;
 }
 
 .items-table {
@@ -264,232 +236,268 @@
 }
 
 .items-table thead {
-    background: #f7fafc;
-    border-bottom: 2px solid #e2e8f0;
+    background: var(--bg-base, #f8fafc);
 }
 
 .items-table th {
-    padding: 1rem;
+    padding: 10px 16px;
     text-align: left;
+    font-size: 0.72rem;
     font-weight: 600;
-    color: #4a5568;
-    font-size: 0.875rem;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.4px;
+    color: var(--text-secondary, #718096);
+    border-bottom: 1px solid var(--border-color, #e2e8f0);
 }
 
 .items-table tbody tr {
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--border-color, #f0f0f0);
+    transition: background 0.15s;
 }
 
-.items-table tbody tr:hover {
-    background: #f7fafc;
-}
+.items-table tbody tr:last-child { border-bottom: none; }
+.items-table tbody tr:hover { background: var(--bg-base, #f8fafc); }
 
 .items-table td {
-    padding: 1rem;
-    color: #2d3748;
-    font-size: 0.95rem;
+    padding: 12px 16px;
+    font-size: 0.875rem;
+    color: var(--text-primary, #2d3748);
+    vertical-align: middle;
 }
 
-.product-info {
+.product-cell {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 12px;
 }
 
-.product-image {
-    width: 50px;
-    height: 50px;
+.product-thumb {
+    width: 44px;
+    height: 44px;
     object-fit: cover;
-    border-radius: 6px;
-    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    border: 1px solid var(--border-color, #e2e8f0);
+    flex-shrink: 0;
 }
 
 .product-details {
-    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 .product-name {
     font-weight: 500;
-    color: #2d3748;
-    margin: 0;
+    color: var(--text-primary, #2d3748);
 }
 
-.text-center {
-    text-align: center;
+.product-shade {
+    font-size: 0.78rem;
+    color: var(--text-secondary, #718096);
 }
 
-.text-right {
+.sku-cell {
+    font-family: 'Courier New', monospace;
+    font-size: 0.78rem;
+    color: var(--text-secondary, #718096);
+}
+
+.tabular { font-variant-numeric: tabular-nums; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+
+/* ── Payment Summary ────────────────────────────────────────────── */
+.payment-summary {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-color, #e2e8f0);
+    gap: 8px;
+}
+
+.summary-row {
+    display: flex;
+    align-items: center;
+    gap: 48px;
+    font-size: 0.875rem;
+}
+
+.summary-label {
+    color: var(--text-secondary, #718096);
+    min-width: 120px;
     text-align: right;
 }
 
-.order-total {
-    display: flex;
-    justify-content: flex-end;
-    padding-top: 1rem;
-    border-top: 2px solid #e2e8f0;
+.summary-value {
+    color: var(--text-primary, #2d3748);
+    font-weight: 500;
+    min-width: 90px;
+    text-align: right;
 }
 
-.total-row {
-    display: flex;
-    gap: 3rem;
-    align-items: center;
-    font-size: 1.125rem;
+.summary-divider {
+    width: 200px;
+    height: 1px;
+    background: var(--border-color, #e2e8f0);
+    margin: 4px 0;
+}
+
+.summary-row.total-row .summary-label {
+    font-weight: 600;
+    color: var(--text-primary, #1a202c);
 }
 
 .total-amount {
-    font-weight: 700;
-    color: #1a202c;
-    font-size: 1.5rem;
-}
-
-.timeline-section {
-    background: white;
-    border-radius: 12px;
-    padding: 1.5rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.timeline-section h2 {
     font-size: 1.25rem;
-    font-weight: 600;
-    color: #1a202c;
-    margin: 0 0 1.5rem 0;
+    font-weight: 700;
+    color: var(--text-primary, #1a202c);
 }
+
+/* ── Timeline ───────────────────────────────────────────────────── */
+.timeline-section .card-header { padding: 14px 20px; }
 
 .timeline {
     position: relative;
-    padding-left: 2rem;
+    padding: 16px 20px 16px 48px;
 }
 
 .timeline::before {
     content: '';
     position: absolute;
-    left: 9px;
-    top: 10px;
-    bottom: 10px;
+    left: 29px;
+    top: 24px;
+    bottom: 24px;
     width: 2px;
-    background: #e2e8f0;
+    background: var(--border-color, #e2e8f0);
 }
 
 .timeline-item {
     position: relative;
-    padding-bottom: 2rem;
+    padding-bottom: 24px;
 }
 
-.timeline-item:last-child {
-    padding-bottom: 0;
-}
+.timeline-item:last-child { padding-bottom: 0; }
 
 .timeline-marker {
     position: absolute;
-    left: -2rem;
-    width: 20px;
-    height: 20px;
+    left: -28px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
-    border: 3px solid white;
-    box-shadow: 0 0 0 2px #e2e8f0;
+    background: var(--bg-base, #e2e8f0);
+    border: 2px solid white;
+    box-shadow: 0 0 0 2px var(--border-color, #e2e8f0);
+    top: 3px;
 }
 
-.timeline-marker.status-pending {
-    background: #d68910;
-}
+.timeline-marker.status-pending   { background: #d68910; }
+.timeline-marker.status-processing { background: #2c5282; }
+.timeline-marker.status-shipped   { background: #6b46c1; }
+.timeline-marker.status-delivered { background: #276749; }
+.timeline-marker.status-cancelled { background: #c53030; }
 
-.timeline-marker.status-processing {
-    background: #2c5282;
-}
-
-.timeline-marker.status-shipped {
-    background: #2f7c31;
-}
-
-.timeline-marker.status-delivered {
-    background: #155724;
-}
-
-.timeline-marker.status-cancelled {
-    background: #c53030;
-}
-
-.timeline-content {
-    padding-left: 0.5rem;
-}
-
-.timeline-status {
-    font-weight: 600;
-    color: #1a202c;
-    margin-bottom: 0.25rem;
-}
-
-.timeline-time {
-    font-size: 0.875rem;
-    color: #718096;
-    margin-bottom: 0.5rem;
-}
-
+.timeline-status { font-weight: 600; color: var(--text-primary, #1a202c); font-size: 0.875rem; }
+.timeline-time   { font-size: 0.78rem; color: var(--text-secondary, #718096); margin-top: 2px; }
 .timeline-note {
-    font-size: 0.9rem;
-    color: #4a5568;
-    padding: 0.5rem 0.75rem;
-    background: #f7fafc;
-    border-radius: 6px;
-    border-left: 3px solid #667eea;
+    margin-top: 6px;
+    font-size: 0.82rem;
+    color: var(--text-primary, #4a5568);
+    padding: 6px 10px;
+    background: var(--bg-base, #f7fafc);
+    border-radius: 4px;
+    border-left: 3px solid var(--secondary, #c0392b);
 }
 
-.back-btn {
-    display: inline-block;
-    margin-top: 1rem;
-    padding: 0.75rem 1.5rem;
-    background: #667eea;
-    color: white;
-    text-decoration: none;
-    border-radius: 8px;
-    transition: all 0.2s;
-}
-
-.back-btn:hover {
-    background: #5a67d8;
-    transform: translateY(-1px);
-}
+/* ── Print Styles ───────────────────────────────────────────────── */
+.print-only { display: none; }
 
 @media print {
+    /* Hide everything admin-related */
+    app-shell .sidebar,
+    app-shell .top-nav,
+    app-shell nav,
+    .no-print {
+        display: none !important;
+    }
 
-    .page-header,
-    .status-update-form,
-    .print-btn,
-    .back-link {
-        display: none;
+    /* Show print-only elements */
+    .print-only {
+        display: block !important;
+    }
+
+    /* Page setup */
+    @page {
+        margin: 18mm 20mm;
+        size: A4;
+    }
+
+    body, html {
+        font-size: 11pt;
+        color: #000;
+        background: #fff;
     }
 
     .order-detail-container {
         padding: 0;
+        max-width: 100%;
     }
 
-    .info-card,
-    .items-section,
-    .timeline-section {
-        box-shadow: none;
-        page-break-inside: avoid;
+    /* Print header */
+    .print-header {
+        border-bottom: 2px solid #000;
+        padding-bottom: 10px;
+        margin-bottom: 16px;
     }
+
+    .print-store-name {
+        font-size: 16pt;
+        font-weight: 700;
+        margin-bottom: 4px;
+    }
+
+    .print-order-id { font-size: 10pt; color: #555; }
+    .print-date, .print-status { font-size: 9pt; color: #555; }
+
+    /* Cards: remove shadows, keep compact */
+    .info-card,
+    .section-card {
+        box-shadow: none;
+        border: 1px solid #ccc;
+        page-break-inside: avoid;
+        margin-bottom: 12pt;
+    }
+
+    .order-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8pt;
+        margin-bottom: 12pt;
+    }
+
+    /* Ensure tables don't break awkwardly */
+    .items-table { page-break-inside: auto; }
+    .items-table tr { page-break-inside: avoid; }
+
+    /* Hide Update Status card entirely in print */
+    .info-card:has(.status-update-form) { display: none !important; }
+
+    /* Payment summary prints cleanly */
+    .payment-summary {
+        border-top: 2px solid #000;
+    }
+
+    /* Timeline section in print */
+    .timeline-section { page-break-inside: avoid; }
+
+    /* Thumbnails can cause layout issues in print */
+    .product-thumb { display: none; }
+
+    /* Back link handled by no-print on page-header */
+    .back-link { display: none; }
 }
 
+/* ── Responsive ─────────────────────────────────────────────────── */
 @media (max-width: 768px) {
-    .order-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .page-header {
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    .print-btn {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .items-table {
-        min-width: 600px;
-    }
+    .order-grid { grid-template-columns: 1fr; }
+    .page-header { flex-direction: column; gap: 12px; }
+    .items-table { min-width: 560px; }
 }

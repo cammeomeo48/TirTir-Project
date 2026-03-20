@@ -183,6 +183,17 @@ export class InventoryDashboardComponent implements OnInit {
         if (page >= 1 && page <= this.totalPages) this.currentPage = page;
     }
 
+    // ── Stock count getters (unaffected by status filter, for dropdown labels) ─
+    get countInStock(): number {
+        return this.allProducts.filter(p => (p.Stock_Quantity ?? 0) >= LOW_STOCK_THRESHOLD).length;
+    }
+    get countLowStock(): number {
+        return this.allProducts.filter(p => (p.Stock_Quantity ?? 0) > 0 && (p.Stock_Quantity ?? 0) < LOW_STOCK_THRESHOLD).length;
+    }
+    get countOutOfStock(): number {
+        return this.allProducts.filter(p => (p.Stock_Quantity ?? 0) === 0).length;
+    }
+
     // ── Stock Status Helpers (threshold = backend's 10) ──────────
     getStockStatus(qty: number): 'out-of-stock' | 'low-stock' | 'in-stock' {
         if (qty === 0) return 'out-of-stock';
