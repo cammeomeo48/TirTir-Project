@@ -66,8 +66,29 @@ app.use(responseTime((req, res, time) => {
 app.use(morgan('combined', { stream: logger.stream }));
 
 // 3. CORS Configuration - MUST BE FIRST
+const explicitAllowedOrigins = new Set([
+  'http://localhost:4200',
+  'http://127.0.0.1:4200',
+  'http://localhost:4201',
+  'http://127.0.0.1:4201',
+]);
+
+const localhostOriginPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
+
 app.use(cors({
-  origin: ['http://localhost:4200', 'http://127.0.0.1:4200', 'http://localhost:4201', 'http://127.0.0.1:4201'],
+  origin: (origin, callback) => {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    if (explicitAllowedOrigins.has(origin) || localhostOriginPattern.test(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error(`Not allowed by CORS: ${origin}`));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'sentry-trace', 'baggage']

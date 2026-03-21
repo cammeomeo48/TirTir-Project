@@ -51,7 +51,16 @@
             <div class="time">{{ msg.timestamp | date:'shortTime' }}</div>
         </div>
 
-        <div class="typing-indicator" *ngIf="isTyping">
+        <div class="message-group bot" *ngIf="isTyping && currentBotMessage">
+            <div class="avatar">
+                <span>T/R</span>
+            </div>
+            <div class="bubble">
+                <p>{{ currentBotMessage }}</p>
+            </div>
+        </div>
+
+        <div class="typing-indicator" *ngIf="isTyping && !currentBotMessage">
             <span class="dot"></span>
             <span class="dot"></span>
             <span class="dot"></span>

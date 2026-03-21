@@ -25,6 +25,13 @@ export interface QuickReply {
     icon?: string;
 }
 
+export interface ChatStreamEvent {
+    type: 'chunk' | 'done' | 'error';
+    text?: string;
+    payload?: any;
+    message?: string;
+}
+
 const GUEST_HISTORY_KEY = 'guest_chat_history';
 
 @Injectable({
@@ -200,7 +207,7 @@ export class ChatService {
      * - Authenticated: backend auto-saves user + bot messages to MongoDB.
      * - Guest: after the bot reply, sessionStorage is updated via handleIncomingMessage.
      */
-    sendMessage(text: string): Observable<any> {
+    sendMessage(text: string): Observable<ChatStreamEvent> {
         const newMessage: ChatMessage = {
             text,
             sender: 'user',
@@ -218,39 +225,177 @@ export class ChatService {
             this.handleIncomingMessage(newMessage);
         }
 
-        return this.http.post<any>(`${this.apiUrl}`, { message: text }).pipe(
-            tap(response => {
-                if (response) {
-                    const botText = response.message;
-                    if (botText) {
-                        const botMessage: ChatMessage = {
-                            text: botText,
-                            sender: 'bot',
-                            timestamp: new Date()
-                        };
-                        if (response.type === 'product' && response.data) {
-                            botMessage.productData = response.data;
-                        }
-                        this.handleIncomingMessage(botMessage);
+        return new Observable<ChatStreamEvent>((observer) => {
+            const controller = new AbortController();
+
+            const parseSseBlock = (eventBlock: string): { eventName: string; payload: any } | null => {
+                const lines = eventBlock
+                    .split('\n')
+                    .map(line => line.trim())
+                    .filter(Boolean);
+
+                if (!lines.length) {
+                    return null;
+                }
+
+                const eventLine = lines.find(line => line.startsWith('event:'));
+                const eventName = eventLine ? eventLine.slice(6).trim() : 'message';
+                const dataRaw = lines
+                    .filter(line => line.startsWith('data:'))
+                    .map(line => line.slice(5).trim())
+                    .join('\n');
+
+                if (!dataRaw) {
+                    return null;
+                }
+
+                try {
+                    return { eventName, payload: JSON.parse(dataRaw) };
+                } catch {
+                    return { eventName, payload: { text: dataRaw } };
+                }
+            };
+
+            const toFriendlyError = (payload: any): string => {
+                return payload?.message || payload?.error || '❌ Chatbot service đang gặp sự cố. Vui lòng thử lại sau.';
+            };
+
+            (async () => {
+                let streamedText = '';
+                try {
+                    const token = this.authService.getToken();
+                    const response = await fetch(`${this.apiUrl}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Accept: 'text/event-stream',
+                            ...(token ? { Authorization: `Bearer ${token}` } : {})
+                        },
+                        body: JSON.stringify({ message: text }),
+                        signal: controller.signal,
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Chat API failed with status ${response.status}`);
                     }
-                }
-            }),
-            catchError((error: any) => {
-                console.error('Backend API /chat failed:', error.message);
 
-                let errorText = 'Sorry, I am currently unable to process your request. Please try again later.';
-                if (error.status === 503) {
-                    errorText = '❌ Chatbot service is not available. Please try again in a moment.';
-                }
+                    if (!response.body) {
+                        throw new Error('SSE stream body is missing');
+                    }
 
-                this.handleIncomingMessage({
-                    text: errorText,
-                    sender: 'bot',
-                    timestamp: new Date()
-                });
-                throw error;
-            })
-        );
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let buffer = '';
+
+                    while (true) {
+                        const { value, done } = await reader.read();
+                        if (done) {
+                            if (buffer.trim()) {
+                                const parsed = parseSseBlock(buffer);
+                                if (parsed) {
+                                    if (parsed.eventName === 'chunk') {
+                                        const chunkText = parsed.payload?.text || '';
+                                        streamedText += chunkText;
+                                        observer.next({ type: 'chunk', text: chunkText });
+                                    } else if (parsed.eventName === 'done') {
+                                        const botData = parsed.payload?.data;
+                                        const botText = botData?.message || streamedText;
+                                        if (botText) {
+                                            const botMessage: ChatMessage = {
+                                                text: botText,
+                                                sender: 'bot',
+                                                timestamp: new Date(),
+                                                ...(botData?.type === 'product' && botData?.data
+                                                    ? { productData: botData.data }
+                                                    : {})
+                                            };
+                                            this.handleIncomingMessage(botMessage);
+                                        }
+                                        observer.next({ type: 'done', payload: parsed.payload });
+                                    } else if (parsed.eventName === 'error') {
+                                        const friendly = toFriendlyError(parsed.payload);
+                                        this.handleIncomingMessage({
+                                            text: friendly,
+                                            sender: 'bot',
+                                            timestamp: new Date()
+                                        });
+                                        observer.next({ type: 'error', message: friendly, payload: parsed.payload });
+                                    }
+                                }
+                            }
+                            break;
+                        }
+
+                        buffer += decoder.decode(value, { stream: true });
+                        let separatorIndex = buffer.indexOf('\n\n');
+
+                        while (separatorIndex !== -1) {
+                            const eventBlock = buffer.slice(0, separatorIndex);
+                            buffer = buffer.slice(separatorIndex + 2);
+
+                            const parsed = parseSseBlock(eventBlock);
+                            if (parsed) {
+                                if (parsed.eventName === 'chunk') {
+                                    const chunkText = parsed.payload?.text || '';
+                                    streamedText += chunkText;
+                                    observer.next({ type: 'chunk', text: chunkText });
+                                } else if (parsed.eventName === 'done') {
+                                    const botData = parsed.payload?.data;
+                                    const botText = botData?.message || streamedText;
+                                    if (botText) {
+                                        const botMessage: ChatMessage = {
+                                            text: botText,
+                                            sender: 'bot',
+                                            timestamp: new Date(),
+                                            ...(botData?.type === 'product' && botData?.data
+                                                ? { productData: botData.data }
+                                                : {})
+                                        };
+                                        this.handleIncomingMessage(botMessage);
+                                    }
+                                    observer.next({ type: 'done', payload: parsed.payload });
+                                    observer.complete();
+                                    controller.abort();
+                                    return;
+                                } else if (parsed.eventName === 'error') {
+                                    const friendly = toFriendlyError(parsed.payload);
+                                    this.handleIncomingMessage({
+                                        text: friendly,
+                                        sender: 'bot',
+                                        timestamp: new Date()
+                                    });
+                                    observer.next({ type: 'error', message: friendly, payload: parsed.payload });
+                                    observer.complete();
+                                    controller.abort();
+                                    return;
+                                }
+                            }
+
+                            separatorIndex = buffer.indexOf('\n\n');
+                        }
+                    }
+
+                    observer.complete();
+                } catch (error: any) {
+                    if (error?.name === 'AbortError') {
+                        observer.complete();
+                        return;
+                    }
+
+                    console.error('Backend SSE /chat failed:', error?.message || error);
+                    const errorText = '❌ Chatbot service is not available. Please try again in a moment.';
+                    this.handleIncomingMessage({
+                        text: errorText,
+                        sender: 'bot',
+                        timestamp: new Date()
+                    });
+                    observer.next({ type: 'error', message: errorText });
+                    observer.complete();
+                }
+            })();
+
+            return () => controller.abort();
+        });
     }
 
     // ─── Sound & Notifications ────────────────────────────────────────────────
@@ -303,10 +448,12 @@ export class ChatService {
     }
 
     getQuickReplies(): Observable<QuickReply[]> {
-        return of([
-            { label: 'Tư vấn loại da', value: 'toi muon tu van san pham theo loai da', icon: '🧴' },
-            { label: 'Mã giảm giá', value: 'co ma giam gia nao dang ap dung khong', icon: '🏷️' },
-            { label: 'Kiểm tra đơn', value: 'toi muon kiem tra don hang cua toi', icon: '📦' }
-        ]);
+        const staticReplies: QuickReply[] = [
+            { label: 'Tư vấn loại da', value: 'Tôi muốn tư vấn sản phẩm theo loại da.', icon: '🧴' },
+            { label: 'Mã giảm giá', value: 'Có mã giảm giá nào đang áp dụng không?', icon: '🏷️' },
+            { label: 'Kiểm tra đơn', value: 'Kiểm tra trạng thái đơn hàng gần nhất của tôi.', icon: '📦' }
+        ];
+
+        return of(staticReplies);
     }
 }

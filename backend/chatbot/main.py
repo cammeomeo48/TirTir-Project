@@ -4,14 +4,17 @@ Runs on port 8001
 """
 
 import os
+import json
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request, Security, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, StreamingResponse
 import logging
 import time
+from typing import Literal
+from typing import Any
 
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -112,9 +115,16 @@ app.add_middleware(
 
 # ─── Request / Response Models ─────────────────────────────────────────────────
 
+class ConversationTurn(BaseModel):
+    role: Literal["user", "bot"]
+    content: str
+
+
 class ChatRequest(BaseModel):
     message: str
     session_id: str | None = None
+    conversation_history: list[ConversationTurn] | None = None
+    dynamic_context: dict[str, Any] | None = None
 
 
 class ChatResponse(BaseModel):
@@ -136,11 +146,11 @@ async def health_check():
         "auth_enabled": bool(AI_API_KEY),
     }
 
-@app.post("/chat", response_model=ChatResponse, dependencies=[Depends(verify_api_key)])
+@app.post("/chat", dependencies=[Depends(verify_api_key)])
 @limiter.limit("30/minute")
 async def chat(body: ChatRequest, request: Request):
     """
-    Process a Vietnamese beauty query and return a structured bot response.
+    Process a Vietnamese beauty query and stream response via SSE.
     Model is loaded at startup — sub-millisecond inference, no spawn overhead.
     Rate limit: 30 requests/minute per IP.
     NOTE: slowapi requires the Starlette Request param to be named `request`.
@@ -155,21 +165,52 @@ async def chat(body: ChatRequest, request: Request):
         raise HTTPException(status_code=400, detail="message field is required and cannot be empty")
 
     start = time.time()
-    try:
-        fallback_session = request.client.host if request.client else None
-        result = chatbot.process(
-            body.message.strip(),
-            session_id=body.session_id or fallback_session
-        )
-    except Exception as e:
-        logger.exception("Chatbot processing failed")
-        return ChatResponse(success=False, error=str(e))
+    fallback_session = request.client.host if request.client else None
+    message = body.message.strip()
+    session_id = body.session_id or fallback_session
+    conversation_history = [turn.model_dump() for turn in (body.conversation_history or [])]
+    dynamic_context = body.dynamic_context or {}
 
-    elapsed_ms = (time.time() - start) * 1000
-    return ChatResponse(
-        success=True,
-        data=result,
-        processing_time_ms=round(elapsed_ms, 2)
+    def sse_event(event_name: str, payload: dict) -> str:
+        return f"event: {event_name}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+    def event_stream():
+        try:
+            for event in chatbot.process_stream(
+                message,
+                session_id=session_id,
+                conversation_history=conversation_history,
+                dynamic_context=dynamic_context,
+            ):
+                if event.get("type") == "chunk":
+                    yield sse_event("chunk", {"text": event.get("text", "")})
+                    continue
+
+                if event.get("type") == "final":
+                    elapsed_ms = (time.time() - start) * 1000
+                    yield sse_event(
+                        "done",
+                        {
+                            "success": True,
+                            "data": event.get("result"),
+                            "processing_time_ms": round(elapsed_ms, 2),
+                        },
+                    )
+                    return
+
+            raise RuntimeError("Streaming finished without final result")
+        except Exception as e:
+            logger.exception("Chatbot streaming failed")
+            yield sse_event("error", {"success": False, "error": str(e)})
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )
 
 

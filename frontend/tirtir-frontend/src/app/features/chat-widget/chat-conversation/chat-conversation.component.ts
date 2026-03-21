@@ -2,7 +2,7 @@ import { Component, EventEmitter, Output, OnInit, ViewChild, ElementRef, AfterVi
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ChatService, ChatMessage, QuickReply } from '../../../core/services/chat.service';
+import { ChatService, ChatMessage, QuickReply, ChatStreamEvent } from '../../../core/services/chat.service';
 import { CartService } from '../../../core/services/cart.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { LanguageService } from '../../../core/services/language.service';
@@ -22,6 +22,7 @@ export class ChatConversationComponent implements OnInit, AfterViewChecked {
     newMessage = '';
     quickReplies: QuickReply[] = [];
     isTyping = false;
+    currentBotMessage = '';
 
     private destroyRef = inject(DestroyRef);
 
@@ -86,12 +87,30 @@ export class ChatConversationComponent implements OnInit, AfterViewChecked {
         this.isTyping = true;
 
         this.chatService.sendMessage(msg).subscribe({
-            next: (response: any) => {
-                this.isTyping = false;
-                this.scrollToBottom();
+            next: (event: ChatStreamEvent) => {
+                if (event.type === 'chunk') {
+                    this.currentBotMessage += event.text || '';
+                    this.scrollToBottom();
+                    return;
+                }
+
+                if (event.type === 'done') {
+                    this.currentBotMessage = '';
+                    this.isTyping = false;
+                    this.scrollToBottom();
+                    return;
+                }
+
+                if (event.type === 'error') {
+                    this.currentBotMessage = '';
+                    this.isTyping = false;
+                    this.toastService.error(event.message || 'Chatbot service đang gặp sự cố.');
+                    this.scrollToBottom();
+                }
             },
             error: (err) => {
                 console.error('Failed to send message:', err);
+                this.currentBotMessage = '';
                 this.isTyping = false;
             }
         });

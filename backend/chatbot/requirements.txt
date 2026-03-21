@@ -5,3 +5,4 @@ pandas==2.2.2
 scikit-learn==1.4.2
 slowapi==0.1.9
 google-generativeai==0.5.4
+redis==5.0.7
