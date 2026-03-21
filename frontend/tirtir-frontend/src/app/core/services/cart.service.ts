@@ -133,7 +133,7 @@ export class CartService {
      * Update cart item quantity or shade (Quick Edit)
      */
     updateCartItem(productId: string, quantity: number, shade?: string, oldShade?: string, newShade?: string): Observable<Cart> {
-        const payload: any = { productId, quantity, shade: shade || 'null' };
+        const payload: any = { productId, quantity, shade: shade ?? '' };
         if (oldShade !== undefined) payload.oldShade = oldShade;
         if (newShade !== undefined) payload.newShade = newShade;
 

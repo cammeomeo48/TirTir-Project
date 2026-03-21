@@ -59,13 +59,14 @@ export class CartComponent implements OnInit {
             return;
         }
 
-        this.cartService.addToCart({
-            productId: item.product._id,
-            quantity: newQuantity,
-            shade: item.shade,
-        }).subscribe({
-            next: () => {
-                this.loadCart();
+        this.cartService.updateCartItem(
+            item.product._id,
+            newQuantity,
+            item.shade
+        ).subscribe({
+            next: (updatedCart) => {
+                this.cart = updatedCart;
+                this.error = '';
             },
             error: (err) => {
                 this.error = err.message;
@@ -75,10 +76,11 @@ export class CartComponent implements OnInit {
 
     removeItemWithoutConfirm(item: CartItem): void {
         this.cartService.removeCartItem(item.product._id, item.shade).subscribe({
-            next: () => {
+            next: (updatedCart) => {
                 // Future enhancement: Use a Toast Service here
                 alert('Item removed from cart');
-                this.loadCart();
+                this.cart = updatedCart;
+                this.error = '';
             },
             error: (err) => {
                 this.error = err.message;
@@ -123,9 +125,10 @@ export class CartComponent implements OnInit {
             item.shade, // oldShade
             newShade   // newShade
         ).subscribe({
-            next: () => {
+            next: (updatedCart) => {
                 this.editingItemId = null;
-                this.loadCart(); // Reload to show new shade and potentially merged quantities
+                this.cart = updatedCart;
+                this.error = '';
             },
             error: (err) => {
                 this.error = err.message;
@@ -190,8 +193,9 @@ export class CartComponent implements OnInit {
         if (!confirm('Remove this item from your cart?')) return;
 
         this.cartService.removeCartItem(item.product._id, item.shade).subscribe({
-            next: () => {
-                this.loadCart();
+            next: (updatedCart) => {
+                this.cart = updatedCart;
+                this.error = '';
             },
             error: (err) => {
                 this.error = err.message;

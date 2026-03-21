@@ -1,10 +1,84 @@
 const Cart = require('../models/cart.model');
 const Product = require('../models/product.model');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 
 // Helper to recalculate total price
 const calculateTotal = (cart) => {
     return cart.items.reduce((total, item) => total + (item.price * item.quantity), 0);
+};
+
+const normalizeId = (value) => {
+    if (value === undefined || value === null) {
+        return '';
+    }
+
+    if (typeof value === 'string' || typeof value === 'number') {
+        return String(value).trim();
+    }
+
+    if (typeof value === 'object') {
+        if (typeof value.toHexString === 'function') {
+            return value.toHexString().trim();
+        }
+
+        if (value.$oid !== undefined && value.$oid !== null) {
+            return String(value.$oid).trim();
+        }
+
+        if (value._id !== undefined && value._id !== null) {
+            const nestedId = value._id;
+            if (typeof nestedId === 'string' || typeof nestedId === 'number') {
+                return String(nestedId).trim();
+            }
+            if (nestedId && typeof nestedId.toHexString === 'function') {
+                return nestedId.toHexString().trim();
+            }
+            if (nestedId && typeof nestedId.toString === 'function') {
+                const nestedStr = nestedId.toString().trim();
+                if (nestedStr && nestedStr !== '[object Object]') {
+                    return nestedStr;
+                }
+            }
+        }
+
+        if (value.id !== undefined && value.id !== null && value.id !== value) {
+            const virtualId = value.id;
+            if (typeof virtualId === 'string' || typeof virtualId === 'number') {
+                return String(virtualId).trim();
+            }
+        }
+
+        if (typeof value.toString === 'function') {
+            const raw = value.toString().trim();
+            if (raw && raw !== '[object Object]') {
+                return raw;
+            }
+        }
+
+        return '';
+    }
+
+    return String(value).trim();
+};
+
+const normalizeShade = (value) => {
+    const normalized = normalizeId(value).trim();
+    if (!normalized || normalized === 'null' || normalized === 'undefined') {
+        return '';
+    }
+    return normalized;
+};
+
+const buildProductLookupQuery = (rawProductId) => {
+    const normalizedProductId = normalizeId(rawProductId);
+    if (!normalizedProductId) {
+        return null;
+    }
+    if (mongoose.Types.ObjectId.isValid(normalizedProductId)) {
+        return { $or: [{ _id: normalizedProductId }, { Product_ID: normalizedProductId }] };
+    }
+    return { Product_ID: normalizedProductId };
 };
 
 // 1. ADD TO CART
@@ -23,6 +97,7 @@ exports.addToCart = async (req, res) => {
         console.log("2. User Info:", userId);
 
         const { productId, quantity, shade } = req.body;
+        const normalizedRequestProductId = normalizeId(productId);
 
         // DEFENSIVE CHECK 2: Inputs
         if (!productId) {
@@ -35,8 +110,9 @@ exports.addToCart = async (req, res) => {
         }
 
         // 3. Find Product
-        console.log("3. Product finding for ID (String):", productId);
-        const product = await Product.findOne({ Product_ID: productId });
+        console.log("3. Product finding for ID (String):", normalizedRequestProductId);
+        const productLookupQuery = buildProductLookupQuery(normalizedRequestProductId);
+        const product = productLookupQuery ? await Product.findOne(productLookupQuery) : null;
 
         if (!product) {
             console.error("❌ Product NOT FOUND in DB for ID:", productId);
@@ -45,7 +121,8 @@ exports.addToCart = async (req, res) => {
         console.log("✅ Product Found:", product.Name, "| ID:", product._id, "| Stock:", product.Stock_Quantity);
 
         // Normalize shade
-        const finalShade = shade || '';
+        const finalShade = normalizeShade(shade);
+        const normalizedProductObjectId = normalizeId(product?._id);
         console.log("   Final Shade used:", finalShade);
 
         // 4. Get Cart
@@ -64,9 +141,11 @@ exports.addToCart = async (req, res) => {
 
         // Logic check stock
         let currentQtyInCart = 0;
-        const existingItem = cart.items.find(
-            p => p.product.toString() === productId && p.shade === finalShade
-        );
+        const existingItem = cart.items.find((item) => {
+            const itemProductId = normalizeId(item.product);
+            const itemShade = normalizeShade(item.shade);
+            return itemProductId === normalizedProductObjectId && itemShade === finalShade;
+        });
         if (existingItem) {
             currentQtyInCart = existingItem.quantity;
         }
@@ -80,9 +159,11 @@ exports.addToCart = async (req, res) => {
         }
 
         // 5. Update Items
-        const itemIndex = cart.items.findIndex(
-            p => p.product.toString() === productId && p.shade === finalShade
-        );
+        const itemIndex = cart.items.findIndex((item) => {
+            const itemProductId = normalizeId(item.product);
+            const itemShade = normalizeShade(item.shade);
+            return itemProductId === normalizedProductObjectId && itemShade === finalShade;
+        });
 
         if (itemIndex > -1) {
             console.log("   Updating existing item at index:", itemIndex);
@@ -132,6 +213,7 @@ exports.updateCartItem = async (req, res) => {
     try {
         const userId = req.user.id;
         const { productId, shade, quantity, oldShade, newShade } = req.body;
+        const normalizedRequestProductId = normalizeId(productId);
 
         // Note: quantity here is the NEW TARGET quantity, not delta
         if (quantity < 0) {
@@ -144,11 +226,21 @@ exports.updateCartItem = async (req, res) => {
         }
 
         // Use oldShade if provided (Quick Edit), otherwise use shade (Standard Update)
-        const targetShade = (oldShade !== undefined) ? oldShade : shade;
+        const targetShade = normalizeShade((oldShade !== undefined) ? oldShade : shade);
 
-        const itemIndex = cart.items.findIndex(
-            p => p.product.toString() === productId && p.shade === targetShade
-        );
+        const productLookupQuery = buildProductLookupQuery(normalizedRequestProductId);
+        const product = productLookupQuery
+            ? await Product.findOne(productLookupQuery).select('_id Product_ID Stock_Quantity Price')
+            : null;
+        const normalizedProductObjectId = product
+            ? normalizeId(product._id)
+            : normalizedRequestProductId;
+
+        const itemIndex = cart.items.findIndex((item) => {
+            const itemProductId = normalizeId(item.product);
+            const itemShade = normalizeShade(item.shade);
+            return itemProductId === normalizedProductObjectId && itemShade === targetShade;
+        });
 
         if (itemIndex === -1) {
             return res.status(404).json({ message: "Item not found in cart" });
@@ -159,7 +251,6 @@ exports.updateCartItem = async (req, res) => {
             cart.items.splice(itemIndex, 1);
         } else {
             // Validate Stock for the NEW quantity
-            const product = await Product.findOne({ Product_ID: productId });
             if (!product) {
                 // If product deleted, remove item
                 cart.items.splice(itemIndex, 1);
@@ -172,10 +263,15 @@ exports.updateCartItem = async (req, res) => {
                 cart.items[itemIndex].price = product.Price;
 
                 // Handle Quick Attribute Edit
-                if (newShade !== undefined && newShade !== targetShade) {
+                const normalizedNewShade = normalizeShade(newShade);
+                if (newShade !== undefined && normalizedNewShade !== targetShade) {
                     // Check if the NEW shade already exists in the cart to merge them
                     const existingNewShadeIndex = cart.items.findIndex(
-                        (p, index) => index !== itemIndex && p.product.toString() === productId && p.shade === newShade
+                        (item, index) => {
+                            const itemProductId = normalizeId(item.product);
+                            const itemShade = normalizeShade(item.shade);
+                            return index !== itemIndex && itemProductId === normalizedProductObjectId && itemShade === normalizedNewShade;
+                        }
                     );
 
                     if (existingNewShadeIndex > -1) {
@@ -185,7 +281,7 @@ exports.updateCartItem = async (req, res) => {
                         cart.items.splice(itemIndex, 1);
                     } else {
                         // Just update the shade string
-                        cart.items[itemIndex].shade = newShade;
+                        cart.items[itemIndex].shade = normalizedNewShade;
                     }
                 }
             }
