@@ -12,11 +12,11 @@
     <!-- Stats Widget (từ GET /coupons/stats) -->
     <div class="coupon-stats" *ngIf="!statsLoading && stats">
         <div class="stat-card">
-            <div class="stat-value">{{ stats.totalCoupons ?? coupons.length }}</div>
+            <div class="stat-value">{{ stats.total ?? coupons.length }}</div>
             <div class="stat-label">Total Coupons</div>
         </div>
         <div class="stat-card active">
-            <div class="stat-value">{{ stats.activeCoupons ?? 0 }}</div>
+            <div class="stat-value">{{ stats.active ?? 0 }}</div>
             <div class="stat-label">Active</div>
         </div>
         <div class="stat-card">
@@ -24,8 +24,8 @@
             <div class="stat-label">Total Uses</div>
         </div>
         <div class="stat-card warning">
-            <div class="stat-value">{{ stats.expiringSoon ?? 0 }}</div>
-            <div class="stat-label">Expiring Soon</div>
+            <div class="stat-value">{{ stats.expired ?? 0 }}</div>
+            <div class="stat-label">Expired</div>
         </div>
     </div>
 
@@ -41,6 +41,8 @@
                 <option value="">All Statuses</option>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
+                <option value="expired">Expired</option>
+                <option value="exhausted">Exhausted</option>
             </select>
         </div>
     </div>
@@ -71,6 +73,7 @@
                     <th>Code</th>
                     <th>Discount</th>
                     <th>Usage</th>
+                    <th>Min Order</th>
                     <th>Valid Dates</th>
                     <th>Status</th>
                     <th class="actions-col">Actions</th>
@@ -79,32 +82,34 @@
             <tbody>
                 <tr *ngFor="let coupon of paginatedCoupons">
                     <td>
-                        <span class="coupon-code">{{ coupon.Code }}</span>
+                        <span class="coupon-code">{{ coupon.code }}</span>
                     </td>
                     <td>
                         {{
-                        coupon.Discount_Type === "percentage"
-                        ? coupon.Discount_Value + "%"
-                        : "$" + coupon.Discount_Value
+                        coupon.discountType === "percentage"
+                        ? coupon.discountValue + "%"
+                        : "$" + coupon.discountValue
                         }}
                     </td>
                     <td>
-                        {{ coupon.Used_Count || 0 }}
-                        <span class="usage-limit" *ngIf="coupon.Usage_Limit">
-                            / {{ coupon.Usage_Limit }}
+                        {{ coupon.usedCount || 0 }}
+                        <span class="usage-limit" *ngIf="coupon.usageLimit">
+                            / {{ coupon.usageLimit }}
                         </span>
                     </td>
                     <td>
+                        {{ coupon.minOrderValue ? "$" + coupon.minOrderValue : "None" }}
+                    </td>
+                    <td>
                         <div class="date-range">
-                            <span>{{ formatDate(coupon.Start_Date) }}</span>
+                            <span>{{ formatDate(coupon.validFrom) }}</span>
                             <span class="date-arrow">→</span>
-                            <span>{{ formatDate(coupon.End_Date) }}</span>
+                            <span>{{ formatDate(coupon.validTo) }}</span>
                         </div>
                     </td>
                     <td>
-                        <span class="status-badge" [class.active]="coupon.Status === 'active'"
-                            [class.inactive]="coupon.Status === 'inactive'">
-                            {{ coupon.Status }}
+                        <span class="status-badge" [ngClass]="getCouponStatus(coupon)">
+                            {{ getCouponStatus(coupon) }}
                         </span>
                     </td>
                     <td class="actions-col">
@@ -113,8 +118,8 @@
                             Edit
                         </button>
                         <button class="btn btn-sm btn-secondary" (click)="toggleStatus(coupon)"
-                            [title]="coupon.Status === 'active' ? 'Deactivate' : 'Activate'">
-                            {{ coupon.Status === 'active' ? 'Deactivate' : 'Activate' }}
+                            [title]="coupon.active ? 'Deactivate' : 'Activate'">
+                            {{ coupon.active ? 'Deactivate' : 'Activate' }}
                         </button>
                         <!-- Inline delete confirm -->
                         <ng-container *ngIf="pendingDeleteId !== coupon._id">
@@ -136,8 +141,7 @@
     <!-- Empty State -->
     <div class="empty-state" *ngIf="!loading && !error && filteredCoupons.length === 0">
         <h3>No coupons found</h3>
-        <p>Create a new coupon to get started</p>
-        <a [routerLink]="['/coupons/add']" class="btn btn-primary">Create Coupon</a>
+        <p>Try adjusting your filters or search query.</p>
     </div>
 
     <!-- Pagination -->

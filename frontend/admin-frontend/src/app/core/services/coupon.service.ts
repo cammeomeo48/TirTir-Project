@@ -5,16 +5,17 @@ import { environment } from '../../../environments/environment';
 
 export interface Coupon {
     _id?: string;
-    Code: string;
-    Discount_Type: 'percentage' | 'fixed';
-    Discount_Value: number;
-    Min_Order_Amount?: number;
-    Max_Discount_Amount?: number;
-    Start_Date: string;
-    End_Date: string;
-    Usage_Limit?: number;
-    Used_Count: number;
-    Status: 'active' | 'inactive';
+    code: string;
+    discountType: 'percentage' | 'fixed';
+    discountValue: number;
+    minOrderValue?: number;
+    maxDiscount?: number;
+    validFrom: string;
+    validTo: string;
+    usageLimit?: number;
+    usedCount: number;
+    active: boolean;
+    applicableProducts?: string[];
     createdAt?: string;
     updatedAt?: string;
 }

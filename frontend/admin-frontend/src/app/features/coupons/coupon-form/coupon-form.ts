@@ -26,15 +26,15 @@ export class CouponFormComponent implements OnInit {
         private route: ActivatedRoute
     ) {
         this.couponForm = this.fb.group({
-            Code: ['', [Validators.required, Validators.pattern('^[A-Za-z0-9_-]+$')]],
-            Discount_Type: ['percentage', Validators.required],
-            Discount_Value: [0, [Validators.required, Validators.min(0.01)]],
-            Start_Date: ['', Validators.required],
-            End_Date: ['', Validators.required],
-            Min_Order_Amount: [0, [Validators.min(0)]],
-            Max_Discount_Amount: [null],
-            Usage_Limit: [null, [Validators.min(1)]],
-            Status: ['active', Validators.required]
+            code: ['', [Validators.required, Validators.pattern('^[A-Za-z0-9_-]+$')]],
+            discountType: ['percentage', Validators.required],
+            discountValue: [0, [Validators.required, Validators.min(0.01)]],
+            validFrom: ['', Validators.required],
+            validTo: ['', Validators.required],
+            minOrderValue: [0, [Validators.min(0)]],
+            maxDiscount: [null],
+            usageLimit: [null, [Validators.min(1)]],
+            active: [true, Validators.required]
         });
     }
 
@@ -52,13 +52,13 @@ export class CouponFormComponent implements OnInit {
         this.couponService.getCouponById(id).subscribe({
             next: (coupon) => {
                 // Format dates for input[type="date"]
-                const startDate = new Date(coupon.Start_Date).toISOString().split('T')[0];
-                const endDate = new Date(coupon.End_Date).toISOString().split('T')[0];
+                const validFrom = new Date(coupon.validFrom).toISOString().split('T')[0];
+                const validTo = new Date(coupon.validTo).toISOString().split('T')[0];
 
                 this.couponForm.patchValue({
                     ...coupon,
-                    Start_Date: startDate,
-                    End_Date: endDate
+                    validFrom,
+                    validTo
                 });
                 this.loading = false;
             },
@@ -83,10 +83,11 @@ export class CouponFormComponent implements OnInit {
         // Ensure numeric values are numbers
         const couponData: Coupon = {
             ...formValue,
-            Discount_Value: Number(formValue.Discount_Value),
-            Min_Order_Amount: formValue.Min_Order_Amount ? Number(formValue.Min_Order_Amount) : undefined,
-            Max_Discount_Amount: formValue.Max_Discount_Amount ? Number(formValue.Max_Discount_Amount) : undefined,
-            Usage_Limit: formValue.Usage_Limit ? Number(formValue.Usage_Limit) : undefined,
+            discountValue: Number(formValue.discountValue),
+            minOrderValue: formValue.minOrderValue ? Number(formValue.minOrderValue) : 0,
+            maxDiscount: formValue.maxDiscount ? Number(formValue.maxDiscount) : undefined,
+            usageLimit: formValue.usageLimit ? Number(formValue.usageLimit) : undefined,
+            usedCount: this.isEditMode ? formValue.usedCount : 0,
         };
 
         if (this.isEditMode && this.couponId) {
@@ -95,7 +96,7 @@ export class CouponFormComponent implements OnInit {
                     this.router.navigate(['/coupons']);
                 },
                 error: (err) => {
-                    this.error = 'Failed to update coupon';
+                    this.error = err.error?.message || 'Failed to update coupon';
                     this.submitting = false;
                     console.error('Update error:', err);
                 }
@@ -106,7 +107,7 @@ export class CouponFormComponent implements OnInit {
                     this.router.navigate(['/coupons']);
                 },
                 error: (err) => {
-                    this.error = 'Failed to create coupon';
+                    this.error = err.error?.message || 'Failed to create coupon';
                     this.submitting = false;
                     console.error('Create error:', err);
                 }

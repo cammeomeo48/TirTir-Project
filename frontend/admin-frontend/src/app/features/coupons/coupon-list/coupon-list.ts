@@ -74,17 +74,24 @@ export class CouponListComponent implements OnInit {
         if (this.searchQuery.trim()) {
             const query = this.searchQuery.toLowerCase();
             filtered = filtered.filter(c =>
-                c.Code.toLowerCase().includes(query)
+                c.code.toLowerCase().includes(query)
             );
         }
 
         // Status filter
-        if (this.selectedStatus) {
-            filtered = filtered.filter(c => c.Status === this.selectedStatus);
+        const now = new Date();
+        if (this.selectedStatus === 'active') {
+            filtered = filtered.filter(c => c.active && new Date(c.validTo) >= now);
+        } else if (this.selectedStatus === 'expired') {
+            filtered = filtered.filter(c => new Date(c.validTo) < now);
+        } else if (this.selectedStatus === 'inactive') {
+            filtered = filtered.filter(c => !c.active);
+        } else if (this.selectedStatus === 'exhausted') {
+            filtered = filtered.filter(c => c.usageLimit && c.usedCount >= c.usageLimit);
         }
 
         this.filteredCoupons = filtered;
-        this.totalPages = Math.ceil(filtered.length / this.pageSize);
+        this.totalPages = Math.max(1, Math.ceil(filtered.length / this.pageSize));
         this.currentPage = 1;
     }
 
@@ -121,6 +128,7 @@ export class CouponListComponent implements OnInit {
             next: () => {
                 this.pendingDeleteId = null;
                 this.loadCoupons();
+                this.loadStats();
             },
             error: (err) => {
                 this.actionError = err.error?.message || 'Failed to delete coupon';
@@ -130,10 +138,11 @@ export class CouponListComponent implements OnInit {
     }
 
     toggleStatus(coupon: Coupon): void {
-        const newStatus = coupon.Status === 'active' ? 'inactive' : 'active';
-        this.couponService.toggleCouponStatus(coupon._id!, newStatus).subscribe({
+        const nextStatus = coupon.active ? 'inactive' : 'active';
+        this.couponService.toggleCouponStatus(coupon._id!, nextStatus).subscribe({
             next: (updatedCoupon) => {
-                coupon.Status = updatedCoupon.Status;
+                coupon.active = updatedCoupon.active;
+                this.loadStats();
             },
             error: (err) => {
                 this.actionError = err.error?.message || 'Failed to update coupon status';
@@ -142,6 +151,7 @@ export class CouponListComponent implements OnInit {
     }
 
     formatDate(date: string): string {
+        if (!date) return 'N/A';
         return new Date(date).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'short',
@@ -151,5 +161,17 @@ export class CouponListComponent implements OnInit {
 
     formatDiscount(type: string, value: number): string {
         return type === 'percentage' ? `${value}%` : `$${value.toFixed(2)}`;
+    }
+
+    getCouponStatus(coupon: Coupon): string {
+        const now = new Date();
+        const validTo = new Date(coupon.validTo);
+        const validFrom = new Date(coupon.validFrom);
+
+        if (!coupon.active) return 'inactive';
+        if (now < validFrom) return 'scheduled';
+        if (now > validTo) return 'expired';
+        if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) return 'exhausted';
+        return 'active';
     }
 }
