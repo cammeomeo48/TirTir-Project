@@ -33,6 +33,18 @@ const GHN_STATUS_MAP = {
     'waiting_to_return': null,
 };
 
+const appendStatusHistory = (order, status, note = '') => {
+    const history = Array.isArray(order.statusHistory) ? order.statusHistory : [];
+    const last = history[history.length - 1];
+    if (last?.status === status) return;
+    history.push({
+        status,
+        timestamp: new Date(),
+        note: (note || '').trim()
+    });
+    order.statusHistory = history;
+};
+
 // ─── Internal Order Status Updater ────────────────────────────────────────────
 /**
  * Shared logic for updating an order status.
@@ -80,6 +92,7 @@ const updateOrderStatusInternal = async (orderId, newStatus, performedById = nul
 
     // ─── Update Order Status ──────────────────────────────────────────────────
     order.status = newStatus;
+    appendStatusHistory(order, newStatus, `Updated from ${eventSource.toUpperCase()}`);
     await order.save();
 
     // ─── Send Notification to User ────────────────────────────────────────────

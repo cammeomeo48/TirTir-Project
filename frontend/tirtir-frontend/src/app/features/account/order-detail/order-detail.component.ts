@@ -2,8 +2,9 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { OrderService } from '../../../core/services/order.service';
+import { UserService } from '../../../core/services/user.service';
 import { catchError } from 'rxjs/operators';
-import { of } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
 
 @Component({
   selector: 'app-order-detail',
@@ -19,6 +20,11 @@ import { of } from 'rxjs';
       <!-- Loading State -->
       <div class="loading-state" *ngIf="loading">
         <div class="spinner"></div>
+        <div class="skeleton-wrap">
+          <div class="skeleton skeleton-line"></div>
+          <div class="skeleton skeleton-line short"></div>
+          <div class="skeleton skeleton-card"></div>
+        </div>
         <p>Loading order details...</p>
       </div>
 
@@ -45,6 +51,10 @@ import { of } from 'rxjs';
           <div class="info-row">
             <span class="label">Total Amount:</span>
             <span class="value highlight">{{ order.totalAmount | currency:'VND':'symbol':'1.0-0' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">Trạng thái:</span>
+            <span class="value">{{ getStatusLabel(order.status) }}</span>
           </div>
         </div>
 
@@ -74,22 +84,25 @@ import { of } from 'rxjs';
           </div>
         </div>
 
-        <!-- Visual Stepper -->
-        <div class="tracking-timeline">
-          <div class="step" 
-               *ngFor="let step of steps; let i = index"
-               [ngClass]="{
-                 'active': isStepActive(step, order.status),
-                 'completed': isStepCompleted(step, order.status),
-                 'cancelled': step === 'Cancelled' && order.status === 'Cancelled'
-               }">
-            <div class="step-icon">
-              <span *ngIf="isStepCompleted(step, order.status)">✓</span>
-              <span *ngIf="!isStepCompleted(step, order.status) && step !== 'Cancelled'">{{ i + 1 }}</span>
-              <span *ngIf="step === 'Cancelled' && order.status === 'Cancelled'">✕</span>
+        <!-- Timeline synced with statusHistory -->
+        <div class="timeline-card">
+          <h2>Lịch sử trạng thái</h2>
+          <div class="timeline-row" *ngFor="let history of timelineHistory; let i = index">
+            <div class="timeline-dot" [class.active]="i === timelineHistory.length - 1"></div>
+            <div class="timeline-content">
+              <div class="timeline-title">{{ getStatusLabel(history.status) }}</div>
+              <div class="timeline-time">{{ history.timestamp | date:'dd/MM/yyyy HH:mm' }}</div>
+              <div class="timeline-note" *ngIf="history.note">{{ history.note }}</div>
             </div>
-            <div class="step-label">{{ step }}</div>
           </div>
+        </div>
+
+        <div class="review-cta-card" *ngIf="order.status === 'Delivered'">
+          <h2>Đánh giá đơn hàng</h2>
+          <p>Cảm nhận của bạn giúp cộng đồng mua sắm tốt hơn.</p>
+          <button class="btn-primary" (click)="goToReview()">
+            {{ hasReviewedAllItems ? 'Xem đánh giá của bạn' : '⭐️ Viết đánh giá sản phẩm' }}
+          </button>
         </div>
 
         <div class="details-grid">
@@ -204,6 +217,37 @@ import { of } from 'rxjs';
       box-shadow: 0 2px 10px rgba(0,0,0,0.02);
     }
 
+    .timeline-card, .review-cta-card {
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 24px 30px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+    }
+
+    .timeline-row {
+      display: flex;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px dashed #eee;
+    }
+
+    .timeline-row:last-child { border-bottom: none; }
+    .timeline-dot {
+      width: 10px;
+      height: 10px;
+      margin-top: 7px;
+      border-radius: 50%;
+      background: #d1d5db;
+      flex-shrink: 0;
+    }
+    .timeline-dot.active { background: #111; }
+    .timeline-title { font-weight: 700; font-size: 14px; color: #111; }
+    .timeline-time { font-size: 12px; color: #6b7280; margin-top: 2px; }
+    .timeline-note { font-size: 12px; color: #374151; margin-top: 4px; }
+    .review-cta-card p { margin: 0 0 14px; font-size: 14px; color: #4b5563; }
+
     .order-info-card {
       display: flex;
       flex-wrap: wrap;
@@ -306,95 +350,6 @@ import { of } from 'rxjs';
       font-weight: 600;
     }
 
-    /* Stepper */
-    .tracking-timeline {
-      display: flex;
-      justify-content: space-between;
-      margin: 40px 0;
-      position: relative;
-      background: white;
-      padding: 40px 20px;
-      border: 1px solid #e0e0e0;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.02);
-    }
-
-    .tracking-timeline::before {
-      content: '';
-      position: absolute;
-      top: 55px; /* Adjust to align with icons */
-      left: 60px;
-      right: 60px;
-      height: 3px;
-      background: #eee;
-      z-index: 1;
-    }
-
-    .step {
-      position: relative;
-      z-index: 2;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      flex: 1;
-    }
-
-    .step-icon {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: #fff;
-      border: 3px solid #eee;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-      font-weight: bold;
-      color: #999;
-      margin-bottom: 12px;
-      transition: all 0.3s;
-    }
-
-    .step-label {
-      font-size: 12px;
-      font-weight: 600;
-      color: #999;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      text-align: center;
-    }
-
-    .step.completed .step-icon {
-      background: #111;
-      border-color: #111;
-      color: #fff;
-    }
-
-    .step.completed .step-label {
-      color: #111;
-    }
-
-    .step.active .step-icon {
-      border-color: #111;
-      color: #111;
-      box-shadow: 0 0 0 4px rgba(17, 17, 17, 0.1);
-    }
-    
-    .step.active .step-label {
-      color: #111;
-      font-weight: 800;
-    }
-
-    .step.cancelled .step-icon {
-      background: #d32f2f;
-      border-color: #d32f2f;
-      color: #fff;
-    }
-
-    .step.cancelled .step-label {
-      color: #d32f2f;
-    }
-
     /* Grid Layout */
     .details-grid {
       display: grid;
@@ -407,25 +362,7 @@ import { of } from 'rxjs';
         grid-template-columns: 1fr;
       }
       
-      .tracking-timeline {
-        flex-direction: column;
-        gap: 30px;
-        align-items: flex-start;
-        padding-left: 50px;
-      }
-
-      .tracking-timeline::before {
-        top: 40px;
-        bottom: 40px;
-        left: 35px;
-        width: 3px;
-        height: auto;
-      }
-
-      .step {
-        flex-direction: row;
-        gap: 20px;
-      }
+      .timeline-card, .review-cta-card { padding: 18px; }
     }
 
     /* Items List */
@@ -548,9 +485,26 @@ import { of } from 'rxjs';
       margin: 0 auto 20px;
     }
 
+    .skeleton-wrap { margin: 12px auto 14px; max-width: 380px; }
+    .skeleton {
+      background: linear-gradient(90deg, #f2f2f2 25%, #e8e8e8 37%, #f2f2f2 63%);
+      background-size: 400% 100%;
+      animation: shimmer 1.2s ease-in-out infinite;
+      border-radius: 6px;
+      margin-bottom: 10px;
+    }
+    .skeleton-line { height: 12px; width: 100%; }
+    .skeleton-line.short { width: 60%; margin: 0 auto 10px; }
+    .skeleton-card { height: 80px; width: 100%; }
+
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 100% 0; }
+      100% { background-position: 0 0; }
     }
 
     .error-icon {
@@ -583,14 +537,35 @@ export class OrderDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private orderService = inject(OrderService);
+  private userService = inject(UserService);
 
   order: any = null;
   loading: boolean = true;
   error: string | null = null;
   copied: boolean = false;
-  
-  // Define standard steps flow
-  steps: string[] = ['Pending', 'Processing', 'Shipped', 'Delivered'];
+  myReviewedProductIds = new Set<string>();
+
+  readonly statusLabels: Record<string, string> = {
+    Pending: 'Chờ xác nhận',
+    Processing: 'Đang xử lý',
+    Shipped: 'Đang giao hàng',
+    Delivered: 'Giao hàng thành công',
+    Cancelled: 'Đã hủy'
+  };
+
+  get timelineHistory(): any[] {
+    const history = this.order?.statusHistory;
+    if (Array.isArray(history) && history.length > 0) return history;
+    return [{ status: this.order?.status || 'Pending', timestamp: this.order?.updatedAt || this.order?.createdAt, note: '' }];
+  }
+
+  get hasReviewedAllItems(): boolean {
+    if (!this.order?.items?.length) return false;
+    return this.order.items.every((item: any) => {
+      const productId = typeof item.product === 'object' ? item.product?._id : item.product;
+      return !!productId && this.myReviewedProductIds.has(String(productId));
+    });
+  }
 
   ngOnInit() {
     this.route.paramMap.subscribe(params => {
@@ -607,33 +582,28 @@ export class OrderDetailComponent implements OnInit {
   fetchOrderDetails(id: string) {
     this.loading = true;
     this.error = null;
-    this.orderService.getOrderById(id).pipe(
+    forkJoin({
+      order: this.orderService.getOrderById(id),
+      myReviews: this.userService.getMyReviews().pipe(catchError(() => of([])))
+    }).pipe(
       catchError((err: any) => {
         this.error = err.message || "Failed to load order details.";
         this.loading = false;
         return of(null);
       })
-    ).subscribe((data: any) => {
-      if (data) {
-        this.order = data;
-        // If order is cancelled, we might alter the steps
-        if (this.order.status === 'Cancelled') {
-          this.steps = ['Pending', 'Cancelled'];
-        }
+    ).subscribe((payload: any) => {
+      if (payload?.order) {
+        this.order = payload.order;
       }
+      const reviews = payload?.myReviews || [];
+      this.myReviewedProductIds = new Set(
+        reviews
+          .map((r: any) => r?.product?._id || r?.product)
+          .filter((x: any) => !!x)
+          .map((x: any) => String(x))
+      );
       this.loading = false;
     });
-  }
-
-  isStepCompleted(step: string, currentStatus: string): boolean {
-    if (currentStatus === 'Cancelled') return false; // Cancelled flow is handled separately
-    const currentIndex = this.steps.indexOf(currentStatus);
-    const stepIndex = this.steps.indexOf(step);
-    return stepIndex < currentIndex;
-  }
-
-  isStepActive(step: string, currentStatus: string): boolean {
-    return step === currentStatus;
   }
 
   copyTracking(trackingNumber: string) {
@@ -655,9 +625,29 @@ export class OrderDetailComponent implements OnInit {
         return parts[0].trim();
       }
     }
-    if (item.product?.Thumbnail_Images?.length > 0) {
-      return item.product.Thumbnail_Images[0];
+    if (item.product?.Thumbnail_Images) {
+      return item.product.Thumbnail_Images;
     }
     return 'assets/images/placeholder.jpg';
+  }
+
+  getStatusLabel(status: string): string {
+    return this.statusLabels[status] || status || 'N/A';
+  }
+
+  goToReview() {
+    const firstItem = this.order?.items?.find((item: any) => {
+      const productId = typeof item.product === 'object' ? item.product?._id : item.product;
+      return !!productId;
+    });
+    const slug = firstItem?.product?.slug;
+    if (!slug) {
+      this.router.navigate(['/account/orders']);
+      return;
+    }
+    this.router.navigate(['/products', slug], {
+      queryParams: { writeReview: this.hasReviewedAllItems ? 0 : 1, orderId: this.order?._id },
+      fragment: 'reviews-section'
+    });
   }
 }

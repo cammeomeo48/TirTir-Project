@@ -22,6 +22,12 @@ export class UserService {
         );
     }
 
+    getMyReviews(): Observable<any[]> {
+        return this.http.get<any>(`${this.apiUrl}/my-reviews`).pipe(
+            map((response: any) => response?.data || response?.reviews || response || [])
+        );
+    }
+
     /**
      * Update user profile
      */

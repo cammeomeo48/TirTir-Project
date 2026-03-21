@@ -1,10 +1,23 @@
 export interface OrderItem {
-    product: string;
+    product: string | {
+        _id?: string;
+        Name?: string;
+        Thumbnail_Images?: string;
+        Price?: number;
+        Product_ID?: string;
+        slug?: string;
+    };
     name: string;
     quantity: number;
     price: number;
     shade?: string;
     image?: string;
+}
+
+export interface OrderStatusHistory {
+    status: OrderStatus;
+    timestamp: string | Date;
+    note?: string;
 }
 
 export interface ShippingAddress {
@@ -28,6 +41,7 @@ export interface Order {
     paymentMethod: PaymentMethod;
     totalAmount: number;
     status: OrderStatus;
+    statusHistory?: OrderStatusHistory[];
     createdAt: Date;
     updatedAt: Date;
 }

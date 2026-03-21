@@ -13,6 +13,18 @@ const getShippingController = () => require('./shipping.controller');
 const formatCurrency = (n) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n);
 
+const appendStatusHistory = (order, status, note = '') => {
+    const history = Array.isArray(order.statusHistory) ? order.statusHistory : [];
+    const last = history[history.length - 1];
+    if (last?.status === status) return;
+    history.push({
+        status,
+        timestamp: new Date(),
+        note: (note || '').trim()
+    });
+    order.statusHistory = history;
+};
+
 // ─── Helper: check if sessions are supported (Replica Set / Atlas only) ────────
 let _sessionSupported = null; // null = not yet checked, true/false = cached result
 const isSessionSupported = async () => {
@@ -191,7 +203,8 @@ exports.getOrderById = async (req, res) => {
     try {
         const order = await Order.findById(req.params.id)
             .populate('user', 'name email')
-            .populate('items.product', 'Product_ID Name');  // resolve SKU alongside name
+            .populate('items.product', 'Name Thumbnail_Images Price Product_ID slug')
+            .lean();
 
         if (!order) {
             return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
@@ -347,12 +360,8 @@ exports.updateOrderStatus = async (req, res) => {
         }
 
         order.status = status;
-        // ─── Append to audit trail ────────────────────────────────────────────────
-        order.statusHistory.push({
-            status,
-            timestamp: new Date(),
-            note: (req.body.note || '').trim()
-        });
+        // Keep statusHistory in sync with current status, especially Delivered.
+        appendStatusHistory(order, status, req.body.note || '');
         const updatedOrder = await order.save();
 
         // ─── Gửi notification cho chủ đơn hàng ────────────────────────────────
@@ -415,6 +424,7 @@ exports.cancelOrder = async (req, res) => {
         }
 
         order.status = 'Cancelled';
+        appendStatusHistory(order, 'Cancelled', 'Cancelled by customer');
         await order.save();
 
         // STOCK STATE MACHINE:
