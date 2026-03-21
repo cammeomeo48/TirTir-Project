@@ -7,7 +7,8 @@ const {
     deleteReview,
     markHelpful,
     getMyReviews,
-    getAllReviewsAdmin
+    getAllReviewsAdmin,
+    getReviewByIdAdmin
 } = require('../controllers/review.controller');
 const { protect, authorize } = require('../middlewares/auth');
 const { reviewLimiter } = require('../middlewares/rateLimit');
@@ -16,6 +17,7 @@ const { reviewLimiter } = require('../middlewares/rateLimit');
 
 // Admin Route - Get All Reviews (Must be before /:id)
 router.get('/admin/all', protect, authorize('admin'), getAllReviewsAdmin);
+router.get('/:id', protect, authorize('admin'), getReviewByIdAdmin);
 
 // Public routes
 router.get('/', getProductReviews);

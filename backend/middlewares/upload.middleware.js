@@ -58,6 +58,11 @@ const reviewUploader = createUploader('reviews');
 module.exports = {
     uploadAvatar: avatarUploader.single('avatar'),
     uploadProductImage: productUploader.single('image'), // Expects field name 'image'
+    productFieldsUploader: productUploader.fields([
+        { name: 'thumbnail', maxCount: 1 },
+        { name: 'gallery', maxCount: 10 },
+        { name: 'descriptionUrl', maxCount: 10 }
+    ]),
     uploadBanner: bannerUploader.single('banner'), // Expects field name 'banner'
     uploadReviewImage: reviewUploader.single('image') // Expects field name 'image'
 };

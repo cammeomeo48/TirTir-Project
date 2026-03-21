@@ -94,7 +94,12 @@ exports.adjustStock = async (req, res) => {
         }
 
         product.Stock_Quantity = newStock;
-        await product.save();
+
+        // Use updateOne to bypass Mongoose validation on other dirty fields in the DB (like Is_Skincare='TRUE')
+        await Product.updateOne(
+            { _id: product._id }, 
+            { $set: { Stock_Quantity: newStock } }
+        );
 
         // Log History
         await StockHistory.create({

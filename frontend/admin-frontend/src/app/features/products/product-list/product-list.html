@@ -64,7 +64,7 @@
                 </tr>
             </thead>
             <tbody>
-                <tr *ngFor="let product of getPaginatedProducts()">
+                <tr *ngFor="let product of getPaginatedProducts()" (click)="goToDetail(product)" class="clickable-row">
                     <!-- Thumbnail -->
                     <td>
                         <img [src]="getMainImage(product)" [alt]="product.Name" class="product-image" onerror="this.src='/placeholder-product.svg';" />
@@ -82,21 +82,20 @@
                     <td class="actions">
                         <!-- Idle State -->
                         <ng-container *ngIf="getRowState(product).status === 'idle'">
-                            <a class="view-link" [routerLink]="['/products/edit', product._id || product.id]">Edit</a>
-                            <button class="btn-text-danger" (click)="requestDelete(product)">Delete</button>
+                            <button class="btn-text-danger" (click)="requestDelete(product); $event.stopPropagation()">Delete</button>
                         </ng-container>
 
                         <!-- Confirming Delete -->
                         <ng-container *ngIf="getRowState(product).status === 'confirm-delete'">
-                            <span class="confirm-text">Are you sure?</span>
-                            <button class="btn-text-danger bold" (click)="confirmDelete(product)">Yes, Delete</button>
-                            <button class="btn-text-muted" (click)="cancelDelete(product)">Cancel</button>
-                            <div *ngIf="getRowState(product).error" class="row-error">{{ getRowState(product).error }}</div>
+                            <span class="confirm-text" (click)="$event.stopPropagation()">Are you sure?</span>
+                            <button class="btn-text-danger bold" (click)="confirmDelete(product); $event.stopPropagation()">Yes, Delete</button>
+                            <button class="btn-text-muted" (click)="cancelDelete(product); $event.stopPropagation()">Cancel</button>
+                            <div *ngIf="getRowState(product).error" class="row-error" (click)="$event.stopPropagation()">{{ getRowState(product).error }}</div>
                         </ng-container>
 
                         <!-- Deleting -->
                         <ng-container *ngIf="getRowState(product).status === 'deleting'">
-                            <span class="confirm-text">Deleting...</span>
+                            <span class="confirm-text" (click)="$event.stopPropagation()">Deleting...</span>
                         </ng-container>
                     </td>
                 </tr>

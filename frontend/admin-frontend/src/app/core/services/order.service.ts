@@ -32,10 +32,14 @@ export interface Order {
     items?: OrderItem[];
     totalAmount?: number;
     Total_Price?: number;
+    shippingCost?: number;
     status: string;
     paymentMethod?: string;
     paymentStatus?: string;
     ghnOrderCode?: string;
+    carrier?: string;
+    trackingNumber?: string;
+    isPacked?: boolean;
     shippingAddress: {
         fullName: string;
         phone: string;
@@ -45,6 +49,7 @@ export interface Order {
         province?: string;
     };
     status_history?: StatusHistory[];
+    statusHistory?: StatusHistory[];   // backend returns camelCase
     createdAt: string;
     updatedAt: string;
 }

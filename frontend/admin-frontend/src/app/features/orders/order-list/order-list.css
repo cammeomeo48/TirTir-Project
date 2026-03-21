@@ -136,8 +136,17 @@
     transition: background 0.15s;
 }
 
+.order-row.clickable-row {
+    cursor: pointer;
+}
+
 .order-row:hover {
     background: var(--bg-base, #f8fafc);
+}
+
+/* Customer cell blocks row-click but stays visually distinct */
+.customer-cell {
+    cursor: default;
 }
 
 /* ── Column Styles ──────────────────────────────────────────────── */

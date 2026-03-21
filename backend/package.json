@@ -41,6 +41,7 @@
     "node-cron": "^4.2.1",
     "nodemailer": "^7.0.13",
     "response-time": "^2.3.4",
+    "sharp": "^0.34.5",
     "socket.io": "^4.8.3",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",

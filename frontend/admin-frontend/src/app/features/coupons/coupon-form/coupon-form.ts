@@ -1,8 +1,20 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, ValidatorFn, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { CouponService, Coupon } from '../../../core/services/coupon.service';
+
+// ── Standalone cross-field validator (avoids 'this' binding issues in constructor) ──
+function dateRangeValidator(): ValidatorFn {
+    return (group: AbstractControl): ValidationErrors | null => {
+        const from = group.get('validFrom')?.value;
+        const to   = group.get('validTo')?.value;
+        if (from && to && new Date(from) >= new Date(to)) {
+            return { dateRange: true };
+        }
+        return null;
+    };
+}
 
 @Component({
     selector: 'app-coupon-form',
@@ -26,15 +38,26 @@ export class CouponFormComponent implements OnInit {
         private route: ActivatedRoute
     ) {
         this.couponForm = this.fb.group({
-            code: ['', [Validators.required, Validators.pattern('^[A-Za-z0-9_-]+$')]],
-            discountType: ['percentage', Validators.required],
-            discountValue: [0, [Validators.required, Validators.min(0.01)]],
-            validFrom: ['', Validators.required],
-            validTo: ['', Validators.required],
-            minOrderValue: [0, [Validators.min(0)]],
-            maxDiscount: [null],
-            usageLimit: [null, [Validators.min(1)]],
-            active: [true, Validators.required]
+            code:           ['', [Validators.required, Validators.pattern('^[A-Za-z0-9_-]+$')]],
+            discountType:   ['percentage', Validators.required],
+            discountValue:  [null, [Validators.required, Validators.min(0.01)]],
+            validFrom:      ['', Validators.required],
+            validTo:        ['', Validators.required],
+            minOrderValue:  [0, [Validators.min(0)]],
+            maxDiscount:    [null],
+            usageLimit:     [null, [Validators.min(1)]],
+            active:         [true, Validators.required]
+        }, { validators: dateRangeValidator() });
+
+        // Apply/remove max validator when discountType changes
+        this.couponForm.get('discountType')!.valueChanges.subscribe((type: string) => {
+            const valueCtrl = this.couponForm.get('discountValue')!;
+            if (type === 'percentage') {
+                valueCtrl.setValidators([Validators.required, Validators.min(0.01), Validators.max(100)]);
+            } else {
+                valueCtrl.setValidators([Validators.required, Validators.min(0.01)]);
+            }
+            valueCtrl.updateValueAndValidity();
         });
     }
 
@@ -115,12 +138,24 @@ export class CouponFormComponent implements OnInit {
         }
     }
 
+    /** Shorthand to access form controls in template */
+    get f() { return this.couponForm.controls; }
+
+    /** Auto-uppercase the coupon code as user types */
+    toUpperCase(event: Event): void {
+        const input = event.target as HTMLInputElement;
+        const start = input.selectionStart ?? 0;
+        const end   = input.selectionEnd   ?? 0;
+        input.value = input.value.toUpperCase();
+        input.setSelectionRange(start, end);
+        this.couponForm.get('code')!.setValue(input.value, { emitEvent: false });
+    }
+
+
     private markFormGroupTouched(formGroup: FormGroup) {
         Object.values(formGroup.controls).forEach(control => {
             control.markAsTouched();
-            if (control instanceof FormGroup) {
-                this.markFormGroupTouched(control);
-            }
+            if (control instanceof FormGroup) this.markFormGroupTouched(control);
         });
     }
 }

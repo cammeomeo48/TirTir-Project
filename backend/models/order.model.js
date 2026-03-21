@@ -74,7 +74,15 @@ const OrderSchema = new mongoose.Schema({
     recoveredFrom: {
         type: String,
         enum: ['email_1', 'email_2', 'email_3', 'manual']
-    }
+    },
+    // ─── Status Audit Trail ───────────────────────────────────────────────────
+    statusHistory: [
+        {
+            status:    { type: String, required: true },
+            timestamp: { type: Date, default: Date.now },
+            note:      { type: String, default: '' }
+        }
+    ]
 },
     { timestamps: true });
 

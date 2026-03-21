@@ -18,51 +18,89 @@ exports.createCoupon = async (req, res) => {
             active
         } = req.body;
 
-        // Validate required fields
-        if (!code || !discountType || !discountValue || !validTo) {
-            return res.status(400).json({
-                message: 'Please provide code, discountType, discountValue, and validTo'
-            });
+        // ── Normalize payload first (avoid runtime edge cases) ─────────────────
+        const normalizedCode = typeof code === 'string' ? code.toUpperCase().trim() : '';
+        const normalizedType = typeof discountType === 'string' ? discountType.trim() : '';
+        const parsedValue = Number(discountValue);
+        const parsedMinOrder = minOrderValue !== undefined && minOrderValue !== null && minOrderValue !== ''
+            ? Number(minOrderValue)
+            : 0;
+        const parsedMaxDis = maxDiscount !== undefined && maxDiscount !== '' && maxDiscount !== null
+            ? Number(maxDiscount)
+            : undefined;
+        const parsedUsageLim = usageLimit !== undefined && usageLimit !== '' && usageLimit !== null
+            ? Number(usageLimit)
+            : 100;
+
+        // Parse boolean safely (Boolean("false") would be true)
+        const parsedActive = active === undefined
+            ? true
+            : (typeof active === 'string' ? active.toLowerCase() === 'true' : Boolean(active));
+
+        // ── Required field validation ──────────────────────────────────────────
+        const errors = [];
+        if (!normalizedCode) errors.push('Coupon code is required');
+        if (!normalizedType || !['percentage', 'fixed'].includes(normalizedType)) errors.push('discountType must be "percentage" or "fixed"');
+        if (!validTo) errors.push('validTo (Expiry Date) is required');
+        if (isNaN(parsedValue) || parsedValue <= 0) errors.push('discountValue must be a positive number');
+        if (normalizedType === 'percentage' && parsedValue > 100) errors.push('Percentage discount cannot exceed 100%');
+        if (isNaN(parsedMinOrder) || parsedMinOrder < 0) errors.push('minOrderValue must be a non-negative number');
+
+        if (errors.length > 0) {
+            return res.status(400).json({ message: errors.join('. ') });
         }
 
-        // Validate date logic
+        // ── Date validation ────────────────────────────────────────────────────
         const fromDate = validFrom ? new Date(validFrom) : new Date();
         const toDate = new Date(validTo);
 
-        if (fromDate >= toDate) {
-            return res.status(400).json({
-                message: 'validFrom must be before validTo'
-            });
-        }
+        if (isNaN(fromDate.getTime())) return res.status(400).json({ message: 'validFrom is not a valid date' });
+        if (isNaN(toDate.getTime())) return res.status(400).json({ message: 'validTo is not a valid date' });
+        if (fromDate >= toDate) return res.status(400).json({ message: 'Start date must be before expiry date' });
 
-        // Check if coupon code already exists
-        const existingCoupon = await Coupon.findOne({ code: code.toUpperCase() });
+        // ── Duplicate code check ───────────────────────────────────────────────
+        const existingCoupon = await Coupon.findOne({ code: normalizedCode });
         if (existingCoupon) {
-            return res.status(400).json({
-                message: 'Coupon code already exists'
-            });
+            return res.status(400).json({ message: `Coupon code "${normalizedCode}" already exists` });
         }
 
-        // Create coupon
+        if (parsedMaxDis !== undefined && (isNaN(parsedMaxDis) || parsedMaxDis < 0)) {
+            return res.status(400).json({ message: 'maxDiscount must be a non-negative number' });
+        }
+        if (isNaN(parsedUsageLim) || parsedUsageLim < 1) {
+            return res.status(400).json({ message: 'usageLimit must be at least 1' });
+        }
+
+        // ── Create ─────────────────────────────────────────────────────────────
         const coupon = await Coupon.create({
-            code: code.toUpperCase(),
-            discountType,
-            discountValue,
-            minOrderValue: minOrderValue || 0,
-            maxDiscount,
+            code: normalizedCode,
+            discountType: normalizedType,
+            discountValue: parsedValue,
+            minOrderValue: parsedMinOrder,
+            maxDiscount: parsedMaxDis,
             validFrom: fromDate,
             validTo: toDate,
-            usageLimit: usageLimit || 100,
+            usageLimit: parsedUsageLim,
             applicableProducts: applicableProducts || [],
-            active: active !== undefined ? active : true
+            active: parsedActive
         });
 
-        res.status(201).json({
-            success: true,
-            data: coupon
-        });
+        res.status(201).json({ success: true, data: coupon });
     } catch (err) {
         console.error('Create Coupon Error:', err);
+        // Surface Mongoose validation errors as 400 instead of 500
+        if (err.name === 'ValidationError') {
+            const messages = Object.values(err.errors).map((e) => e.message).join('. ');
+            return res.status(400).json({ message: messages });
+        }
+        // Duplicate key from unique index
+        if (err.code === 11000) {
+            return res.status(400).json({ message: 'Coupon code already exists' });
+        }
+        // Schema/date pre-save checks often throw plain Error
+        if (err.message && err.message.includes('validFrom must be before validTo')) {
+            return res.status(400).json({ message: 'Start date must be before expiry date' });
+        }
         res.status(500).json({ message: err.message });
     }
 };
@@ -369,7 +407,7 @@ exports.getCouponStats = async (req, res) => {
         const total = await Coupon.countDocuments();
         const active = await Coupon.countDocuments({ active: true });
         const expired = await Coupon.countDocuments({ validTo: { $lt: new Date() } });
-        
+
         // Total usage
         const usageResult = await Coupon.aggregate([
             { $group: { _id: null, totalUsage: { $sum: "$usedCount" } } }

@@ -39,6 +39,13 @@ export const routes: Routes = [
                             ),
                     },
                     {
+                        path: 'detail/:id',
+                        loadComponent: () =>
+                            import('./features/products/product-detail/product-detail').then(
+                                (m) => m.ProductDetailComponent
+                            ),
+                    },
+                    {
                         path: 'edit/:id',
                         loadComponent: () =>
                             import('./features/products/product-form/product-form').then(
@@ -151,10 +158,22 @@ export const routes: Routes = [
             // ─── Reviews ──────────────────────────────────────────
             {
                 path: 'reviews',
-                loadComponent: () =>
-                    import('./features/reviews/reviews.component').then(
-                        (m) => m.ReviewsComponent
-                    ),
+                children: [
+                    {
+                        path: '',
+                        loadComponent: () =>
+                            import('./features/reviews/reviews.component').then(
+                                (m) => m.ReviewsComponent
+                            ),
+                    },
+                    {
+                        path: ':id',
+                        loadComponent: () =>
+                            import('./features/reviews/review-detail/review-detail').then(
+                                (m) => m.ReviewDetailComponent
+                            ),
+                    },
+                ],
             },
             // ─── Analytics ────────────────────────────────────────
             {

@@ -29,17 +29,8 @@ const couponSchema = new mongoose.Schema({
     },
     maxDiscount: {
         type: Number,
-        min: [0, 'Maximum discount cannot be negative'],
-        validate: {
-            validator: function (value) {
-                // Only validate if discountType is percentage
-                if (this.discountType === 'percentage' && value === undefined) {
-                    return false;
-                }
-                return true;
-            },
-            message: 'Maximum discount is required for percentage type coupons'
-        }
+        min: [0, 'Maximum discount cannot be negative']
+        // maxDiscount is OPTIONAL — no required-for-percentage constraint
     },
     validFrom: {
         type: Date,
@@ -84,12 +75,11 @@ couponSchema.virtual('isValid').get(function () {
         this.usedCount < this.usageLimit;
 });
 
-// Pre-save validation
-couponSchema.pre('save', function (next) {
+// Pre-save validation (Mongoose 9: throw error instead of using next callback)
+couponSchema.pre('save', function () {
     if (this.validFrom >= this.validTo) {
-        return next(new Error('validFrom must be before validTo'));
+        throw new Error('validFrom must be before validTo');
     }
-    next();
 });
 
 module.exports = mongoose.model('Coupon', couponSchema);

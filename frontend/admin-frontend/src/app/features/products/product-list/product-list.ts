@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, ActivatedRoute } from '@angular/router';
+import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ProductService } from '../../../core/services/product.service';
 import { environment } from '../../../../environments/environment';
@@ -54,7 +54,8 @@ export class ProductListComponent implements OnInit {
 
     constructor(
         private productService: ProductService,
-        private route: ActivatedRoute
+        private route: ActivatedRoute,
+        private router: Router
     ) { }
 
     ngOnInit(): void {
@@ -141,6 +142,13 @@ export class ProductListComponent implements OnInit {
 
     goToPage(page: number): void {
         if (page >= 1 && page <= this.totalPages) this.currentPage = page;
+    }
+
+    goToDetail(product: Product): void {
+        const id = product._id || product.id;
+        if (id) {
+            this.router.navigate(['/products/detail', id]);
+        }
     }
 
 

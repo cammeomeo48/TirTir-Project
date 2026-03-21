@@ -34,16 +34,52 @@ exports.getAllReviewsAdmin = async (req, res) => {
         const total = await Review.countDocuments(query);
         const reviews = await Review.find(query)
             .populate('user', 'name email')
-            .populate('product', 'Name Thumbnail_Images')
+            .populate('product', 'Name Thumbnail_Images Product_Slug slug')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);
 
+        const normalizedReviews = reviews.map((review) => {
+            const plain = review.toObject();
+            if (plain.product) {
+                plain.product.Product_Slug = plain.product.Product_Slug || plain.product.slug || '';
+                // Backward-compatible alias expected by admin UI / integrations.
+                plain.product_id = plain.product;
+            }
+            return plain;
+        });
+
         res.json({
-            reviews,
+            reviews: normalizedReviews,
             page,
             pages: Math.ceil(total / limit),
             total
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// GET /api/v1/reviews/:id (Admin Only)
+exports.getReviewByIdAdmin = async (req, res) => {
+    try {
+        const review = await Review.findById(req.params.id)
+            .populate('user', 'name email')
+            .populate('product', 'Name Thumbnail_Images Product_Slug slug');
+
+        if (!review) {
+            return res.status(404).json({ message: 'Review not found' });
+        }
+
+        const normalized = review.toObject();
+        if (normalized.product) {
+            normalized.product.Product_Slug = normalized.product.Product_Slug || normalized.product.slug || '';
+            normalized.product_id = normalized.product;
+        }
+
+        res.json({
+            success: true,
+            data: normalized
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -54,6 +90,41 @@ exports.getProductReviews = async (req, res) => {
     // ... existing code ...
     try {
         const rawId = req.params.id;
+
+        // Support admin list endpoint at GET /api/v1/reviews
+        if (!rawId) {
+            const page = parseInt(req.query.page, 10) || 1;
+            const limit = parseInt(req.query.limit, 10) || 20;
+            const skip = (page - 1) * limit;
+            const rating = req.query.rating;
+            const query = rating ? { rating: Number(rating) } : {};
+
+            const total = await Review.countDocuments(query);
+            const reviews = await Review.find(query)
+                .populate('user', 'name email')
+                .populate('product', 'Name Thumbnail_Images Product_Slug slug')
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit);
+
+            const normalizedReviews = reviews.map((review) => {
+                const plain = review.toObject();
+                if (plain.product) {
+                    plain.product.Product_Slug = plain.product.Product_Slug || plain.product.slug || '';
+                    plain.product_id = plain.product;
+                }
+                return plain;
+            });
+
+            return res.status(200).json({
+                success: true,
+                reviews: normalizedReviews,
+                page,
+                pages: Math.ceil(total / limit),
+                total
+            });
+        }
+
         const productId = await resolveProductId(rawId);
 
         if (!productId) {

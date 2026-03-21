@@ -12,26 +12,49 @@ const generateSlug = (name) => {
         .replace(/^-+|-+$/g, '');    // Trim hyphens
 };
 
-// STRICT DATA MAPPING LAYER
-// Prevents DB schema changes from breaking Frontend
+// STRICT DATA MAPPING LAYER — returns ALL fields the Edit form and Detail page need
 const mapProductToFrontend = (product) => {
+    const p = product.toObject ? product.toObject() : product;
     return {
-        id: product.Product_ID, // Map Product_ID to 'id' for easier FE consumption if needed, or keep strictly Product_ID
-        Product_ID: product.Product_ID, // Keep original for compatibility
-        Name: product.Name,
-        Price: product.Price,
-        Thumbnail_Images: product.Thumbnail_Images,
-        Category: product.Category,
-        Is_Skincare: product.Is_Skincare || false,
-        slug: generateSlug(product.Name), // Dynamic Slug Generation
-        description: product.Description_Short, // Added description for Detail page
-        images: [product.Thumbnail_Images, ...(product.Gallery_Images || [])], // Map images array for Detail page
-        descriptionImages: product.Description_Images || [], // Added description images
-        category: product.Category_Slug || product.Category, // Generic category field
-        Stock_Quantity: product.Stock_Quantity, // Added Stock Quantity
-        Stock_Reserved: product.Stock_Reserved || 0, // Added Reserved Stock
-        Rating_Average: product.Rating_Average || 0, // Added Rating Average
-        Rating_Count: product.Rating_Count || 0, // Added Rating Count
+        // Identifiers
+        _id: p._id,
+        id: p.Product_ID,
+        Product_ID: p.Product_ID,
+        Parent_ID: p.Parent_ID,
+        // Basic Info
+        Name: p.Name,
+        Product_Name: p.Name,
+        Product_Slug: p.slug,
+        slug: p.slug,
+        Category: p.Category,
+        Category_Slug: p.Category_Slug,
+        Status: p.Status,
+        // Commerce
+        Price: p.Price,
+        Sale_Price: p.Sale_Price,
+        Volume_Size: p.Volume_Size,
+        // Stock
+        Stock_Quantity: p.Stock_Quantity,
+        Stock_Reserved: p.Stock_Reserved || 0,
+        // Skincare
+        Is_Skincare: p.Is_Skincare || false,
+        Skin_Type_Target: p.Skin_Type_Target,
+        Main_Concern: p.Main_Concern,
+        Key_Ingredients: p.Key_Ingredients,
+        // Descriptions
+        Description_Short: p.Description_Short,
+        description: p.Description_Short,
+        Full_Description: p.Full_Description,
+        How_To_Use: p.How_To_Use,
+        // Media
+        Thumbnail_Images: p.Thumbnail_Images,
+        Gallery_Images: p.Gallery_Images || [],
+        Description_Images: p.Description_Images || [],
+        images: [p.Thumbnail_Images, ...(p.Gallery_Images || [])],
+        descriptionImages: p.Description_Images || [],
+        // Ratings
+        Rating_Average: p.Rating_Average || 0,
+        Rating_Count: p.Rating_Count || 0,
     };
 };
 
@@ -351,27 +374,33 @@ exports.getProductDetail = async (req, res) => {
     try {
         const param = req.params.id;
 
-        // FAST LOOKUP: Check Exact Slug or Product_ID (Indexed)
-        let product = await Product.findOne({
-            $or: [
-                { slug: param },
-                { Product_ID: param }
-            ]
-        });
+        // 1. Fast lookup: ObjectId (from list-page navigation)
+        let product = null;
+        if (mongoose.Types.ObjectId.isValid(param)) {
+            product = await Product.findById(param);
+        }
 
-        // SLOW FALLBACK: Regex Name Match (Only if slug not found)
-        // This should rarely run once slugs are populated
+        // 2. Fallback: slug or custom Product_ID string
+        if (!product) {
+            product = await Product.findOne({
+                $or: [
+                    { slug: param },
+                    { Product_ID: param }
+                ]
+            });
+        }
+
+        // 3. Last resort: fuzzy name regex (rarely needed once slugs exist)
         if (!product) {
             const nameRegex = param.split('-').join('.*');
-            // Removed ^ anchor to allow partial match (e.g. "Mask Fit" matching "Tirtir Mask Fit")
             product = await Product.findOne({ Name: { $regex: new RegExp(`${nameRegex}`, 'i') } });
         }
 
         if (!product) return res.status(404).json({ message: "Product not found" });
 
-        // 3. Fetch Shades from SEPARATE Collection (as per user requirement)
-        const shades = await Shade.find({ Product_ID: product.Product_ID })
-            .sort({ No: 1 });
+        // 3. Fetch Shades (Legacy support if any) AND Variant Products
+        const shades = await Shade.find({ Product_ID: product.Product_ID }).sort({ No: 1 });
+        const variants = await Product.find({ Parent_ID: product.Product_ID });
 
         // 4. Map Data & Merge Images
         const mappedProduct = mapProductToFrontend(product);
@@ -401,12 +430,7 @@ exports.getProductDetail = async (req, res) => {
         res.json({
             ...mappedProduct,
             images: allImages, // Overwrite with fully merged list
-            shades: shades.map(s => ({
-                name: s.Shade_Name,
-                color: s.Hex_Code,
-                image: s.Shade_Image,
-                // Include other shade details if needed by frontend
-            }))
+            shades: shades // Return full shade documents for advanced edit mode
         });
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -459,40 +483,160 @@ exports.getStockHistory = async (req, res) => {
 };
 
 exports.createProduct = async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
     try {
-        const { Product_ID, Name, Price, Category } = req.body;
+        const files = req.files || {};
+        if (files.thumbnail) req.body.Thumbnail_Images = `/uploads/products/${files.thumbnail[0].filename}`;
+
+        if (files.gallery) {
+            const newGallery = files.gallery.map(f => `/uploads/products/${f.filename}`);
+            req.body.Gallery_Images = [...(Array.isArray(req.body.existingGallery) ? req.body.existingGallery : (req.body.existingGallery ? [req.body.existingGallery] : [])), ...newGallery];
+        } else if (req.body.existingGallery) {
+            req.body.Gallery_Images = Array.isArray(req.body.existingGallery) ? req.body.existingGallery : [req.body.existingGallery];
+        }
+
+        if (files.descriptionUrl) {
+            const newDesc = files.descriptionUrl.map(f => `/uploads/products/${f.filename}`);
+            req.body.Description_Images = [...(Array.isArray(req.body.existingDescription) ? req.body.existingDescription : (req.body.existingDescription ? [req.body.existingDescription] : [])), ...newDesc];
+        } else if (req.body.existingDescription) {
+            req.body.Description_Images = Array.isArray(req.body.existingDescription) ? req.body.existingDescription : [req.body.existingDescription];
+        }
+
+        if (typeof req.body.shades === 'string') {
+            try { req.body.shades = JSON.parse(req.body.shades); } catch (e) { req.body.shades = []; }
+        }
+        if (typeof req.body.Is_Skincare === 'string') {
+            req.body.Is_Skincare = req.body.Is_Skincare === 'true';
+        }
+
+        const { Product_ID, Name, Price, Category, variants } = req.body;
         if (!Product_ID || !Name || Price === undefined || !Category) {
-            return res.status(400).json({ message: "Missing required fields" });
+            throw new Error("Missing required fields");
         }
-        const existingProduct = await Product.findOne({ Product_ID });
+        
+        const existingProduct = await Product.findOne({ Product_ID }).session(session);
         if (existingProduct) {
-            return res.status(400).json({ message: "Product already exists" });
+            throw new Error("Product already exists");
         }
+        
         const slug = generateSlug(Name);
         const product = new Product({ ...req.body, slug });
-        const created = await product.save();
-        res.status(201).json(mapProductToFrontend(created));
+        const created = await product.save({ session });
+        
+        let createdShades = [];
+        if (req.body.shades && Array.isArray(req.body.shades) && req.body.shades.length > 0) {
+            const shadeDocs = req.body.shades.map(s => {
+                const doc = { ...s };
+                doc.Product_ID = Product_ID; // Force inject Parent Product_ID
+                // Shade_ID should already be Parent_ID-Shade_Code, but enforce it:
+                doc.Shade_ID = `${doc.Parent_ID}-${doc.Shade_Code}`;
+                delete doc._id; // Ensure clean insert
+                return doc;
+            });
+            createdShades = await Shade.insertMany(shadeDocs, { session });
+        }
+        
+        await session.commitTransaction();
+        session.endSession();
+        
+        const responseData = mapProductToFrontend(created);
+        responseData.shades = createdShades;
+        res.status(201).json(responseData);
     } catch (err) {
+        console.error("Create Product Error:", err);
+        await session.abortTransaction();
+        session.endSession();
         res.status(500).json({ message: err.message });
     }
 };
 
 exports.updateProduct = async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
     try {
         const { id } = req.params;
+        
+        const files = req.files || {};
+        if (files.thumbnail) req.body.Thumbnail_Images = `/uploads/products/${files.thumbnail[0].filename}`;
+
+        if (files.gallery) {
+            const newGallery = files.gallery.map(f => `/uploads/products/${f.filename}`);
+            req.body.Gallery_Images = [...(Array.isArray(req.body.existingGallery) ? req.body.existingGallery : (req.body.existingGallery ? [req.body.existingGallery] : [])), ...newGallery];
+        } else if (req.body.existingGallery) {
+            req.body.Gallery_Images = Array.isArray(req.body.existingGallery) ? req.body.existingGallery : [req.body.existingGallery];
+        } else {
+            req.body.Gallery_Images = [];
+        }
+
+        if (files.descriptionUrl) {
+            const newDesc = files.descriptionUrl.map(f => `/uploads/products/${f.filename}`);
+            req.body.Description_Images = [...(Array.isArray(req.body.existingDescription) ? req.body.existingDescription : (req.body.existingDescription ? [req.body.existingDescription] : [])), ...newDesc];
+        } else if (req.body.existingDescription) {
+            req.body.Description_Images = Array.isArray(req.body.existingDescription) ? req.body.existingDescription : [req.body.existingDescription];
+        } else {
+            req.body.Description_Images = [];
+        }
+
+        if (typeof req.body.shades === 'string') {
+            try { req.body.shades = JSON.parse(req.body.shades); } catch (e) { req.body.shades = []; }
+        }
+        if (typeof req.body.Is_Skincare === 'string') {
+            req.body.Is_Skincare = req.body.Is_Skincare === 'true';
+        }
+
+        const { variants, existingGallery, existingDescription, ...updateData } = req.body;
+        
         const or = [{ Product_ID: id }];
         if (mongoose.Types.ObjectId.isValid(id)) or.push({ _id: id });
-        const product = await Product.findOne({ $or: or });
+        
+        const product = await Product.findOne({ $or: or }).session(session);
         if (!product) {
-            return res.status(404).json({ message: "Product not found" });
+            throw new Error("Product not found");
         }
-        Object.assign(product, req.body);
-        if (req.body.Name) {
-            product.slug = generateSlug(req.body.Name);
+        
+        Object.assign(product, updateData);
+        if (updateData.Name) {
+            product.slug = generateSlug(updateData.Name);
         }
-        const updated = await product.save();
+        const updated = await product.save({ session });
+        
+        // Handle Advanced Shades sync if provided
+        if (req.body.shades && Array.isArray(req.body.shades)) {
+            const currentShadeIds = req.body.shades.map(s => s.Shade_ID).filter(Boolean);
+            
+            // Delete removed shades (that belong to this Product_ID but are not in the new list)
+            await Shade.deleteMany({ 
+                Product_ID: product.Product_ID, 
+                Shade_ID: { $nin: currentShadeIds } 
+            }).session(session);
+            
+            // Upsert shades
+            let shadeList = [];
+            for (const s of req.body.shades) {
+                // Ensure identifiers
+                s.Product_ID = product.Product_ID;
+                s.Shade_ID = `${s.Parent_ID}-${s.Shade_Code}`;
+                
+                if (s._id) {
+                    await Shade.updateOne({ _id: s._id }, { $set: s }).session(session);
+                    shadeList.push(s);
+                } else {
+                    delete s._id; // Prevent CastError for empty strings
+                    const newS = new Shade(s);
+                    await newS.save({ session });
+                    shadeList.push(newS);
+                }
+            }
+        }
+        
+        await session.commitTransaction();
+        session.endSession();
         res.json(mapProductToFrontend(updated));
     } catch (err) {
+        console.error("Update Product Error:", err);
+        await session.abortTransaction();
+        session.endSession();
         res.status(500).json({ message: err.message });
     }
 };

@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, ActivatedRoute } from '@angular/router';
+import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { OrderService, Order } from '../../../core/services/order.service';
 import { ExportService } from '../../../core/services/export.service';
@@ -40,7 +40,8 @@ export class OrderListComponent implements OnInit {
     constructor(
         private orderService: OrderService,
         private exportService: ExportService,
-        private route: ActivatedRoute
+        private route: ActivatedRoute,
+        private router: Router
     ) { }
 
     ngOnInit(): void {
@@ -153,6 +154,14 @@ export class OrderListComponent implements OnInit {
 
     onDateRangeChange(): void {
         this.applyFilters();
+    }
+
+    goToOrderDetails(id: string): void {
+        this.router.navigate(['/orders', id]);
+    }
+
+    goToCustomerDetails(customerId: string): void {
+        if (customerId) this.router.navigate(['/customers', customerId]);
     }
 
     goToPage(page: number): void {

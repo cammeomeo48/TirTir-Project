@@ -69,7 +69,7 @@ app.use(morgan('combined', { stream: logger.stream }));
 app.use(cors({
   origin: ['http://localhost:4200', 'http://127.0.0.1:4200', 'http://localhost:4201', 'http://127.0.0.1:4201'],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'sentry-trace', 'baggage']
 }));
 
@@ -256,6 +256,7 @@ app.get("/debug-sentry", function mainHandler(req, res) {
 // API Routes
 app.use("/api/v1/shades", shadeRoutes);
 app.use("/api/v1/products", productRoutes);
+app.use("/api/v1/admin/smart", require("./routes/admin.smart.routes")); // Add Smart Admin Routes
 app.use("/api/v1/admin/products", require("./routes/admin.products.routes"));
 app.use("/api/v1/admin/users", require("./routes/admin.users.routes")); // Add Admin User Routes
 app.use("/api/v1/admin", require("./routes/admin.dashboard.routes"));

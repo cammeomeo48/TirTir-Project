@@ -68,11 +68,11 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr *ngFor="let order of getPaginatedOrders()" class="order-row">
+                    <tr *ngFor="let order of getPaginatedOrders()" class="order-row clickable-row" (click)="goToOrderDetails(order._id)">
                         <td class="order-id-cell">
                             <code class="order-id" [title]="order._id">{{ order._id | slice:0:12 }}…</code>
                         </td>
-                        <td class="customer-cell">
+                        <td class="customer-cell" (click)="$event.stopPropagation()">
                             <a [routerLink]="['/customers', order.user?._id]" class="customer-link" *ngIf="order.user?._id; else noUser">
                                 <div class="customer-name">{{ order.user?.name || 'N/A' }}</div>
                                 <div class="customer-email">{{ order.user?.email || '' }}</div>

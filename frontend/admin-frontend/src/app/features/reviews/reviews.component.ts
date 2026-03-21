@@ -1,12 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { ReviewService, Review } from '../../core/services/review.service';
 
 @Component({
     selector: 'app-reviews',
     standalone: true,
-    imports: [CommonModule, FormsModule],
+    imports: [CommonModule, FormsModule, RouterModule],
     template: `
 <div class="reviews-container">
     <div class="page-header">
@@ -87,7 +88,7 @@ import { ReviewService, Review } from '../../core/services/review.service';
                         <div class="customer-name">{{ review.user.name || 'Anonymous' }}</div>
                         <div class="customer-email">{{ review.user.email || '' }}</div>
                     </td>
-                    <td class="product-name">{{ review.product.Product_Name || 'N/A' }}</td>
+                    <td class="product-name">{{ getProductName(review) }}</td>
                     <td>
                         <span class="stars">{{ getStars(review.rating) }}</span>
                         <span class="rating-num">{{ review.rating }}/5</span>
@@ -95,6 +96,9 @@ import { ReviewService, Review } from '../../core/services/review.service';
                     <td class="comment-cell">{{ review.comment }}</td>
                     <td>{{ formatDate(review.createdAt) }}</td>
                     <td class="actions">
+                        <a class="btn btn-sm btn-outline" [routerLink]="['/reviews', review._id]" title="View detail">
+                            View
+                        </a>
                         <ng-container *ngIf="pendingDeleteId !== review._id">
                             <button class="btn btn-sm btn-danger" (click)="requestDelete(review._id)" title="Delete">
                                 Delete
@@ -148,6 +152,8 @@ import { ReviewService, Review } from '../../core/services/review.service';
         .actions { white-space: nowrap; display: flex; gap: 4px; align-items: center; }
         .confirm-text { font-size: 12px; color: #b71c1c; font-weight: 600; }
         .btn-secondary { background: #e0e0e0; color: #333; }
+        .btn-outline { background: #fff; border: 1px solid #d1d5db; color: #374151; }
+        .btn-outline:hover { background: #f9fafb; }
         .pagination { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 16px 0; }
         .page-btn { padding: 6px 12px; border: 1px solid #e0e0e0; border-radius: 4px; background: #fff; cursor: pointer; font-size: 16px; }
         .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -198,8 +204,8 @@ export class ReviewsComponent implements OnInit {
         if (this.searchQuery.trim()) {
             const q = this.searchQuery.toLowerCase();
             filtered = filtered.filter(r =>
-                r.product.Product_Name.toLowerCase().includes(q) ||
-                r.user.name.toLowerCase().includes(q)
+                this.getProductName(r).toLowerCase().includes(q) ||
+                (r.user?.name || '').toLowerCase().includes(q)
             );
         }
         if (this.selectedRating) {
@@ -250,6 +256,9 @@ export class ReviewsComponent implements OnInit {
         if (!this.reviews.length) return '—';
         const avg = this.reviews.reduce((s, r) => s + r.rating, 0) / this.reviews.length;
         return avg.toFixed(1);
+    }
+    getProductName(review: Review): string {
+        return review.product?.Name || review.product_id?.Name || 'N/A';
     }
     formatDate(d: string): string { return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }); }
 }

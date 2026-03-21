@@ -119,6 +119,7 @@ async function _createOrderLogic(req, session) {
     const newOrder = new Order({
         user: userId, items: orderItems, shippingAddress, paymentMethod,
         totalAmount: calculatedTotal, status: ORDER_STATUS.PENDING,
+        statusHistory: [{ status: ORDER_STATUS.PENDING, timestamp: new Date(), note: 'Order placed' }],
         ...(recoveredFrom && { recoveredFrom })
     });
 
@@ -189,7 +190,8 @@ exports.getMyOrders = async (req, res) => {
 exports.getOrderById = async (req, res) => {
     try {
         const order = await Order.findById(req.params.id)
-            .populate('user', 'name email');
+            .populate('user', 'name email')
+            .populate('items.product', 'Product_ID Name');  // resolve SKU alongside name
 
         if (!order) {
             return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
@@ -345,6 +347,12 @@ exports.updateOrderStatus = async (req, res) => {
         }
 
         order.status = status;
+        // ─── Append to audit trail ────────────────────────────────────────────────
+        order.statusHistory.push({
+            status,
+            timestamp: new Date(),
+            note: (req.body.note || '').trim()
+        });
         const updatedOrder = await order.save();
 
         // ─── Gửi notification cho chủ đơn hàng ────────────────────────────────
