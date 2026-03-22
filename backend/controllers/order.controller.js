@@ -349,7 +349,8 @@ exports.updateOrderStatus = async (req, res) => {
         if (status === 'Shipped' && oldStatus === 'Processing') {
             try {
                 const { createGHNOrder } = getShippingController();
-                await createGHNOrder(order);
+                const ghnCode = await createGHNOrder(order);
+                if (ghnCode) order.ghnOrderCode = ghnCode; // make sure save() includes it
             } catch (ghnErr) {
                 // GHN failed → leave order at Processing (createGHNOrder already rolled back status)
                 return res.status(ghnErr.statusCode || 502).json({
@@ -404,7 +405,28 @@ exports.updateOrderStatus = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
-// 5. HỦY ĐƠN HÀNG (User)
+// 5. CẬP NHẬT FULFILLMENT (Admin)
+exports.updateFulfillment = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { carrier, trackingNumber, isPacked } = req.body;
+
+        const order = await Order.findById(id);
+        if (!order) return res.status(404).json({ message: 'Không tìm thấy đơn hàng' });
+
+        if (carrier !== undefined) order.carrier = carrier;
+        if (trackingNumber !== undefined) order.trackingNumber = trackingNumber;
+        if (isPacked !== undefined) order.isPacked = isPacked;
+
+        await order.save();
+        res.json({ message: 'Fulfillment đã được cập nhật', order });
+    } catch (error) {
+        console.error('Update Fulfillment Error:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// 6. HỦY ĐƠN HÀNG (User)
 exports.cancelOrder = async (req, res) => {
     try {
         const orderId = req.params.id;

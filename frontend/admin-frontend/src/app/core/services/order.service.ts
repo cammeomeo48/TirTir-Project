@@ -108,4 +108,8 @@ export class OrderService {
     cancelOrder(orderId: string): Observable<any> {
         return this.http.post(`${environment.apiUrl}/orders/${orderId}/cancel`, {});
     }
+
+    updateFulfillment(orderId: string, data: { carrier?: string; trackingNumber?: string; isPacked?: boolean }): Observable<any> {
+        return this.http.put<any>(`${this.ordersUrl}/${orderId}/fulfillment`, data);
+    }
 }

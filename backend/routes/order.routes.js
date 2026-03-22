@@ -174,4 +174,13 @@ router.post('/:id/reorder', protect, orderController.reorder);
  */
 router.get('/:id', protect, orderController.getOrderById);
 
+/**
+ * @swagger
+ * /orders/{id}/fulfillment:
+ *   put:
+ *     summary: Cập nhật thông tin fulfillment (carrier, trackingNumber, isPacked) — Admin only
+ *     tags: [Orders]
+ */
+router.put('/:id/fulfillment', protect, authorize('admin', 'customer_service', 'inventory_staff'), orderController.updateFulfillment);
+
 module.exports = router;
