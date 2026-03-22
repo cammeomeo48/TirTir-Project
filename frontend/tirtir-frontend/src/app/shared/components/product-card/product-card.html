@@ -1,7 +1,7 @@
 <div class="product-card" *ngIf="displayProduct">
+
     <!-- Image Container -->
     <a [routerLink]="['/products', productLink]" class="card-image">
-        <!-- TODO: Replace with real TIRTIR product image -->
         <img [src]="displayProduct.image" [alt]="displayProduct.name" class="product-img" loading="lazy"
             decoding="async">
 
@@ -11,6 +11,30 @@
                 [class.new]="badge === 'NEW'" [class.shades]="badge.includes('SHADES')">
                 {{ badge }}
             </span>
+        </div>
+
+        <!-- Quick Add Overlay -->
+        <div class="quick-add-overlay">
+            <button class="quick-add-btn"
+                [class.state-added]="quickAddState === 'added'"
+                [class.state-loading]="quickAddState === 'loading'"
+                (click)="onQuickAdd($event)">
+
+                @if (quickAddState === 'loading') {
+                    <span class="qa-spinner"></span>
+                } @else if (quickAddState === 'added') {
+                    <svg viewBox="0 0 14 14" fill="none">
+                        <path d="M2 7l4 4 6-6" stroke="currentColor" stroke-width="1.8"
+                            stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Added to bag
+                } @else if (hasShades) {
+                    Select Shade
+                } @else {
+                    Quick Add
+                }
+
+            </button>
         </div>
     </a>
 

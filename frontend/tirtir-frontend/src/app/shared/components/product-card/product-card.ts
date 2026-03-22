@@ -1,7 +1,9 @@
-import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, inject, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { environment } from '../../../../environments/environment';
+import { CartService } from '../../../core/services/cart.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-product-card',
@@ -9,9 +11,8 @@ import { environment } from '../../../../environments/environment';
   imports: [CommonModule, RouterModule],
   templateUrl: './product-card.html',
   styleUrl: './product-card.css',
-  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ProductCard {
+export class ProductCard implements OnDestroy {
   @Input() product: any;
   @Input() id: string = '';
   @Input() name: string = '';
@@ -25,6 +26,12 @@ export class ProductCard {
   @Input() shadeCount: number = 0;
 
   private readonly backendUrl = environment.apiUrl.replace('/api/v1', '');
+  private cartService = inject(CartService);
+  private authService = inject(AuthService);
+  private router = inject(Router);
+
+  quickAddState: 'idle' | 'loading' | 'added' = 'idle';
+  private resetTimer: any;
 
   get displayProduct() {
     if (this.product) {
@@ -47,7 +54,54 @@ export class ProductCard {
   get productLink(): string {
     if (this.product?.slug) return this.product.slug;
     if (this.productSlug) return this.productSlug;
-    return this.product?.id || this.id;
+    return this.product?.id || this.product?._id || this.id;
+  }
+
+  get productId(): string {
+    return this.product?._id || this.product?.id || this.id;
+  }
+
+  /** Products with multiple shades need the user to pick a shade first */
+  get hasShades(): boolean {
+    const count = this.product?.shadeCount
+      ?? this.product?.Shades?.length
+      ?? this.shadeCount;
+    return Number(count) > 1;
+  }
+
+  onQuickAdd(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (this.quickAddState !== 'idle') return;
+
+    // Has shades → send to product page to pick shade
+    if (this.hasShades) {
+      this.router.navigate(['/products', this.productLink]);
+      return;
+    }
+
+    // Not logged in → save pending + redirect to login
+    if (!this.authService.isAuthenticated()) {
+      this.cartService.savePendingItems([{ productId: this.productId, quantity: 1 }]);
+      this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
+      return;
+    }
+
+    this.quickAddState = 'loading';
+
+    this.cartService.addToCart({ productId: this.productId, quantity: 1 }).subscribe({
+      next: () => {
+        this.quickAddState = 'added';
+        clearTimeout(this.resetTimer);
+        this.resetTimer = setTimeout(() => {
+          this.quickAddState = 'idle';
+        }, 2000);
+      },
+      error: () => {
+        this.quickAddState = 'idle';
+      }
+    });
   }
 
   getImageUrl(product: any): string {
@@ -57,21 +111,21 @@ export class ProductCard {
       return `${this.backendUrl}/${path.startsWith('/') ? path.slice(1) : path}`;
     };
 
-    // 1. Thumbnail_Images (primary field)
     const thumb = resolve(product?.Thumbnail_Images);
     if (thumb) return thumb;
 
-    // 2. images array fallback
     if (Array.isArray(product?.images) && product.images.length > 0) {
       const img = resolve(product.images[0]);
       if (img) return img;
     }
 
-    // 3. image field (legacy)
     const legacy = resolve(product?.image);
     if (legacy) return legacy;
 
     return 'https://placehold.co/400x400/f5f5f5/999?text=No+Image';
   }
-}
 
+  ngOnDestroy(): void {
+    clearTimeout(this.resetTimer);
+  }
+}

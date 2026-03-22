@@ -32,6 +32,77 @@
     transform: scale(1.05);
 }
 
+/* Quick Add Overlay — slides up from bottom on card hover */
+.quick-add-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 0 10px 10px;
+    transform: translateY(100%);
+    transition: transform 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    pointer-events: none;
+}
+
+.card-image:hover .quick-add-overlay {
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.quick-add-btn {
+    width: 100%;
+    padding: 10px 12px;
+    background: rgba(17, 17, 17, 0.92);
+    backdrop-filter: blur(4px);
+    color: #fff;
+    border: none;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: background 0.15s;
+    white-space: nowrap;
+}
+
+.quick-add-btn svg {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+}
+
+.quick-add-btn:hover {
+    background: rgba(40, 40, 40, 0.96);
+}
+
+.quick-add-btn.state-added {
+    background: rgba(42, 111, 7, 0.92);
+}
+
+.quick-add-btn.state-loading {
+    background: rgba(17, 17, 17, 0.7);
+    cursor: default;
+}
+
+/* Spinner inside button */
+.qa-spinner {
+    width: 13px;
+    height: 13px;
+    border: 1.5px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: qa-spin 0.65s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes qa-spin {
+    to { transform: rotate(360deg); }
+}
+
 /* Badges */
 .badges {
     position: absolute;
