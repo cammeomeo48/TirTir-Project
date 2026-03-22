@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { CartService } from '../../../core/services/cart.service';
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner/loading-spinner';
 import { CartMergeService } from '../../../core/services/cart-merge.service';
 
@@ -16,6 +17,7 @@ import { CartMergeService } from '../../../core/services/cart-merge.service';
 export class LoginComponent {
     private fb = inject(FormBuilder);
     private authService = inject(AuthService);
+    private cartService = inject(CartService);
     private router = inject(Router);
     private route = inject(ActivatedRoute);
     private cartMergeService = inject(CartMergeService);
@@ -51,7 +53,10 @@ export class LoginComponent {
                 setTimeout(() => {
                     this.loading = false;
                 }, 0);
-                
+
+                // Flush any items saved to localStorage before redirecting to login (guest cart persistence)
+                this.cartService.flushPendingItems();
+
                 const queryParams = this.route.snapshot.queryParams;
                 if (queryParams['recovery_token']) {
                     this.cartMergeService.handlePostLoginMerge().then(() => {

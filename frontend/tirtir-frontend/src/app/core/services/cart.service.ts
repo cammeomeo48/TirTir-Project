@@ -24,13 +24,11 @@ export class CartService {
     public cartCount = computed(() => this.cartCountSignal());
 
     constructor() {
-        // Reactively load/clear cart based on auth state
+        // Clear cart state when user logs out
         effect(() => {
-            if (this.authService.isAuthenticated()) {
-                this.flushPendingItems();
-            } else {
+            if (!this.authService.isAuthenticated()) {
                 this.cartSubject.next(null);
-                this.cartCountSignal.set(0);
+                setTimeout(() => this.cartCountSignal.set(0), 0);
             }
         });
     }
@@ -58,7 +56,7 @@ export class CartService {
      * Called on login: add any pending guest items to the server cart, then load.
      * If there are no pending items, falls straight through to loadCart().
      */
-    private flushPendingItems(): void {
+    flushPendingItems(): void {
         const pending = this.getPendingItems();
         if (pending.length === 0) {
             this.loadCart();
