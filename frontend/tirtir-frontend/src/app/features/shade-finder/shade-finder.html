@@ -253,33 +253,6 @@
           <button class="close-x" (click)="closeModal()">✕</button>
         </div>
 
-        <!-- F2: Low confidence warning -->
-        @if (lowConfidence()) {
-          <div class="confidence-warning">
-            <span class="warn-icon">⚠️</span>
-            <span>Low analysis confidence (below 50%). Results may be inaccurate — try scanning again in better lighting.</span>
-          </div>
-        }
-
-        <!-- Heuristic note -->
-        <!-- Issue #19: Clearer heuristic fallback message -->
-        @if (routine()?.isHeuristicGenerated) {
-          <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
-            <p style="margin: 0; color: #856404; font-weight: bold;">
-              ⚠️ AI routine generation unavailable
-            </p>
-            <p style="margin: 8px 0 0 0; color: #856404; font-size: 90%;">
-              Showing algorithmic recommendations based on your skin analysis.
-              If this persists, please try again in a few minutes.
-            </p>
-            <button
-              (click)="closeModal(); scanShade()"
-              style="margin-top: 8px; padding: 6px 12px; background: #ffc107; border: none; border-radius: 4px; cursor: pointer;">
-              🔄 Retry AI Routine
-            </button>
-          </div>
-        }
-
         <!-- Tab Bar -->
         <div class="modal-tabs">
           <button class="modal-tab" [class.active]="activeTab() === 'shade'" (click)="activeTab.set('shade')">
@@ -713,9 +686,6 @@
             </div>
           </ng-container>
 
-          <div class="routine-error" *ngIf="!isLoadingRoutine() && routineError()">
-            <p>{{ routineError() }}</p>
-          </div>
         </div>
 
       </div>
