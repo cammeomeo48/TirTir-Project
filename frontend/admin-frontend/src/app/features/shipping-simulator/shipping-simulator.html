@@ -66,7 +66,7 @@
                     <td>
                         <div class="action-buttons">
                             <button *ngFor="let opt of ghnStatusOptions"
-                                [class]="'btn btn-sm btn-' + opt.cls"
+                                [class]="'btn btn-sm ' + opt.cls"
                                 (click)="simulate(order, opt.value)"
                                 [disabled]="order._simulating">
                                 {{ order._simulating ? '...' : opt.label }}

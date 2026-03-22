@@ -107,12 +107,28 @@ export class OrderDetailComponent implements OnInit {
     }
 
     saveFulfillment(): void {
-        // Persist fulfillment locally for now — extend with API call if backend supports it
+        if (!this.order) return;
         this.savingFulfillment = true;
-        setTimeout(() => {
-            this.savingFulfillment = false;
-            alert('Fulfillment info saved (local). Connect to backend API to persist.');
-        }, 800);
+        this.orderService.updateFulfillment(this.order._id, {
+            carrier: this.carrier,
+            trackingNumber: this.trackingNumber,
+            isPacked: this.isPacked
+        }).subscribe({
+            next: (res: any) => {
+                if (this.order) {
+                    this.order.carrier = res.order?.carrier ?? this.carrier;
+                    this.order.trackingNumber = res.order?.trackingNumber ?? this.trackingNumber;
+                    this.order.isPacked = res.order?.isPacked ?? this.isPacked;
+                }
+                this.savingFulfillment = false;
+                this.updateSuccess = true;
+                setTimeout(() => this.updateSuccess = false, 3000);
+            },
+            error: (err: any) => {
+                this.updateError = err.error?.message || 'Failed to save fulfillment.';
+                this.savingFulfillment = false;
+            }
+        });
     }
 
     // ── Helpers ───────────────────────────────────────────────────

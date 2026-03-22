@@ -75,6 +75,10 @@ const OrderSchema = new mongoose.Schema({
         type: String,
         enum: ['email_1', 'email_2', 'email_3', 'manual']
     },
+    // ─── Fulfillment Info ────────────────────────────────────────────────────
+    carrier:    { type: String, default: null },   // GHN, GHTK, J&T, etc.
+    isPacked:   { type: Boolean, default: false },
+    shippingCost: { type: Number, default: 0 },
     // ─── Status Audit Trail ───────────────────────────────────────────────────
     statusHistory: [
         {
