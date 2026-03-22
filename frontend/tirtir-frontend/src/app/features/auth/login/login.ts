@@ -2,10 +2,12 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../../core/services/auth.service';
 import { CartService } from '../../../core/services/cart.service';
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner/loading-spinner';
 import { CartMergeService } from '../../../core/services/cart-merge.service';
+import { environment } from '../../../../environments/environment';
 
 @Component({
     selector: 'app-login',
@@ -18,6 +20,7 @@ export class LoginComponent {
     private fb = inject(FormBuilder);
     private authService = inject(AuthService);
     private cartService = inject(CartService);
+    private http = inject(HttpClient);
     private router = inject(Router);
     private route = inject(ActivatedRoute);
     private cartMergeService = inject(CartMergeService);
@@ -54,8 +57,11 @@ export class LoginComponent {
                     this.loading = false;
                 }, 0);
 
-                // Flush any items saved to localStorage before redirecting to login (guest cart persistence)
+                // Flush pending cart items (guest cart persistence)
                 this.cartService.flushPendingItems();
+
+                // Flush pending scan result (guest skin profile persistence)
+                this.flushPendingScan();
 
                 const queryParams = this.route.snapshot.queryParams;
                 if (queryParams['recovery_token']) {
@@ -73,6 +79,18 @@ export class LoginComponent {
                 }, 0);
             },
         });
+    }
+
+    private flushPendingScan(): void {
+        const raw = localStorage.getItem('tirtir_pending_scan');
+        if (!raw) return;
+        try {
+            const scan = JSON.parse(raw);
+            localStorage.removeItem('tirtir_pending_scan');
+            this.http.post(`${environment.apiUrl}/ai/save-result`, scan).subscribe();
+        } catch {
+            localStorage.removeItem('tirtir_pending_scan');
+        }
     }
 
     getFieldError(fieldName: string): string {

@@ -198,6 +198,107 @@
     color: #fff;
 }
 
+/* ── Skin Profile Card ── */
+.skin-profile-card {
+    border: 1px solid #e8e6e1;
+    padding: 24px;
+    background: #fafaf8;
+}
+
+.sp-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.sp-eyebrow {
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-accent, #D32F2F);
+    margin-bottom: 4px;
+}
+
+.sp-title {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--color-text, #111);
+    margin-bottom: 2px;
+}
+
+.sp-date {
+    font-size: 11px;
+    color: var(--color-text-muted, #888);
+}
+
+.sp-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.sp-chip {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 16px;
+    border: 1px solid #e0ddd8;
+    background: #fff;
+    min-width: 100px;
+}
+
+.sp-chip-label {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-text-muted, #888);
+}
+
+.sp-chip-val {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text, #111);
+}
+
+.sp-chip--conf .sp-chip-val { color: #2e7d32; }
+
+.sp-concerns {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sp-concerns-label {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-text-muted, #888);
+    margin-bottom: 2px;
+}
+
+.sp-concerns-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.sp-concern-tag {
+    padding: 4px 12px;
+    font-size: 11px;
+    background: #fff3e0;
+    border: 1px solid #ffcc80;
+    color: #e65100;
+}
+
+.sp-concern-tag--ok {
+    background: #e8f5e9;
+    border-color: #a5d6a7;
+    color: #2e7d32;
+}
+
 /* ── Section Label ── */
 .section-label {
     font-size: 10px;

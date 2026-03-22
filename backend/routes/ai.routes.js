@@ -12,6 +12,7 @@ const { aiScanLimiter } = require('../middlewares/rateLimit');
 router.post('/analyze-face', aiScanLimiter, optionalProtect, aiController.analyzeFace);
 router.post('/recommend-routine', aiScanLimiter, optionalProtect, aiController.recommendRoutine);
 router.get('/latest-profile', protect, aiController.getLatestProfile);
+router.post('/save-result', protect, aiController.saveResult);
 router.get('/history', protect, aiController.getHistory);
 
 // Legacy/Alternative

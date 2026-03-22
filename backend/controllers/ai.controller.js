@@ -707,6 +707,61 @@ exports.getLatestProfile = async (req, res) => {
 };
 
 /**
+ * @route   POST /api/ai/save-result
+ * @desc    Save a pre-computed scan result (no image needed).
+ *          Used when a guest user scanned before login — the result is stored
+ *          in localStorage and flushed here after authentication.
+ * @access  Private
+ */
+exports.saveResult = async (req, res) => {
+    try {
+        const { skinTone, undertone, skinType, concerns, confidence, routine } = req.body;
+
+        if (!skinTone || !undertone) {
+            return res.status(400).json({ success: false, message: 'skinTone and undertone are required' });
+        }
+
+        const concernList = Array.isArray(concerns) ? concerns : [];
+
+        // Save full analysis record (imageUrl marks it as a session-restored result)
+        await AiAnalysis.create({
+            user: req.user.id,
+            imageUrl: 'session_restored',
+            analysisResult: {
+                skinTone,
+                undertone,
+                skinType: skinType || 'Normal',
+                concerns: concernList,
+                confidence: confidence || 0.85,
+            },
+            recommendedRoutine: Array.isArray(routine)
+                ? routine.filter(s => s.productId || s.product_id).map(s => ({
+                    step: s.step,
+                    productName: s.product?.Name || s.productName || '',
+                    usage: s.reason || s.application_tip || '',
+                }))
+                : [],
+        });
+
+        // Update quick-access skinProfile snapshot on User doc
+        await User.findByIdAndUpdate(req.user.id, {
+            skinProfile: {
+                skinTone,
+                undertone,
+                skinType: skinType || 'Normal',
+                concerns: concernList,
+                confidence: confidence || 0.85,
+                lastAnalyzedAt: new Date(),
+            },
+        });
+
+        res.json({ success: true, message: 'Scan result saved to your profile' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+/**
  * @route   GET /api/ai/health
  * @desc    Health check — also checks FastAPI service
  */

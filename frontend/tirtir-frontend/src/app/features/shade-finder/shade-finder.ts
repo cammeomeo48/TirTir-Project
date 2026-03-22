@@ -432,6 +432,22 @@ export class ShadeFinderComponent implements OnInit, OnDestroy {
             this.routineError.set('AI Routine is unavailable at the moment. Please try again later.');
           }
 
+          // Save scan result to localStorage if guest — flushed to account after login
+          if (!this.authService.isAuthenticated()) {
+            const profile = this.skinProfile();
+            if (profile) {
+              localStorage.setItem('tirtir_pending_scan', JSON.stringify({
+                skinTone:   profile.skinTone,
+                undertone:  profile.undertone,
+                skinType:   profile.skinType,
+                concerns:   profile.concerns || [],
+                confidence: profile.confidence,
+                routine:    routine?.data?.routine ?? [],
+                timestamp:  new Date().toISOString(),
+              }));
+            }
+          }
+
           this.isLoadingRoutine.set(false);
           this.isProcessing = false;
           this.showResultModal.set(true);

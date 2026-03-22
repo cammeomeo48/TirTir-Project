@@ -46,24 +46,78 @@
 
     <div class="section-divider"></div>
 
-    <!-- Skin Match Banner -->
+    <!-- Skin Profile Card -->
+    <div class="section-label">Skin Profile</div>
+
+    @if (loadingSkinProfile) {
     <div class="skin-banner">
         <div class="skin-banner-body">
             <div class="skin-banner-eyebrow">Skin Match</div>
-            @if (loadingSkinProfile) {
             <div class="skin-banner-title">Loading skin profile...</div>
-            } @else if (skinProfile) {
-            <div class="skin-banner-title">Your skin profile is ready</div>
-            <div class="skin-banner-sub">Skin tone: {{ getSkinToneLabel(skinProfile.skinTone) }} · {{ skinProfile.undertone }} · {{ getSkinTypeLabel(skinProfile.skinType) }}</div>
-            } @else {
-            <div class="skin-banner-title">Your skin profile</div>
-            <div class="skin-banner-sub">Complete your profile to receive personalized shade recommendations</div>
-            }
         </div>
-        <button type="button" class="skin-banner-btn" (click)="navigateToShadeFinder()">
-            {{ skinProfile ? 'Re-scan' : 'Set up now' }}
-        </button>
     </div>
+    } @else if (skinProfile) {
+    <div class="skin-profile-card">
+        <!-- Header row -->
+        <div class="sp-header">
+            <div>
+                <div class="sp-eyebrow">Virtual Shade Finder Result</div>
+                <div class="sp-title">Your Skin Profile</div>
+                @if (skinProfile.lastAnalyzedAt) {
+                <div class="sp-date">Last scanned: {{ formatLastAnalyzed(skinProfile.lastAnalyzedAt) }}</div>
+                }
+            </div>
+            <button type="button" class="skin-banner-btn" (click)="navigateToShadeFinder()">Re-scan</button>
+        </div>
+
+        <!-- Metric chips -->
+        <div class="sp-chips">
+            <span class="sp-chip sp-chip--tone">
+                <span class="sp-chip-label">Skin Tone</span>
+                <span class="sp-chip-val">{{ getSkinToneLabel(skinProfile.skinTone) }}</span>
+            </span>
+            <span class="sp-chip sp-chip--under">
+                <span class="sp-chip-label">Undertone</span>
+                <span class="sp-chip-val">{{ skinProfile.undertone }}</span>
+            </span>
+            <span class="sp-chip sp-chip--type">
+                <span class="sp-chip-label">Skin Type</span>
+                <span class="sp-chip-val">{{ getSkinTypeLabel(skinProfile.skinType) }}</span>
+            </span>
+            <span class="sp-chip sp-chip--conf">
+                <span class="sp-chip-label">Confidence</span>
+                <span class="sp-chip-val">{{ ((skinProfile.confidence || 0) * 100).toFixed(0) }}%</span>
+            </span>
+        </div>
+
+        <!-- Concerns -->
+        @if (skinProfile.concerns && skinProfile.concerns.length > 0 && skinProfile.concerns[0] !== 'None') {
+        <div class="sp-concerns">
+            <div class="sp-concerns-label">Detected Concerns</div>
+            <div class="sp-concerns-list">
+                @for (concern of skinProfile.concerns; track concern) {
+                    @if (concern !== 'None') {
+                    <span class="sp-concern-tag">{{ concern }}</span>
+                    }
+                }
+            </div>
+        </div>
+        } @else {
+        <div class="sp-concerns">
+            <span class="sp-concern-tag sp-concern-tag--ok">No concerns detected</span>
+        </div>
+        }
+    </div>
+    } @else {
+    <div class="skin-banner">
+        <div class="skin-banner-body">
+            <div class="skin-banner-eyebrow">Skin Match</div>
+            <div class="skin-banner-title">No scan yet</div>
+            <div class="skin-banner-sub">Use Virtual Shade Finder to get personalized shade recommendations saved to your profile</div>
+        </div>
+        <button type="button" class="skin-banner-btn" (click)="navigateToShadeFinder()">Set up now</button>
+    </div>
+    }
 
     <div class="section-divider"></div>
 
