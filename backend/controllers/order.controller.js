@@ -137,6 +137,14 @@ async function _createOrderLogic(req, session) {
 
     const savedOrder = session ? await newOrder.save({ session }) : await newOrder.save();
 
+    // CANCEL Cart Recovery Jobs since the user has checked out
+    try {
+        const { cancelRecoveryJobsForCart } = require('../queues/cart_recovery.queue');
+        await cancelRecoveryJobsForCart(cart._id.toString());
+    } catch (err) {
+        console.error("Failed to cancel recovery jobs natively", err);
+    }
+
     for (const reserved of reservedProducts) {
         const historyDoc = [{
             product: reserved.id, action: 'Reserve', change_type: 'Decrease',
@@ -176,6 +184,16 @@ async function _createOrderLogic(req, session) {
         message: `Order #${savedOrder._id.toString().slice(-6).toUpperCase()} — ${formatCurrency(savedOrder.totalAmount)}`,
         orderId: savedOrder._id
     });
+
+    // Notify user: order placed
+    const placedShortId = savedOrder._id.toString().slice(-6).toUpperCase();
+    await createNotification(
+        userId,
+        'order',
+        'Order Placed',
+        `Your order #${placedShortId} has been placed successfully and is awaiting confirmation.`,
+        `/account/orders/${savedOrder._id}`
+    );
 
     return savedOrder._id;
 }
@@ -369,20 +387,20 @@ exports.updateOrderStatus = async (req, res) => {
         const shortId = orderIdStr.slice(-6).toUpperCase();
         const notifMap = {
             Processing: {
-                title: '🛒 Đơn hàng đang xử lý',
-                message: `Đơn hàng #${shortId} đã được xác nhận và đang được xử lý.`
+                title: 'Order Processing',
+                message: `Order #${shortId} has been confirmed and is being prepared.`
             },
             Shipped: {
-                title: '🚚 Đơn hàng đang giao',
-                message: `Đơn hàng #${shortId} đã được giao cho đơn vị vận chuyển.`
+                title: 'Order Shipped',
+                message: `Order #${shortId} has been handed to the delivery carrier and is on its way.`
             },
             Delivered: {
-                title: '✅ Giao hàng thành công',
-                message: `Đơn hàng #${shortId} đã được giao thành công. Cảm ơn bạn đã mua sắm!`
+                title: 'Order Delivered',
+                message: `Order #${shortId} has been delivered successfully. Thank you for shopping with us!`
             },
             Cancelled: {
-                title: '❌ Đơn hàng đã bị hủy',
-                message: `Đơn hàng #${shortId} đã bị hủy. Liên hệ hỗ trợ nếu cần trợ giúp.`
+                title: 'Order Cancelled',
+                message: `Order #${shortId} has been cancelled. Please contact support if you need help.`
             }
         };
 

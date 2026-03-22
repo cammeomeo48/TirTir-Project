@@ -87,10 +87,30 @@
                             <div class="payment-selection">
                                 <select id="paymentMethod" formControlName="paymentMethod"
                                     class="form-select payment-select">
-                                    <option value="VNPAY">VNPAY - Thanh toán qua VNPAY</option>
-                                    <option value="MOMO">MoMo - Thanh toán qua ví Điện tử MoMo</option>
-                                    <option value="CARD">Thẻ ATM/Visa/Master/JCB/Khác</option>
+                                    <option value="VNPAY">VNPAY — Online Payment</option>
+                                    <option value="MOMO">MoMo — E-Wallet</option>
+                                    <option value="CARD">ATM / Visa / Mastercard / JCB</option>
                                 </select>
+
+                                <div class="payment-badges">
+                                    <span class="payment-badge">
+                                        <svg viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="8" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M1 6h12" stroke="currentColor" stroke-width="1.2"/></svg>
+                                        VNPAY
+                                    </span>
+                                    <span class="payment-badge">
+                                        <svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M5 7a2 2 0 1 0 4 0 2 2 0 0 0-4 0" stroke="currentColor" stroke-width="1.2"/></svg>
+                                        MoMo
+                                    </span>
+                                    <span class="payment-badge">
+                                        <svg viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="8" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M1 6h12" stroke="currentColor" stroke-width="1.2"/><path d="M4 9h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                                        ATM / Card
+                                    </span>
+                                </div>
+
+                                <div class="payment-security">
+                                    <svg viewBox="0 0 14 14" fill="none"><path d="M7 1L2 3.5v4C2 10.5 4.5 13 7 13s5-2.5 5-5.5v-4L7 1z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    Secured & encrypted payment
+                                </div>
                             </div>
                         </div>
                     </div>

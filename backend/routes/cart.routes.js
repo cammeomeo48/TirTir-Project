@@ -7,7 +7,9 @@ const {
     removeFromCart,
     clearCart,
     getCartCount,
-    unsubscribeRecovery
+    unsubscribeRecovery,
+    mergeCart,
+    abandonCart
 } = require('../controllers/cart.controller');
 const { protect } = require('../middlewares/auth');
 
@@ -23,5 +25,7 @@ router.put('/update', updateCartItem);
 router.delete('/remove/:productId/:shade', removeFromCart);
 router.delete('/clear', clearCart);
 router.get('/count', getCartCount);
+router.post('/merge', mergeCart);
+router.post('/abandon', abandonCart);
 
 module.exports = router;

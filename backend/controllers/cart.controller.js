@@ -455,3 +455,121 @@ exports.unsubscribeRecovery = async (req, res) => {
         return res.status(400).send(errorHtml);
     }
 };
+
+// 8. MERGE CART (G4 Cart Merge Logic)
+exports.mergeCart = async (req, res) => {
+    try {
+        const { guestCartToken, mergeStrategy = 'union' } = req.body;
+        const userId = req.user.id;
+
+        const supportTransactions = mongoose.connection.readyState === 1 && !!mongoose.connection.db.admin;
+        const session = supportTransactions ? await mongoose.startSession() : null;
+        
+        try {
+            if (session) session.startTransaction();
+
+            const guestCart = await Cart.findOne({ recovery_token: guestCartToken }).session(session);
+            if (!guestCart || guestCart.status === 'purchased') throw new Error('INVALID_TOKEN');
+            if (guestCart.token_expires_at && new Date() > guestCart.token_expires_at) throw new Error('TOKEN_EXPIRED');
+
+            let userCart = await Cart.findOne({ user: userId, status: { $ne: 'merged' } }).session(session);
+            if (!userCart) {
+                userCart = new Cart({ user: userId, items: [], status: 'active' });
+            }
+
+            const mergedMap = new Map();
+            userCart.items.forEach(item => {
+                const key = item.product.toString() + '_' + (item.shade || '');
+                mergedMap.set(key, { ...item.toObject() });
+            });
+
+            guestCart.items.forEach(gItem => {
+                const key = gItem.product.toString() + '_' + (gItem.shade || '');
+                if (mergedMap.has(key)) {
+                    mergedMap.get(key).quantity += gItem.quantity;
+                } else {
+                    mergedMap.set(key, { ...gItem.toObject() });
+                }
+            });
+
+            userCart.items = Array.from(mergedMap.values());
+            userCart.totalPrice = calculateTotal(userCart);
+            userCart.lastAbandonedAt = new Date(); 
+
+            const itemsAdded = guestCart.items.length;
+
+            guestCart.status = 'merged';
+            guestCart.merged_into_cart_id = userCart._id;
+
+            await guestCart.save({ session });
+            await userCart.save({ session });
+
+            let CartRecoveryEvent;
+            try { CartRecoveryEvent = require('../models/cart_recovery_event.model'); } catch(e) {}
+            if (CartRecoveryEvent) {
+                await CartRecoveryEvent.create([{
+                    cart_id: guestCart._id,
+                    user_id: userId,
+                    event_type: 'cart_merged',
+                    metadata: { target_cart: userCart._id }
+                }], { session });
+            }
+
+            try {
+                const { cancelRecoveryJobsForCart } = require('../queues/cart_recovery.queue');
+                if (cancelRecoveryJobsForCart) await cancelRecoveryJobsForCart(guestCart._id.toString());
+            } catch (e) {}
+
+            if (session) await session.commitTransaction();
+
+            const populatedCart = await Cart.findById(userCart._id).populate({
+                path: 'items.product',
+                select: 'Name Price Original_Price Thumbnail_Images Stock_Quantity slug Product_Attributes Product_ID'
+            });
+
+            res.status(200).json({ mergedCart: populatedCart, itemsAdded });
+        } catch (error) {
+            if (session) await session.abortTransaction();
+            throw error;
+        } finally {
+            if (session) session.endSession();
+        }
+    } catch (error) {
+        if (['INVALID_TOKEN', 'TOKEN_EXPIRED'].includes(error.message)) {
+            return res.status(400).json({ error: error.message });
+        }
+        res.status(500).json({ error: 'MERGE_FAILED', message: error.message });
+    }
+};
+
+// 9. CART ABANDONMENT TRIGGER (Triggered via API optionally on beforeunload)
+exports.abandonCart = async (req, res) => {
+    try {
+        const userId = req.user ? req.user.id : null;
+        let cart;
+        
+        if (userId) {
+            const CartClass = require('../models/cart.model');
+            cart = await CartClass.findOne({ user: userId }).populate('user');
+        }
+        
+        const { guestEmail, guestCartToken } = req.body;
+        if (!cart && guestCartToken) {
+            const CartClass = require('../models/cart.model');
+            cart = await CartClass.findOne({ recovery_token: guestCartToken });
+        }
+
+        if (!cart) return res.status(404).json({ message: "Cart not found" });
+
+        const { scheduleRecoveryEmails } = require('../services/cart_abandonment.service');
+        await scheduleRecoveryEmails(cart, userId ? cart.user?.email : null, guestEmail);
+
+        cart.status = 'abandoned';
+        await cart.save();
+
+        res.status(200).json({ message: "Scheduled cart recovery events." });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+    }
+};

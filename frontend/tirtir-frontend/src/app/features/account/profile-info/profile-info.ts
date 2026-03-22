@@ -47,6 +47,7 @@ export class ProfileInfoComponent implements OnInit, OnDestroy, CanComponentDeac
 
     // Unsaved changes tracking
     hasUnsavedChanges = false;
+    initialFormValue: any = null;
     private destroy$ = new Subject<void>();
 
     // Camera state
@@ -84,6 +85,8 @@ export class ProfileInfoComponent implements OnInit, OnDestroy, CanComponentDeac
                     gender: user.gender || '',
                     birthDate: user.birthDate ? this.formatDateForInput(user.birthDate) : ''
                 });
+                this.initialFormValue = this.profileForm.value;
+                this.hasUnsavedChanges = false;
                 this.loading = false;
             },
             error: (error) => {
@@ -366,8 +369,10 @@ export class ProfileInfoComponent implements OnInit, OnDestroy, CanComponentDeac
     private trackFormChanges(): void {
         this.profileForm.valueChanges
             .pipe(takeUntil(this.destroy$))
-            .subscribe(() => {
-                this.hasUnsavedChanges = true;
+            .subscribe((val) => {
+                if (this.initialFormValue) {
+                    this.hasUnsavedChanges = JSON.stringify(this.initialFormValue) !== JSON.stringify(val);
+                }
             });
     }
 
@@ -420,7 +425,7 @@ export class ProfileInfoComponent implements OnInit, OnDestroy, CanComponentDeac
                 this.loadingSkinProfile = false;
             },
             error: () => {
-                this.skinProfileError = 'Không thể tải hồ sơ da.';
+                this.skinProfileError = 'Failed to load skin profile.';
                 this.loadingSkinProfile = false;
             }
         });
@@ -432,30 +437,30 @@ export class ProfileInfoComponent implements OnInit, OnDestroy, CanComponentDeac
 
     getSkinTypeLabel(type: string): string {
         const map: Record<string, string> = {
-            'Oily': 'Da dầu',
-            'Dry': 'Da khô',
-            'Combination': 'Da hỗn hợp',
-            'Normal': 'Da thường',
-            'Sensitive': 'Da nhạy cảm'
+            'Oily': 'Oily',
+            'Dry': 'Dry',
+            'Combination': 'Combination',
+            'Normal': 'Normal',
+            'Sensitive': 'Sensitive'
         };
         return map[type] || type;
     }
 
     getSkinToneLabel(tone: string): string {
         const map: Record<string, string> = {
-            'Fair': 'Trắng sứ',
-            'Light': 'Sáng',
-            'Medium': 'Trung bình',
-            'Tan': 'Nâu nhẹ',
-            'Dark': 'Ngăm',
-            'Deep': 'Sẫn tối'
+            'Fair': 'Fair',
+            'Light': 'Light',
+            'Medium': 'Medium',
+            'Tan': 'Tan',
+            'Dark': 'Dark',
+            'Deep': 'Deep'
         };
         return map[tone] || tone;
     }
 
     formatLastAnalyzed(date: Date | string): string {
         if (!date) return '';
-        return new Date(date).toLocaleDateString('vi-VN', {
+        return new Date(date).toLocaleDateString('en-US', {
             day: '2-digit', month: '2-digit', year: 'numeric',
             hour: '2-digit', minute: '2-digit'
         });

@@ -4,8 +4,28 @@ const CartSchema = new mongoose.Schema({
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true,
-        unique: true
+        // Enable guests by removing strict constraint, use sparse unique index
+        index: { unique: true, sparse: true }
+    },
+    session_id: {
+        type: String,
+        index: { unique: true, sparse: true }
+    },
+    status: {
+        type: String,
+        enum: ['active', 'purchased', 'abandoned', 'merged'],
+        default: 'active'
+    },
+    recovery_token: {
+        type: String,
+        sparse: true
+    },
+    token_expires_at: {
+        type: Date
+    },
+    merged_into_cart_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Cart'
     },
     items: [
         {

@@ -1,224 +1,184 @@
 <div class="profile-info">
+
+    <!-- Header -->
     <div class="page-header">
-        <h1>Profile Information</h1>
-        <p class="subtitle">Manage your personal information</p>
+        <div class="eyebrow">My Account</div>
+        <div class="page-title">Profile information</div>
+        <div class="subtitle">Manage your personal details</div>
     </div>
+
+    <!-- Alerts -->
+    @if (successMessage) {
+    <div class="alert alert-success">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        {{ successMessage }}
+    </div>
+    }
+    @if (errorMessage) {
+    <div class="alert alert-error">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M8 5v4M8 11v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.2"/></svg>
+        {{ errorMessage }}
+    </div>
+    }
 
     <!-- Avatar Section -->
     <div class="avatar-section">
-        <div class="avatar-container" (click)="openAvatarUpload()" title="Click to change avatar">
+        <div class="avatar-wrap" (click)="openAvatarUpload()" title="Click to change avatar">
             @if (user?.avatar) {
-            <img [src]="getAvatarUrl(user?.avatar!)" alt="Avatar" class="avatar-image">
+            <img [src]="getAvatarUrl(user?.avatar!)" alt="Avatar" class="avatar-img">
             } @else {
             <div class="avatar-initials" [style.background]="getAvatarColor()">
                 {{ getUserInitials() }}
             </div>
             }
-            <div class="avatar-overlay">
-                <span class="edit-text">EDIT</span>
+            <div class="avatar-edit-badge">
+                <svg viewBox="0 0 12 12" fill="none">
+                    <path d="M8.5 1.5l2 2L3 11H1V9L8.5 1.5z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
             </div>
         </div>
-        <div class="avatar-info">
-            <h3>{{ (user?.name === 'User' ? 'Cam Meo Meo' : user?.name) || 'Cam Meo Meo' }}</h3>
-            <p class="email">{{ user?.email }}</p>
-            <p class="hint">Click avatar to upload new photo</p>
+        <div class="avatar-meta">
+            <div class="avatar-name">{{ (user?.name === 'User' ? '' : user?.name) || '' }}</div>
+            <div class="avatar-email">{{ user?.email }}</div>
+            <div class="avatar-hint">Click avatar to change photo</div>
         </div>
     </div>
 
+    <div class="section-divider"></div>
 
-
-    <!-- ===== SKIN PROFILE SECTION ===== -->
-    <div class="skin-profile-section">
-        <div class="skin-profile-header">
-            <h2>🧬 Hồ sơ da của bạn</h2>
-            @if (skinProfile) {
-            <span class="ai-badge">✨ AI Analyzed</span>
-            }
-        </div>
-
-        @if (loadingSkinProfile) {
-        <div class="skin-profile-loading">
-            <span class="spinner-sm"></span> Đang tải hồ sơ da...
-        </div>
-        } @else if (skinProfile) {
-        <div class="skin-profile-card">
-            <div class="skin-info-grid">
-                <div class="skin-info-item">
-                    <span class="skin-label">Màu da</span>
-                    <span class="skin-value tone-badge">{{ getSkinToneLabel(skinProfile.skinTone) }}</span>
-                </div>
-                <div class="skin-info-item">
-                    <span class="skin-label">Undertone</span>
-                    <span class="skin-value">{{ skinProfile.undertone }}</span>
-                </div>
-                <div class="skin-info-item">
-                    <span class="skin-label">Loại da</span>
-                    <span class="skin-value">{{ getSkinTypeLabel(skinProfile.skinType) }}</span>
-                </div>
-                <div class="skin-info-item">
-                    <span class="skin-label">Độ chính xác</span>
-                    <div class="confidence-wrap">
-                        <div class="confidence-bar">
-                            <div class="confidence-fill" [style.width.%]="skinProfile.confidence * 100"></div>
-                        </div>
-                        <span class="confidence-pct">{{ (skinProfile.confidence * 100) | number:'1.0-0' }}%</span>
-                    </div>
-                </div>
-            </div>
-
-            @if (skinProfile.concerns && skinProfile.concerns.length > 0) {
-            <div class="skin-concerns">
-                <span class="skin-label">Vấn đề da</span>
-                <div class="concern-tags">
-                    @for (concern of skinProfile.concerns; track concern) {
-                    <span class="concern-tag">{{ concern }}</span>
-                    }
-                </div>
-            </div>
-            }
-
-            <div class="skin-profile-footer">
-                <span class="last-analyzed">🕐 Lần cuối: {{ formatLastAnalyzed(skinProfile.lastAnalyzedAt) }}</span>
-                <button type="button" class="btn-rescan" (click)="navigateToShadeFinder()">🔄 Quét lại</button>
-            </div>
-        </div>
-        } @else {
-        <div class="skin-profile-empty">
-            <div class="empty-icon">🔬</div>
-            <p>Bạn chưa có hồ sơ da. Hãy thử Virtual Shade Finder để phân tích da và nhận gợi ý sản phẩm phù hợp!</p>
-            <button type="button" class="btn btn-primary" (click)="navigateToShadeFinder()">✨ Scan ngay</button>
-        </div>
-        }
-    </div>
-
-    <!-- Hidden file input -->
-    <input type="file" #fileInput style="display: none" accept="image/jpeg,image/jpg,image/png,image/webp"
-        (change)="onFileSelected($event)">
-
-    <!-- Upload Modal -->
-    @if (showUploadModal) {
-    <div class="upload-modal-overlay" (click)="closeUploadModal()">
-        <div class="upload-modal" (click)="$event.stopPropagation()">
-            <h2>Change Avatar</h2>
-
-            @if (!selectedFile && !showCameraPreview) {
-            <div class="upload-options">
-                <button type="button" class="upload-option-btn primary-upload" (click)="triggerFileInput()">
-                    <span>Upload from Device</span>
-                </button>
-                <button type="button" class="upload-option-btn secondary-upload" (click)="openCamera()">
-                    <span>Capture from Camera</span>
-                </button>
-            </div>
-            } @else if (showCameraPreview) {
-            <div class="camera-section">
-                <div class="video-wrapper">
-                    <video #videoElement autoplay playsinline class="camera-video"></video>
-                    <canvas #canvasElement style="display: none;"></canvas>
-                </div>
-                <div class="camera-actions">
-                    <button type="button" class="btn btn-primary" (click)="capturePhoto()">Capture Photo</button>
-                    <button type="button" class="btn btn-secondary" (click)="stopCamera()">Cancel</button>
-                </div>
-            </div>
+    <!-- Skin Match Banner -->
+    <div class="skin-banner">
+        <div class="skin-banner-body">
+            <div class="skin-banner-eyebrow">Skin Match</div>
+            @if (loadingSkinProfile) {
+            <div class="skin-banner-title">Loading skin profile...</div>
+            } @else if (skinProfile) {
+            <div class="skin-banner-title">Your skin profile is ready</div>
+            <div class="skin-banner-sub">Skin tone: {{ getSkinToneLabel(skinProfile.skinTone) }} · {{ skinProfile.undertone }} · {{ getSkinTypeLabel(skinProfile.skinType) }}</div>
             } @else {
-            <div class="preview-section">
-                <img [src]="previewUrl" alt="Preview" class="avatar-preview">
-                <div class="preview-actions">
-                    @if (uploadProgress === null) {
-                    <button type="button" class="btn btn-primary" (click)="confirmUpload()" [disabled]="uploading">
-                        @if (uploading) {
-                        <span class="spinner"></span> Uploading...
-                        } @else {
-                        Upload Avatar
-                        }
-                    </button>
-                    <button type="button" class="btn btn-secondary" (click)="cancelUpload()" [disabled]="uploading">
-                        Cancel
-                    </button>
-                    } @else {
-                    <div class="upload-progress">
-                        <div class="progress-bar">
-                            <div class="progress-fill" [style.width.%]="uploadProgress"></div>
-                        </div>
-                        <span>{{ uploadProgress }}%</span>
-                    </div>
-                    }
-                </div>
-            </div>
+            <div class="skin-banner-title">Your skin profile</div>
+            <div class="skin-banner-sub">Complete your profile to receive personalized shade recommendations</div>
             }
-
-            <button type="button" class="close-btn" (click)="closeUploadModal()" [disabled]="uploading">×</button>
         </div>
+        <button type="button" class="skin-banner-btn" (click)="navigateToShadeFinder()">
+            {{ skinProfile ? 'Re-scan' : 'Set up now' }}
+        </button>
     </div>
-    }
 
-    <!-- Success/Error Messages -->
-    @if (successMessage) {
-    <div class="alert alert-success">
-        ✓ {{ successMessage }}
-    </div>
-    }
-    @if (errorMessage) {
-    <div class="alert alert-error">
-        ✗ {{ errorMessage }}
-    </div>
-    }
+    <div class="section-divider"></div>
+
+    <!-- Personal Details -->
+    <div class="section-label">Personal Details</div>
 
     <!-- Profile Form -->
     <form [formGroup]="profileForm" (ngSubmit)="onSubmit()" class="profile-form">
-        <!-- Name -->
+
+        <!-- Row 1: Name + Phone -->
         <div class="form-group">
-            <label for="name">Full Name <span class="required">*</span></label>
-            <input type="text" id="name" formControlName="name" class="form-control" placeholder="Enter your full name">
+            <label for="name">Full Name</label>
+            <input type="text" id="name" formControlName="name" class="form-input" placeholder="Enter your full name">
             @if (profileForm.get('name')?.invalid && profileForm.get('name')?.touched) {
-            <div class="error-message">Name is required (minimum 2 characters)</div>
+            <span class="field-error">Name is required (min. 2 characters)</span>
             }
         </div>
 
-        <!-- Phone -->
         <div class="form-group">
             <label for="phone">Phone Number</label>
-            <input type="tel" id="phone" formControlName="phone" class="form-control" placeholder="0901234567">
+            <input type="tel" id="phone" formControlName="phone" class="form-input" placeholder="0901234567">
             @if (profileForm.get('phone')?.invalid && profileForm.get('phone')?.touched) {
-            <div class="error-message">Phone must be 10-11 digits</div>
+            <span class="field-error">Phone must be 10–11 digits</span>
             }
         </div>
 
-        <!-- Email (Read-only) -->
+        <!-- Row 2: Email + Gender -->
         <div class="form-group">
             <label for="email">Email Address</label>
-            <input type="email" id="email" [value]="user?.email || ''" class="form-control" readonly disabled>
-            <p class="field-hint">Email cannot be changed</p>
+            <input type="email" id="email" [value]="user?.email || ''" class="form-input form-input--disabled" readonly disabled>
         </div>
 
-        <!-- Gender -->
         <div class="form-group">
             <label for="gender">Gender</label>
-            <select id="gender" formControlName="gender" class="form-control">
-                <option value="">Select Gender</option>
+            <select id="gender" formControlName="gender" class="form-input form-select">
+                <option value="">Not specified</option>
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
                 <option value="Other">Other</option>
             </select>
         </div>
 
-        <!-- Birth Date -->
+        <!-- Row 3: DOB (left col) -->
         <div class="form-group">
             <label for="birthDate">Date of Birth</label>
-            <input type="date" id="birthDate" formControlName="birthDate" class="form-control">
+            <input type="date" id="birthDate" formControlName="birthDate" class="form-input">
         </div>
 
+        <!-- empty right col -->
+        <div></div>
 
-        <!-- Submit Button -->
+        <!-- Actions -->
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary" [disabled]="loading || profileForm.invalid">
+            <button type="submit" class="btn-save" [disabled]="loading || profileForm.invalid">
                 @if (loading) {
-                <span class="spinner"></span> Saving...
+                <span class="btn-spinner"></span> Saving...
                 } @else {
                 Save Changes
                 }
             </button>
+            <button type="button" class="btn-cancel" (click)="loadProfile()">Cancel</button>
         </div>
+
     </form>
+
 </div>
+
+<!-- Hidden file input -->
+<input type="file" #fileInput style="display: none" accept="image/jpeg,image/jpg,image/png,image/webp"
+    (change)="onFileSelected($event)">
+
+<!-- Upload Modal -->
+@if (showUploadModal) {
+<div class="upload-modal-overlay" (click)="closeUploadModal()">
+    <div class="upload-modal" (click)="$event.stopPropagation()">
+        <div class="upload-modal-title">Change Avatar</div>
+
+        @if (!selectedFile && !showCameraPreview) {
+        <div class="upload-options">
+            <button type="button" class="upload-btn upload-btn--primary" (click)="triggerFileInput()">Upload from Device</button>
+            <button type="button" class="upload-btn upload-btn--outline" (click)="openCamera()">Capture from Camera</button>
+        </div>
+        } @else if (showCameraPreview) {
+        <div class="camera-section">
+            <div class="video-wrapper">
+                <video #videoElement autoplay playsinline class="camera-video"></video>
+                <canvas #canvasElement style="display: none;"></canvas>
+            </div>
+            <div class="camera-actions">
+                <button type="button" class="upload-btn upload-btn--primary" (click)="capturePhoto()">Capture Photo</button>
+                <button type="button" class="upload-btn upload-btn--outline" (click)="stopCamera()">Cancel</button>
+            </div>
+        </div>
+        } @else {
+        <div class="preview-section">
+            <img [src]="previewUrl" alt="Preview" class="avatar-preview-img">
+            <div class="preview-actions">
+                @if (uploadProgress === null) {
+                <button type="button" class="upload-btn upload-btn--primary" (click)="confirmUpload()" [disabled]="uploading">
+                    @if (uploading) { <span class="btn-spinner"></span> Uploading... } @else { Upload Avatar }
+                </button>
+                <button type="button" class="upload-btn upload-btn--outline" (click)="cancelUpload()" [disabled]="uploading">Cancel</button>
+                } @else {
+                <div class="upload-progress">
+                    <div class="progress-bar"><div class="progress-fill" [style.width.%]="uploadProgress"></div></div>
+                    <span>{{ uploadProgress }}%</span>
+                </div>
+                }
+            </div>
+        </div>
+        }
+
+        <button type="button" class="modal-close" (click)="closeUploadModal()" [disabled]="uploading">
+            <svg viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+    </div>
+</div>
+}

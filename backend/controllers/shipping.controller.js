@@ -99,12 +99,12 @@ const updateOrderStatusInternal = async (orderId, newStatus, performedById = nul
     const shortId = orderId.toString().slice(-6).toUpperCase();
     const notifMap = {
         Delivered: {
-            title: '✅ Đơn hàng đã giao thành công',
-            message: `Đơn hàng #${shortId} đã được giao đến bạn. Cảm ơn bạn đã mua sắm tại TirTir! 🎉`
+            title: 'Order Delivered',
+            message: `Order #${shortId} has been delivered to you. Thank you for shopping with TirTir!`
         },
         Cancelled: {
-            title: '❌ Đơn hàng bị hủy/hoàn',
-            message: `Đơn hàng #${shortId} đã bị hủy hoặc hoàn lại từ shipper.`
+            title: 'Order Cancelled',
+            message: `Order #${shortId} has been cancelled or returned by the carrier.`
         }
     };
 

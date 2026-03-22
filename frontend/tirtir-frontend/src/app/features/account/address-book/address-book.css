@@ -2,296 +2,579 @@
     max-width: 100%;
 }
 
+/* ── Header ── */
 .page-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 40px;
+    margin-bottom: 2rem;
 }
 
-.page-header h1 {
-    font-size: 14px;
-    font-weight: 800;
+.eyebrow {
+    font-size: 9px;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
-    letter-spacing: 2px;
-    color: #111;
-    margin: 0 0 10px 0;
+    color: var(--color-accent, #D32F2F);
+    margin-bottom: 6px;
 }
 
-.subtitle {
-    font-size: 11px;
-    color: #888;
+.page-title {
+    font-family: var(--font-display, 'Playfair Display', Georgia, serif);
+    font-size: 32px;
+    font-weight: 500;
+    font-style: italic;
+    line-height: 1.1;
+    color: var(--color-text, #111);
+    margin-bottom: 6px;
+}
+
+.addr-count {
+    font-size: 12px;
+    color: var(--color-text-muted, #888);
+}
+
+/* Add Address button (outline, top-right) */
+.add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 20px;
+    background: transparent;
+    border: 1px solid #d8d5ce;
+    color: var(--color-text, #111);
+    font-size: 10px;
+    font-weight: 500;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.12em;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex-shrink: 0;
 }
 
-/* Alerts */
+.add-btn svg {
+    width: 10px;
+    height: 10px;
+    flex-shrink: 0;
+}
+
+.add-btn:hover:not(:disabled) {
+    border-color: var(--color-text, #111);
+}
+
+.add-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* ── Alerts ── */
 .alert {
-    padding: 15px;
-    font-size: 11px;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    margin-bottom: 30px;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 14px;
+    font-size: 12px;
+    margin-bottom: 1.5rem;
+}
+
+.alert svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
 }
 
 .alert-success {
-    background: #f0fff0;
-    color: #2e7d32;
-    border: 1px solid #2e7d32;
+    background: #f4fbf0;
+    color: #2a6f07;
+    border-left: 3px solid #2a6f07;
 }
 
 .alert-error {
-    background: #fff0f0;
+    background: #fff5f5;
     color: #d32f2f;
-    border: 1px solid #d32f2f;
+    border-left: 3px solid #d32f2f;
 }
 
-/* Addresses Grid */
-.addresses-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 30px;
+/* ── Loading ── */
+.loading-state {
+    padding: 60px 0;
+    display: flex;
+    justify-content: center;
 }
 
-.address-card {
-    background: white;
-    border: 1px solid #e0e0e0;
-    padding: 30px;
-    position: relative;
-    transition: all 0.3s ease;
+.spinner {
+    width: 28px;
+    height: 28px;
+    border: 2px solid #e8e6e1;
+    border-top-color: var(--color-text, #111);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
 }
 
-.address-card:hover {
-    border-color: #111;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
-.address-card.default {
-    border-color: #111;
-}
-
-.default-badge {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    background: #111;
-    color: white;
-    padding: 4px 10px;
-    font-size: 9px;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-.address-content h3 {
-    margin: 0 0 10px 0;
-    font-size: 16px;
-    font-weight: 800;
-    text-transform: uppercase;
-    color: #111;
-}
-
-.phone {
-    color: #888;
-    font-size: 13px;
-    margin: 0 0 15px 0;
-}
-
-.address-details {
-    color: #555;
-    font-size: 14px;
-    line-height: 1.8;
-    margin: 0 0 24px 0;
-}
-
-/* Address Actions */
-.address-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-}
-
-/* Action Buttons */
-.btn-action {
-    padding: 12px;
-    border: none;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    cursor: pointer;
-    transition: all 0.2s;
+/* ── Empty ── */
+.empty-state {
+    padding: 60px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
     text-align: center;
 }
 
-.btn-default {
-    grid-column: span 2;
-    background: #111;
-    color: white;
-    margin-bottom: 5px;
+.empty-icon {
+    width: 40px;
+    height: 40px;
+    color: var(--color-text-muted, #ccc);
 }
 
-.btn-edit {
-    background: #f5f5f5;
-    color: #111;
-    border: 1px solid #e0e0e0;
+.empty-state p {
+    font-size: 13px;
+    color: var(--color-text-muted, #888);
+    margin: 0;
 }
 
-.btn-delete {
-    background: #fff5f5;
-    color: #d32f2f;
-    border: 1px solid #ffcdd2;
+/* ── Addresses Grid ── */
+.addresses-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0;
+    border-top: 1px solid #e8e6e1;
 }
 
-.btn-action:hover:not(:disabled) {
-    opacity: 0.8;
+/* Add vertical divider between columns */
+.addresses-grid .address-col:nth-child(odd) {
+    border-right: 1px solid #e8e6e1;
+    padding-right: 48px;
 }
 
-/* Modal */
+.addresses-grid .address-col:nth-child(even) {
+    padding-left: 48px;
+}
+
+/* ── Address Column ── */
+.address-col {
+    position: relative;
+    padding-top: 28px;
+    padding-bottom: 28px;
+}
+
+/* Default label — inline top-left, plain text style */
+.default-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--color-text, #111);
+    margin-bottom: 10px;
+}
+
+.default-label svg {
+    width: 10px;
+    height: 10px;
+    flex-shrink: 0;
+}
+
+/* Default card: subtle left border accent */
+.address-col.is-default {
+    border-top: 2px solid var(--color-text, #111);
+    padding-left: 16px;
+}
+
+/* Even column needs adjustment for divider + left border */
+.addresses-grid .address-col.is-default:nth-child(odd) {
+    padding-left: 16px;
+}
+
+.addresses-grid .address-col.is-default:nth-child(even) {
+    padding-left: calc(48px + 16px);
+
+}
+
+.addr-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-text, #111);
+    margin-bottom: 6px;
+}
+
+.addr-phone {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--color-text-muted, #888);
+    margin-bottom: 14px;
+}
+
+.addr-phone svg {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+}
+
+.addr-lines {
+    font-size: 13px;
+    color: var(--color-text-muted, #666);
+    line-height: 1.8;
+    margin-bottom: 20px;
+}
+
+/* Default card: address lines in muted teal/slate */
+.addr-lines--default {
+    color: #5b7fa6;
+}
+
+.addr-divider {
+    border: none;
+    border-top: 1px solid #e8e6e1;
+    margin-bottom: 16px;
+}
+
+/* ── Action Buttons ── */
+.addr-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.action-btn {
+    padding: 8px 14px;
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.15s;
+    border-radius: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.action-btn svg {
+    width: 11px;
+    height: 11px;
+    flex-shrink: 0;
+}
+
+.action-btn--default {
+    background: var(--color-text, #111);
+    color: #fff;
+    border: none;
+}
+
+.action-btn--default:hover:not(:disabled) {
+    background: #333;
+}
+
+.action-btn--default:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.action-btn--outline {
+    background: transparent;
+    color: var(--color-text, #111);
+    border: 1px solid #d8d5ce;
+}
+
+.action-btn--outline:hover:not(:disabled) {
+    border-color: var(--color-text, #111);
+}
+
+.action-btn--outline:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* ── Modal ── */
 .modal-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(255, 255, 255, 0.95);
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 2000;
 }
 
-.modal-content {
-    background: white;
-    border: 1px solid #111;
-    max-width: 600px;
+.modal {
+    background: #fff;
+    border: 1px solid #e8e6e1;
+    max-width: 560px;
     width: 90%;
     max-height: 90vh;
     overflow-y: auto;
-    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.1);
 }
 
-.modal-header {
+.modal-head {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 40px;
-    border-bottom: 1px solid #f5f5f5;
+    padding: 28px 32px 20px;
+    border-bottom: 1px solid #e8e6e1;
 }
 
-.modal-header h2 {
-    margin: 0;
-    font-size: 14px;
-    font-weight: 800;
+.modal-title {
+    font-size: 11px;
+    font-weight: 500;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: 0.14em;
+    color: var(--color-text, #111);
 }
 
-.close-btn {
+.modal-close {
     background: none;
     border: none;
-    font-size: 24px;
     cursor: pointer;
-    color: #111;
+    color: var(--color-text-muted, #aaa);
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    transition: color 0.15s;
 }
 
-/* Form */
+.modal-close:hover {
+    color: var(--color-text, #111);
+}
+
+.modal-close svg {
+    width: 13px;
+    height: 13px;
+}
+
+/* ── Modal Form ── */
+.modal-form {
+    padding: 24px 32px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
 .form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    gap: 0 24px;
 }
 
 .form-group {
-    margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-bottom: 20px;
 }
 
 .form-group label {
-    font-weight: 800;
-    color: #111;
-    font-size: 11px;
+    font-size: 10px;
+    font-weight: 500;
     text-transform: uppercase;
-    letter-spacing: 1.5px;
-    display: block;
-    margin-bottom: 10px;
+    letter-spacing: 0.12em;
+    color: var(--color-text-muted, #888);
+    display: flex;
+    align-items: center;
+    gap: 5px;
 }
 
-.form-control {
+.label-locked {
+    opacity: 0.45;
+}
+
+.step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--color-text-muted, #ccc);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 600;
+    flex-shrink: 0;
+    letter-spacing: 0;
+}
+
+.lock-hint {
+    font-size: 9px;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--color-text-muted, #aaa);
+}
+
+/* Cascade divider between contact and address fields */
+.cascade-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 4px 0 20px;
+}
+
+.cascade-divider::before,
+.cascade-divider::after {
+    content: '';
+    flex: 1;
+    border-top: 1px solid #e8e6e1;
+}
+
+.cascade-divider span {
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-text-muted, #aaa);
+    white-space: nowrap;
+}
+
+.form-input {
     width: 100%;
-    padding: 12px 0;
+    padding: 9px 0;
     border: none;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid #d8d5ce;
     border-radius: 0;
     font-size: 14px;
-    transition: all 0.3s ease;
+    color: var(--color-text, #111);
     background: transparent;
+    transition: border-color 0.2s, opacity 0.2s;
+    box-sizing: border-box;
 }
 
-.form-control:focus {
+.form-input:focus {
     outline: none;
-    border-bottom-color: #111;
+    border-bottom-color: var(--color-text, #111);
+}
+
+.form-input::placeholder {
+    color: #bbb;
+    font-size: 13px;
+}
+
+/* Locked state — visually dimmed, pointer-events off */
+.input-locked {
+    opacity: 0.35;
+    pointer-events: none;
+    border-bottom-style: dashed;
+}
+
+.form-select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 4px center;
+    padding-right: 20px;
+}
+
+.field-error {
+    font-size: 10px;
+    color: #d32f2f;
+}
+
+/* ── Street autocomplete ── */
+.street-group {
+    position: relative;
+}
+
+.street-wrap {
+    position: relative;
+}
+
+.suggestions-dropdown {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #d8d5ce;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    z-index: 100;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.suggestion-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--color-text, #111);
+    cursor: pointer;
+    transition: background 0.1s;
+    border-bottom: 1px solid #f2f0ec;
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.suggestion-item:hover {
+    background: #fafaf8;
+}
+
+.suggestion-item svg {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    color: var(--color-text-muted, #aaa);
+}
+
+.street-context {
+    font-size: 10px;
+    color: var(--color-text-muted, #aaa);
+    margin-top: 2px;
+    letter-spacing: 0.02em;
+}
+
+/* ── Checkbox ── */
+.checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    margin-bottom: 24px;
+}
+
+.checkbox-input {
+    width: 15px;
+    height: 15px;
+    accent-color: var(--color-text, #111);
+    cursor: pointer;
+    flex-shrink: 0;
 }
 
 .checkbox-label {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+    font-size: 11px;
+    color: var(--color-text, #111);
+    letter-spacing: 0.04em;
 }
 
-.checkbox-label input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    border: 1px solid #111;
-}
-
-/* Modal Actions */
+/* ── Modal Actions ── */
 .modal-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-    padding-top: 20px;
+    display: flex;
+    gap: 10px;
+    padding-top: 4px;
 }
 
-.btn {
-    padding: 20px;
-    border: none;
-    font-size: 12px;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-align: center;
+.btn-spinner {
+    width: 12px;
+    height: 12px;
+    border: 1.5px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
 }
 
-.btn-primary {
-    background: #111;
-    color: white;
-}
-
-.btn-secondary {
-    background: #fff;
-    color: #111;
-    border: 1px solid #111;
-}
-
-.btn-primary:hover {
-    background: #333;
-}
-
-.btn-secondary:hover {
-    background: #f5f5f5;
-}
-
-
-/* Responsive */
+/* ── Responsive ── */
 @media (max-width: 768px) {
     .page-header {
         flex-direction: column;
@@ -302,15 +585,21 @@
         grid-template-columns: 1fr;
     }
 
+    .addresses-grid .address-col:nth-child(odd) {
+        border-right: none;
+        border-bottom: 1px solid #e8e6e1;
+        padding-right: 0;
+    }
+
+    .addresses-grid .address-col:nth-child(even) {
+        padding-left: 0;
+    }
+
     .form-row {
         grid-template-columns: 1fr;
     }
 
     .modal-actions {
         flex-direction: column-reverse;
-    }
-
-    .modal-actions .btn {
-        width: 100%;
     }
 }
