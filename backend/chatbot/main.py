@@ -30,22 +30,31 @@ limiter = Limiter(key_func=get_remote_address)
 
 # ─── API Key Auth ──────────────────────────────────────────────────────────────
 AI_API_KEY = os.environ.get("AI_SERVICE_API_KEY", "")
+ENVIRONMENT = os.environ.get("NODE_ENV", "development")
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
 async def verify_api_key(api_key: str = Security(api_key_header)):
     """
     Validate API key from X-API-Key header.
-    If AI_SERVICE_API_KEY env var is not set, skip auth (dev mode).
+    - Production: API key required
+    - Development: API key optional (for local testing)
     """
     if not AI_API_KEY:
+        if ENVIRONMENT == "production":
+            raise HTTPException(
+                status_code=500,
+                detail="AI_SERVICE_API_KEY not configured. Set this environment variable in production."
+            )
+        logger.warning("DEV MODE: API key auth disabled. Not suitable for production.")
         return True
-    if api_key and api_key == AI_API_KEY:
-        return True
-    raise HTTPException(
-        status_code=403,
-        detail="Invalid or missing API key. Provide X-API-Key header."
-    )
+    
+    if not api_key or api_key != AI_API_KEY:
+        raise HTTPException(
+            status_code=403,
+            detail="Invalid or missing API key. Provide X-API-Key header."
+        )
+    return True
 
 
 # ─── Global references — set during lifespan startup ──────────────────────────

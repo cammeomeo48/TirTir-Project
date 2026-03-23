@@ -373,9 +373,12 @@ exports.chatWithBot = async (req, res) => {
                     text: botData.message || streamedText,
                     sender: 'bot',
                     timestamp: new Date(),
+                    // Store full product data with recommendations & metadata
                     ...(botData.type === 'product' && botData.data
                         ? { productData: botData.data }
-                        : {})
+                        : {}),
+                    // Store intent classification for conversation analytics
+                    ...(botData.intent ? { intent: botData.intent } : {})
                 };
                 await saveMessagesToDB(req.user._id, userMsg, botMsg);
             }

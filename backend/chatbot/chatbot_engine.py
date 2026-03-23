@@ -62,12 +62,13 @@ class ChatbotEngine:
         self.session_ttl_seconds = 30 * 60
         self.redis_client: redis.Redis | None = None
         try:
-            self.redis_client = redis.Redis.from_url(self.redis_url, decode_responses=True)
+            self.redis_client = redis.Redis.from_url(self.redis_url, decode_responses=True, socket_connect_timeout=2, socket_keepalive=True)
             self.redis_client.ping()
-            logger.info("✅ Redis session store connected.")
-        except Exception:
+            logger.info(f"✅ Redis session store connected at {self.redis_url}")
+        except Exception as e:
             self.redis_client = None
-            logger.exception("⚠️ Redis unavailable. Session state will not persist.")
+            logger.warning(f"⚠️  Redis unavailable at {self.redis_url}. Conversation memory will NOT persist. Error: {str(e)}")
+            logger.warning("➡️  For persistence, ensure Redis is running and REDIS_URL is correct.")
 
         self.skin_keywords = {
             "oily": ["da dầu", "dầu", "nhờn", "oily", "acne-prone", "mụn"],

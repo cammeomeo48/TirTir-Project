@@ -48,7 +48,7 @@ export class ProductDetailComponent implements OnInit {
         next: ([data]) => {
           this.product = data;
           this.selectedImage = this.product.images[0];
-          if (this.product.shades && this.product.shades.length > 0) {
+          if (this.product.shades && this.product.shades.length > 1) {
             const midIndex = Math.floor(this.product.shades.length / 2);
             this.selectedShade = this.product.shades[midIndex].name;
           }
@@ -105,7 +105,9 @@ export class ProductDetailComponent implements OnInit {
   addToCart() {
     if (!this.product) return;
 
-    if (this.product.shades && this.product.shades.length > 0 && !this.selectedShade) {
+    const hasMultipleShades = Array.isArray(this.product.shades) && this.product.shades.length > 1;
+
+    if (hasMultipleShades && !this.selectedShade) {
       alert('Please select a shade');
       return;
     }
@@ -115,7 +117,7 @@ export class ProductDetailComponent implements OnInit {
     this.cartService.addToCart({
       productId: (this.product as any)._id || this.product.id,
       quantity: this.quantity,
-      shade: this.selectedShade || undefined
+      shade: hasMultipleShades ? (this.selectedShade || undefined) : undefined
     }).subscribe({
       next: (cart) => {
         setTimeout(() => {
