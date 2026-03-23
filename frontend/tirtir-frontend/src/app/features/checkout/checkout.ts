@@ -205,7 +205,7 @@ export class CheckoutComponent implements OnInit {
             error: (err) => {
                 this.loading = false;
                 console.error('Full Checkout Error:', err);
-                this.error = err.error?.message || err.message || 'Lỗi đặt hàng';
+                this.error = this.getCheckoutErrorMessage(err);
             },
         });
     }
@@ -246,6 +246,25 @@ export class CheckoutComponent implements OnInit {
         const subtotal = this.getSubtotal();
         const discountAmount = this.cart?.discountAmount || 0;
         return subtotal - discountAmount;
+    }
+
+    getCheckoutErrorMessage(err: any): string {
+        const errorCode = err.error?.errorCode;
+        const fallback = err.error?.message || err.message || 'Đặt hàng thất bại. Vui lòng thử lại.';
+        switch (errorCode) {
+            case 'INSUFFICIENT_STOCK':
+                return `Sản phẩm "${err.error?.productName || ''}" đã hết hàng hoặc không đủ số lượng.`;
+            case 'CART_EMPTY':
+                return 'Giỏ hàng của bạn đang trống. Vui lòng thêm sản phẩm trước khi đặt hàng.';
+            case 'INVALID_PAYMENT':
+                return 'Phương thức thanh toán không hợp lệ. Vui lòng chọn lại.';
+            case 'AUTH_EXPIRED':
+                return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.';
+            case 'SERVER_ERROR':
+                return 'Lỗi máy chủ. Vui lòng thử lại sau ít phút.';
+            default:
+                return fallback;
+        }
     }
 
     getFieldError(fieldName: string): string {

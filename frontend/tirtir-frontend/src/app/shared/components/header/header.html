@@ -68,13 +68,35 @@
 
             <!-- Header Actions (RIGHT) -->
             <div class="header-actions">
-                <a routerLink="/account" class="action-btn" aria-label="Account">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="1.5">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="12" cy="7" r="4"></circle>
-                    </svg>
-                </a>
+                <!-- Account Icon + Dropdown -->
+                <div class="account-wrapper" (mouseenter)="toggleAccountMenu(true)"
+                    (mouseleave)="toggleAccountMenu(false)">
+                    <a routerLink="/account" class="action-btn" aria-label="Account">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </a>
+
+                    <div class="account-dropdown" [class.visible]="showAccountMenu">
+                        <ng-container *ngIf="authService.isAuthenticated(); else guestMenu">
+                            <a routerLink="/account/profile" class="account-dropdown-item"
+                                (click)="showAccountMenu = false">My Profile</a>
+                            <a routerLink="/account/orders" class="account-dropdown-item"
+                                (click)="showAccountMenu = false">My Orders</a>
+                            <div class="account-dropdown-divider"></div>
+                            <button class="account-dropdown-item account-dropdown-item--logout"
+                                (click)="logout()">Sign Out</button>
+                        </ng-container>
+                        <ng-template #guestMenu>
+                            <a routerLink="/login" class="account-dropdown-item"
+                                (click)="showAccountMenu = false">Sign In</a>
+                            <a routerLink="/register" class="account-dropdown-item"
+                                (click)="showAccountMenu = false">Create Account</a>
+                        </ng-template>
+                    </div>
+                </div>
 
                 <!-- Notification Icon -->
                 <div class="notification-wrapper" (mouseenter)="toggleNotifications(true)"

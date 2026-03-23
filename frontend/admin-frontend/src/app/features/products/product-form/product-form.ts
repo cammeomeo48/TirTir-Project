@@ -146,11 +146,12 @@ export class ProductFormComponent implements OnInit {
             
             this.shades.controls.forEach(shadeCtrl => {
                 const code = shadeCtrl.get('Shade_Code')?.value || '';
+                const idBase = parentId || parentProdId; // Prefer Series ID/Parent_ID for consistency
                 shadeCtrl.patchValue({
                     Product_ID: parentProdId,
                     Shade_Category_Name: parentName,
                     Parent_ID: parentId,
-                    Shade_ID: parentProdId && code ? `${parentProdId}-${code}` : ''
+                    Shade_ID: idBase && code ? `${idBase}-${code}` : ''
                 }, { emitEvent: false });
             });
         };
@@ -241,6 +242,7 @@ export class ProductFormComponent implements OnInit {
             Shade_Image: [''],
             
             Hex_Code: [''],
+            Stock_Quantity: [0, [Validators.min(0)]],
             R: [{value: null, disabled: true}],
             G: [{value: null, disabled: true}],
             B: [{value: null, disabled: true}],
@@ -252,8 +254,11 @@ export class ProductFormComponent implements OnInit {
         // Auto ID listeners
         shadeGroup.get('Shade_Code')?.valueChanges.subscribe(code => {
             const currentParentProdId = this.productForm.get('Product_ID')?.value || '';
-            if (currentParentProdId && code) {
-                shadeGroup.patchValue({ Shade_ID: `${currentParentProdId}-${code}` }, { emitEvent: false });
+            const currentParentId = this.productForm.get('Parent_ID')?.value || ''; // Series ID
+            const idBase = currentParentId || currentParentProdId;
+            
+            if (idBase && code) {
+                shadeGroup.patchValue({ Shade_ID: `${idBase}-${code}` }, { emitEvent: false });
             }
         });
         
@@ -439,6 +444,7 @@ export class ProductFormComponent implements OnInit {
                             Oxidation_Risk_Level: s.Oxidation_Risk_Level || '',
                             Shade_Image: s.Shade_Image || s.image || '',
                             Hex_Code: s.Hex_Code || s.color || '',
+                            Stock_Quantity: s.Stock_Quantity || 0,
                             R: s.R, G: s.G, B: s.B, L: s.L, a: s.a, b: s.b
                         });
                     });
@@ -585,9 +591,14 @@ export class ProductFormComponent implements OnInit {
             : this.productService.addProduct(formData as any);
 
         save$.subscribe({
-            next: () => {
+            next: (res: any) => {
                 this.showToast('Product saved successfully!');
-                this.router.navigate(['/products']);
+                const finalId = res._id || res.id || this.productId;
+                if (this.isEditMode && finalId) {
+                    this.router.navigate(['/products/detail', finalId]);
+                } else {
+                    this.router.navigate(['/products']);
+                }
             },
             error: (err: any) => {
                 this.error = err.error?.message || (this.isEditMode ? 'Failed to update product' : 'Failed to create product');

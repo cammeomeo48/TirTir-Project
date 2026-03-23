@@ -134,7 +134,8 @@ export class ProductService {
       shades: bp.shades?.map(s => ({
         name: s.name || s.Shade_Name || s.Name,
         color: s.color || s.Hex_Code || s.Color_Code || '#000000',
-        image: fixUrl(s.image || s.Image_Url || s.Shade_Image)
+        image: fixUrl(s.image || s.Image_Url || s.Shade_Image),
+        Stock_Quantity: s.Stock_Quantity || 0
       })),
       sizes: [{ name: 'Standard', price: bp.Price }],
       // Smart Category Mapping from DB Data

@@ -1003,3 +1003,73 @@
     background: #000;
     color: #fff;
 }
+
+/* =====================================================
+   ACCOUNT DROPDOWN STYLES
+   ===================================================== */
+.account-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+}
+
+.account-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 180px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    border: 1px solid #eee;
+    z-index: 9999;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(8px);
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
+    padding: 6px 0;
+}
+
+.account-dropdown.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.account-dropdown-item {
+    display: block;
+    width: 100%;
+    padding: 10px 16px;
+    font-size: 13px;
+    color: #333;
+    text-decoration: none;
+    text-align: left;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
+}
+
+.account-dropdown-item:hover {
+    background: #f8f8f8;
+    color: #000;
+}
+
+.account-dropdown-divider {
+    height: 1px;
+    background: #f0f0f0;
+    margin: 4px 0;
+}
+
+.account-dropdown-item--logout {
+    color: #e53e3e;
+}
+
+.account-dropdown-item--logout:hover {
+    background: #fff5f5;
+    color: #c53030;
+}

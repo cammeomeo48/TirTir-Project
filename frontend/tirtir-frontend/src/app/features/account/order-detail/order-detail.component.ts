@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { OrderService } from '../../../core/services/order.service';
 import { UserService } from '../../../core/services/user.service';
+import { CartService } from '../../../core/services/cart.service';
+import { ToastService } from '../../../core/services/toast.service';
 import { catchError } from 'rxjs/operators';
 import { forkJoin, of } from 'rxjs';
 
@@ -159,9 +161,25 @@ import { forkJoin, of } from 'rxjs';
           <div class="rev-ey">Share Your Experience</div>
           <div class="rev-txt">Your review helps our beauty community.</div>
         </div>
-        <button class="rev-btn" (click)="goToReview()">
-          {{ hasReviewedAllItems ? 'View Review' : 'Write a Review' }}
-        </button>
+        <div class="detail-actions">
+          <!-- Buy Again Button -->
+          <button class="btn-buy-again-detail"
+                  [class.loading]="isReordering"
+                  (click)="buyAgain(order)">
+            <span class="btn-text">
+              <svg class="redo-icon" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658a.25.25 0 0 1-.41-.192z"/>
+              </svg>
+              Buy Again
+            </span>
+            <span class="btn-spinner" *ngIf="isReordering"></span>
+          </button>
+
+          <button class="rev-btn" (click)="goToReview()" *ngIf="order.status === 'Delivered'">
+            {{ hasReviewedAllItems ? 'View Review' : 'Write a Review' }}
+          </button>
+        </div>
       </div>
 
     </div>
@@ -578,6 +596,59 @@ import { forkJoin, of } from 'rxjs';
       color: #fff;
     }
 
+    /* ── Review Strip Actions ── */
+    .detail-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    /* ── Buy Again Button (Detail) ── */
+    .btn-buy-again-detail {
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-weight: 500;
+      padding: 9px 20px;
+      border: 1px solid #000000ff;
+      background: transparent;
+      color: #000000ff;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.3s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      min-width: 120px;
+    }
+    .btn-buy-again-detail:hover {
+      background: #000000ff;
+      color: #fff;
+    }
+    .btn-buy-again-detail.loading {
+      color: transparent;
+      pointer-events: none;
+    }
+    .btn-buy-again-detail .btn-text {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-buy-again-detail .redo-icon {
+      width: 12px;
+      height: 12px;
+    }
+    .btn-buy-again-detail .btn-spinner {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #ff6b6b;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
     /* ── Loading & Error ── */
     .loading-state, .error-state {
       text-align: center;
@@ -649,9 +720,12 @@ export class OrderDetailComponent implements OnInit {
   private router = inject(Router);
   private orderService = inject(OrderService);
   private userService = inject(UserService);
+  private cartService = inject(CartService);
+  private toastService = inject(ToastService);
 
   order: any = null;
   loading: boolean = true;
+  isReordering: boolean = false;
   error: string | null = null;
   copied: boolean = false;
   myReviewedProductIds = new Set<string>();
@@ -706,11 +780,16 @@ export class OrderDetailComponent implements OnInit {
       currentIndex = baseOrder.length - 1;
     }
 
+    // Build a map of status → history entry, keeping the latest timestamp
+    // for each status so duplicate entries never cause stale timestamps.
     const historyMap = new Map();
     if (Array.isArray(this.order?.statusHistory)) {
-      this.order.statusHistory.forEach((h: any) => {
-        historyMap.set(h.status, h);
-      });
+      for (const h of this.order.statusHistory) {
+        const existing = historyMap.get(h.status);
+        if (!existing || new Date(h.timestamp) > new Date(existing.timestamp)) {
+          historyMap.set(h.status, h);
+        }
+      }
     }
 
     return baseOrder.map((status, index) => {
@@ -728,20 +807,20 @@ export class OrderDetailComponent implements OnInit {
     });
   }
 
+  // Single source of truth: always the DB field, not derived from statusHistory.
+  // statusHistory is a log of past events and may be incomplete; order.status
+  // is what the backend authoritatively set last.
   get latestStatus(): string {
-    const history = this.timelineHistory;
-    if (history && history.length > 0) {
-      return history[history.length - 1].status;
-    }
     return this.order?.status || 'Order Placed';
   }
 
   get latestTimestamp(): string | undefined {
-    const history = this.timelineHistory;
-    if (history && history.length > 0) {
-      return history[history.length - 1].timestamp;
-    }
-    return this.order?.updatedAt;
+    // Prefer the recorded timestamp for the current status if available,
+    // otherwise fall back to updatedAt (which the backend always updates).
+    const currentStatus = this.latestStatus;
+    const historyEntry = (this.order?.statusHistory as any[])
+      ?.find((h: any) => h.status === currentStatus);
+    return historyEntry?.timestamp || this.order?.updatedAt;
   }
 
   get hasReviewedAllItems(): boolean {
@@ -796,10 +875,53 @@ export class OrderDetailComponent implements OnInit {
       navigator.clipboard.writeText(trackingNumber).then(() => {
         this.copied = true;
         setTimeout(() => this.copied = false, 2000);
-      }).catch(err => {
-        console.error('Failed to copy text: ', err);
       });
     }
+  }
+
+  buyAgain(order: any): void {
+    if (this.isReordering) return;
+
+    this.isReordering = true;
+    this.orderService.getReorderData(order._id).subscribe({
+      next: (data) => {
+        const availableItems = data.items.filter((item: any) => item.isAvailable);
+        const skippedCount = data.items.length - availableItems.length;
+
+        if (availableItems.length === 0) {
+          this.toastService.error('Sorry, all items in this order are currently out of stock.');
+          this.isReordering = false;
+          return;
+        }
+
+        const addOps = availableItems.map((item: any) =>
+          this.cartService.addToCart({
+            productId: item.productId,
+            quantity: item.quantity,
+            shade: item.shade
+          })
+        );
+
+        forkJoin(addOps).subscribe({
+          next: () => {
+            if (skippedCount > 0) {
+              this.toastService.warning(`${skippedCount} items were skipped as they are out of stock.`);
+            } else {
+              this.toastService.success('Items added to cart!');
+            }
+            this.router.navigate(['/cart']);
+          },
+          error: (err) => {
+            this.toastService.error('Failed to add some items to cart.');
+            this.isReordering = false;
+          }
+        });
+      },
+      error: (err) => {
+        this.toastService.error('Failed to retrieve reorder data.');
+        this.isReordering = false;
+      }
+    });
   }
 
   getImageUrl(item: any): string {

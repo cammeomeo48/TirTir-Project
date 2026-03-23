@@ -1,16 +1,17 @@
 import { Component, OnInit, ChangeDetectorRef, inject, signal } from '@angular/core';
 import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { Subject, debounceTime, distinctUntilChanged, switchMap, of, map } from 'rxjs'; // Added map
+import { Subject, debounceTime, distinctUntilChanged, switchMap, of, map } from 'rxjs';
 import { ProductData } from '../../../core/constants/products.data';
 import { MenuItem, MenuService } from '../../../core/services/menu.service';
 import { CartService } from '../../../core/services/cart.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { MakeupMegaMenuComponent } from '../makeup-mega-menu/makeup-mega-menu';
 import { SkincareMegaMenuComponent } from '../skincare-mega-menu/skincare-mega-menu';
 import { ProductService } from '../../../core/services/product.service';
-import { NotificationService } from '../../../core/services/notification.service'; // Import
-import { TimeAgoPipe } from '../../pipes/time-ago.pipe'; // Import
-import { INotification } from '../../../core/models/notification.model'; // Import
+import { NotificationService } from '../../../core/services/notification.service';
+import { TimeAgoPipe } from '../../pipes/time-ago.pipe';
+import { INotification } from '../../../core/models/notification.model';
 import { FreeShippingBarComponent } from '../free-shipping-bar/free-shipping-bar.component';
 import { CurrencyPipe } from '@angular/common';
 
@@ -29,7 +30,8 @@ export class HeaderComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
   private router = inject(Router);
   private productService = inject(ProductService);
-  public notificationService = inject(NotificationService); // Public for template
+  public notificationService = inject(NotificationService);
+  public authService = inject(AuthService);
 
   searchTerm = '';
   showSearch = false;
@@ -147,5 +149,17 @@ export class HeaderComponent implements OnInit {
   // ===== Mini Cart Logic =====
   toggleMiniCart(show: boolean) {
     this.showMiniCart = show;
+  }
+
+  // ===== Account Menu Logic =====
+  showAccountMenu = false;
+
+  toggleAccountMenu(show: boolean) {
+    this.showAccountMenu = show;
+  }
+
+  logout() {
+    this.showAccountMenu = false;
+    this.authService.logout();
   }
 }

@@ -3,6 +3,7 @@ export interface ProductShade {
     name: string;
     color: string;
     image?: string;
+    Stock_Quantity?: number;
 }
 
 export interface ProductData {

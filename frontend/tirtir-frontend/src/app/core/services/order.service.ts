@@ -41,6 +41,13 @@ export class OrderService {
     }
 
     /**
+     * Get validated data for reordering
+     */
+    getReorderData(orderId: string): Observable<any> {
+        return this.http.get<any>(`${this.apiUrl}/${orderId}/reorder-data`).pipe(catchError(this.handleError));
+    }
+
+    /**
      * Error handler
      */
     private handleError(error: any): Observable<never> {

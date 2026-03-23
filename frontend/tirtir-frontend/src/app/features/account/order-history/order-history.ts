@@ -3,6 +3,9 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { forkJoin, timer } from 'rxjs';
 import { OrderService } from '../../../core/services/order.service';
+import { CartService } from '../../../core/services/cart.service';
+import { ToastService } from '../../../core/services/toast.service';
+import { Router } from '@angular/router';
 import { Order } from '../../../core/models';
 
 @Component({
@@ -76,10 +79,27 @@ import { Order } from '../../../core/models';
           </div>
 
           <!-- Bottom: Date + item count -->
-          <div class="order-meta">
-            <span>{{ order.createdAt | date:'dd/MM/yyyy · hh:mm a' }}</span>
-            <span class="meta-sep">·</span>
-            <span>{{ order.items.length }} {{ order.items.length === 1 ? 'item' : 'items' }}</span>
+          <div class="order-bottom-actions">
+            <div class="order-meta">
+              <span>{{ order.createdAt | date:'dd/MM/yyyy · hh:mm a' }}</span>
+              <span class="meta-sep">·</span>
+              <span>{{ order.items.length }} {{ order.items.length === 1 ? 'item' : 'items' }}</span>
+            </div>
+
+            <!-- Buy Again Button -->
+            <button *ngIf="order.status === 'Delivered' || order.status === 'Cancelled'"
+                    class="btn-buy-again"
+                    [class.loading]="reorderingId === order._id"
+                    (click)="buyAgain($event, order)">
+              <span class="btn-text">
+                <svg class="redo-icon" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                  <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658a.25.25 0 0 1-.41-.192z"/>
+                </svg>
+                Buy Again
+              </span>
+              <span class="btn-spinner" *ngIf="reorderingId === order._id"></span>
+            </button>
           </div>
 
         </div>
@@ -362,13 +382,71 @@ import { Order } from '../../../core/models';
       opacity: 0.3;
       cursor: default;
     }
+
+    /* ── Buy Again Button ── */
+    .order-bottom-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 4px;
+    }
+    .btn-buy-again {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 32px;
+      padding: 0 14px;
+      background: transparent;
+      border: 1px solid #070707;
+      border-radius: 16px;
+      color: #000000ff;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      cursor: pointer;
+      overflow: hidden;
+      position: relative;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .btn-buy-again:hover {
+      background: #000000ff;
+      color: #fff;
+    }
+    .btn-buy-again.loading {
+      color: transparent;
+      pointer-events: none;
+      background: #fff;
+    }
+    .btn-text {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .redo-icon {
+      width: 12px;
+      height: 12px;
+    }
+    .btn-spinner {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #ff6b6b;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
   `],
 })
 export class OrderHistoryComponent implements OnInit {
   private orderService = inject(OrderService);
+  private cartService = inject(CartService);
+  private toastService = inject(ToastService);
+  private router = inject(Router);
 
   orders: Order[] = [];
   loading = true;
+  reorderingId: string | null = null;
   activeFilter = 'all';
   currentPage = 1;
   readonly pageSize = 5;
@@ -422,5 +500,52 @@ export class OrderHistoryComponent implements OnInit {
     }
     if (item.product?.Thumbnail_Images) return item.product.Thumbnail_Images;
     return 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\'%3E%3Crect width=\'100\' height=\'100\' fill=\'%23f3f4f6\'/%3E%3Cpath d=\'M50 35a15 15 0 1 0 0 30 15 15 0 0 0 0-30zm0 25a10 10 0 1 1 0-20 10 10 0 0 1 0 20z\' fill=\'%23d1d5db\'/%3E%3C/svg%3E';
+  }
+
+  buyAgain(event: Event, order: any): void {
+    event.stopPropagation();
+    if (this.reorderingId) return;
+
+    this.reorderingId = order._id;
+    this.orderService.getReorderData(order._id).subscribe({
+      next: (data) => {
+        const availableItems = data.items.filter((item: any) => item.isAvailable);
+        const skippedCount = data.items.length - availableItems.length;
+
+        if (availableItems.length === 0) {
+          this.toastService.error('Sorry, all items in this order are currently out of stock.');
+          this.reorderingId = null;
+          return;
+        }
+
+        const addOps = availableItems.map((item: any) =>
+          this.cartService.addToCart({
+            productId: item.productId,
+            quantity: item.quantity,
+            shade: item.shade
+          })
+        );
+
+        forkJoin(addOps).subscribe({
+          next: () => {
+            if (skippedCount > 0) {
+              this.toastService.warning(`${skippedCount} items were skipped as they are out of stock.`);
+            } else {
+              this.toastService.success('Items added to cart!');
+            }
+            this.router.navigate(['/cart']);
+          },
+          error: (err) => {
+            this.toastService.error('Failed to add some items to cart.');
+            console.error('Reorder Add Error:', err);
+            this.reorderingId = null;
+          }
+        });
+      },
+      error: (err) => {
+        this.toastService.error('Failed to retrieve reorder data.');
+        this.reorderingId = null;
+      }
+    });
   }
 }

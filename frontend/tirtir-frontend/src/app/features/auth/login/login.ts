@@ -29,6 +29,7 @@ export class LoginComponent {
     loading = false;
     errorMessage = '';
     returnUrl = '/';
+    showPassword = false;
 
     constructor() {
         this.loginForm = this.fb.group({
@@ -38,6 +39,10 @@ export class LoginComponent {
 
         // Get return URL from query params or default to '/'
         this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/';
+    }
+
+    togglePassword(): void {
+        this.showPassword = !this.showPassword;
     }
 
     onSubmit(): void {

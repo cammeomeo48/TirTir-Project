@@ -22,37 +22,42 @@ export class RegisterComponent {
     errorMessage = '';
     successMessage = '';
 
+    // Password visibility state
+    showPassword = false;
+    showConfirmPassword = false;
+
     constructor() {
         this.registerForm = this.fb.group({
-            name: ['', [Validators.required, Validators.minLength(2)]],
-            email: ['', [Validators.required, Validators.email]],
-            password: ['', [Validators.required, Validators.minLength(6)]],
+            firstName: ['', [Validators.required, Validators.minLength(1)]],
+            lastName:  ['', [Validators.required, Validators.minLength(1)]],
+            email:     ['', [Validators.required, Validators.email]],
+            password:  ['', [Validators.required, Validators.minLength(8)]],
             confirmPassword: ['', [Validators.required]],
         }, {
             validators: this.passwordMatchValidator,
-            updateOn: 'blur'  // Fix: browser autofill doesn't fire 'change' events;
-                              // using 'blur' ensures the value is read when user leaves the field
+            updateOn: 'blur'
         });
+    }
+
+    togglePassword(): void {
+        this.showPassword = !this.showPassword;
+    }
+
+    toggleConfirmPassword(): void {
+        this.showConfirmPassword = !this.showConfirmPassword;
     }
 
     passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
         const password = control.get('password');
         const confirmPassword = control.get('confirmPassword');
-
-        if (!password || !confirmPassword) {
-            return null;
-        }
-
+        if (!password || !confirmPassword) return null;
         return password.value === confirmPassword.value ? null : { passwordMismatch: true };
     }
 
     onSubmit(): void {
-        // Force all controls to update their value before validation
-        // This handles the case where browser autofill populates fields
-        // without triggering Angular's change detection
+        // Force update — handles browser autofill that bypasses change detection
         Object.keys(this.registerForm.controls).forEach(key => {
-            const control = this.registerForm.get(key);
-            if (control) control.updateValueAndValidity();
+            this.registerForm.get(key)?.updateValueAndValidity();
         });
 
         if (this.registerForm.invalid) {
@@ -64,18 +69,19 @@ export class RegisterComponent {
         this.errorMessage = '';
         this.successMessage = '';
 
-        const { name, email, password } = this.registerForm.value;
-        const userData = { name, email, password };
+        const { firstName, lastName, email, password } = this.registerForm.value;
 
-        this.authService.register(userData).subscribe({
+        this.authService.register({ firstName, lastName, email, password }).subscribe({
             next: (response) => {
                 this.loading = false;
-                this.successMessage = response.message || 'Account created successfully!';
 
-                // Redirect to login after 2 seconds
-                setTimeout(() => {
-                    this.router.navigate(['/login']);
-                }, 2000);
+                if (response.token) {
+                    // Backend issued tokens → session already saved by auth service → go home
+                    this.router.navigate(['/']);
+                } else {
+                    // Production: email verification required
+                    this.successMessage = response.message || 'Account created! Please check your email.';
+                }
             },
             error: (error) => {
                 this.loading = false;
@@ -87,23 +93,17 @@ export class RegisterComponent {
     getFieldError(fieldName: string): string {
         const field = this.registerForm.get(fieldName);
         if (field && field.invalid && field.touched) {
-            if (field.errors?.['required']) {
-                return 'This field is required';
-            }
-            if (field.errors?.['email']) {
-                return 'Please enter a valid email address';
-            }
+            if (field.errors?.['required'])  return 'This field is required';
+            if (field.errors?.['email'])     return 'Please enter a valid email address';
             if (field.errors?.['minlength']) {
-                const minLength = field.errors['minlength'].requiredLength;
-                return `Minimum ${minLength} characters required`;
+                const min = field.errors['minlength'].requiredLength;
+                return `Minimum ${min} characters required`;
             }
         }
-
-        // Check password mismatch error
-        if (fieldName === 'confirmPassword' && this.registerForm.errors?.['passwordMismatch'] && field?.touched) {
+        if (fieldName === 'confirmPassword' &&
+            this.registerForm.errors?.['passwordMismatch'] && field?.touched) {
             return 'Passwords do not match';
         }
-
         return '';
     }
 }

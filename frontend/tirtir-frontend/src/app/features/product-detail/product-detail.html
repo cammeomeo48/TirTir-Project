@@ -60,8 +60,13 @@
                         </div>
                         <div class="shade-options">
                             <button *ngFor="let shade of product.shades" class="shade-btn"
-                                [class.active]="selectedShade === shade.name" [style.background]="shade.color"
-                                (click)="selectShade(shade.name)" [attr.aria-label]="shade.name" [title]="shade.name">
+                                [class.active]="selectedShade === shade.name" 
+                                [class.out-of-stock]="shade.Stock_Quantity === 0"
+                                [style.background]="shade.color"
+                                [disabled]="shade.Stock_Quantity === 0"
+                                (click)="selectShade(shade.name)" 
+                                [attr.aria-label]="shade.name" 
+                                [title]="shade.Stock_Quantity === 0 ? shade.name + ' (Out of Stock)' : shade.name">
                             </button>
                         </div>
                     </div>
@@ -127,6 +132,10 @@
                     <div class="card-badge" *ngIf="item.isDeal">COMBO DEAL</div>
                     <div class="suggestion-img">
                         <img [src]="item.images[0]" [alt]="item.name">
+                        <!-- Quick Add Overlay -->
+                        <div class="quick-add-overlay">
+                            <button class="btn-quick-add">QUICK ADD</button>
+                        </div>
                     </div>
                     <div class="suggestion-meta">
                         <h4>{{ item.name }}</h4>

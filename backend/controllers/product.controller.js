@@ -12,6 +12,24 @@ const generateSlug = (name) => {
         .replace(/^-+|-+$/g, '');    // Trim hyphens
 };
 
+// NEW: Helper to sync total Product stock from its Shades
+const syncProductStock = async (productID, session = null) => {
+    try {
+        const shades = await Shade.find({ Product_ID: productID }).session(session);
+        const totalStock = shades.reduce((sum, s) => sum + (s.Stock_Quantity || 0), 0);
+        
+        await Product.updateOne(
+            { Product_ID: productID },
+            { $set: { Stock_Quantity: totalStock } }
+        ).session(session);
+        
+        return totalStock;
+    } catch (err) {
+        console.error(`Error syncing stock for product ${productID}:`, err);
+        return 0;
+    }
+};
+
 // STRICT DATA MAPPING LAYER — returns ALL fields the Edit form and Detail page need
 const mapProductToFrontend = (product) => {
     const p = product.toObject ? product.toObject() : product;
@@ -529,8 +547,14 @@ exports.createProduct = async (req, res) => {
             const shadeDocs = req.body.shades.map(s => {
                 const doc = { ...s };
                 doc.Product_ID = Product_ID; // Force inject Parent Product_ID
-                // Shade_ID should already be Parent_ID-Shade_Code, but enforce it:
-                doc.Shade_ID = `${doc.Parent_ID}-${doc.Shade_Code}`;
+                
+                // Backend-owned ID Consistency:
+                // Prefer Series ID (Parent_ID) if available, fallback to SKU (Product_ID)
+                const idBase = doc.Parent_ID || doc.Product_ID;
+                if (idBase && doc.Shade_Code) {
+                    doc.Shade_ID = `${idBase}-${doc.Shade_Code}`;
+                }
+                
                 delete doc._id; // Ensure clean insert
                 return doc;
             });
@@ -539,6 +563,9 @@ exports.createProduct = async (req, res) => {
         
         await session.commitTransaction();
         session.endSession();
+        
+        // Sync stock after shades are created
+        await syncProductStock(Product_ID);
         
         const responseData = mapProductToFrontend(created);
         responseData.shades = createdShades;
@@ -603,26 +630,39 @@ exports.updateProduct = async (req, res) => {
         
         // Handle Advanced Shades sync if provided
         if (req.body.shades && Array.isArray(req.body.shades)) {
-            const currentShadeIds = req.body.shades.map(s => s.Shade_ID).filter(Boolean);
+            // STRATEGY: "Filter-to-Keep" using MongoDB _id
+            // 1. Collect all _ids from the incoming shades that already exist in the DB
+            const updatedShadeDbIds = req.body.shades
+                .map(s => s._id)
+                .filter(id => id && mongoose.Types.ObjectId.isValid(id));
             
-            // Delete removed shades (that belong to this Product_ID but are not in the new list)
+            // 2. Delete shades that are NOT in the incoming list (those that were removed on frontend)
             await Shade.deleteMany({ 
                 Product_ID: product.Product_ID, 
-                Shade_ID: { $nin: currentShadeIds } 
+                _id: { $nin: updatedShadeDbIds } 
             }).session(session);
             
-            // Upsert shades
+            // 3. Upsert shades (Update existing or Create new)
             let shadeList = [];
             for (const s of req.body.shades) {
-                // Ensure identifiers
+                // Backend-owned ID Consistency:
+                // Ensure identifiers are always synced with the parent product
                 s.Product_ID = product.Product_ID;
-                s.Shade_ID = `${s.Parent_ID}-${s.Shade_Code}`;
+                if (!s.Parent_ID && product.Parent_ID) s.Parent_ID = product.Parent_ID;
                 
-                if (s._id) {
-                    await Shade.updateOne({ _id: s._id }, { $set: s }).session(session);
+                // Regenerate Shade_ID from Series ID (Parent_ID) and Shade_Code to ensure consistency
+                const idBase = s.Parent_ID || s.Product_ID; // Fallback to SKU if no Series ID
+                if (idBase && s.Shade_Code) {
+                    s.Shade_ID = `${idBase}-${s.Shade_Code}`;
+                }
+                
+                if (s._id && mongoose.Types.ObjectId.isValid(s._id)) {
+                    // Update existing shade
+                    await Shade.findByIdAndUpdate(s._id, { $set: s }).session(session);
                     shadeList.push(s);
                 } else {
-                    delete s._id; // Prevent CastError for empty strings
+                    // Create new shade
+                    delete s._id; // Ensure clean insert (avoid empty string issues)
                     const newS = new Shade(s);
                     await newS.save({ session });
                     shadeList.push(newS);
@@ -632,6 +672,10 @@ exports.updateProduct = async (req, res) => {
         
         await session.commitTransaction();
         session.endSession();
+        
+        // Sync total stock based on all shades (including new ones)
+        await syncProductStock(product.Product_ID);
+        
         res.json(mapProductToFrontend(updated));
     } catch (err) {
         console.error("Update Product Error:", err);

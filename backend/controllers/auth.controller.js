@@ -47,13 +47,13 @@ const generateAndSaveRefreshToken = async (user) => {
  */
 exports.register = async (req, res) => {
     try {
-        const { name, email, password } = req.body;
+        const { firstName, lastName, email, password } = req.body;
 
         // ===== VALIDATION =====
-        if (!name || !email || !password) {
+        if (!firstName || !lastName || !email || !password) {
             return res.status(400).json({
                 success: false,
-                message: 'Please provide name, email, and password'
+                message: 'Please provide first name, last name, email, and password'
             });
         }
 
@@ -66,11 +66,11 @@ exports.register = async (req, res) => {
             });
         }
 
-        // Password strength validation
-        if (password.length < 6) {
+        // Password strength validation (NIST SP 800-63B: minimum 8 characters)
+        if (password.length < 8) {
             return res.status(400).json({
                 success: false,
-                message: 'Password must be at least 6 characters long'
+                message: 'Password must be at least 8 characters long'
             });
         }
 
@@ -85,6 +85,9 @@ exports.register = async (req, res) => {
 
         // ===== CHECK DEVELOPMENT MODE =====
         const isDevelopment = process.env.NODE_ENV === 'development';
+
+        // Combine into a single display name for the User schema
+        const name = `${firstName.trim()} ${lastName.trim()}`;
 
         // ===== CREATE USER =====
         const newUser = new User({
@@ -117,21 +120,32 @@ exports.register = async (req, res) => {
             '/coupons'
         );
 
-        // ===== DEVELOPMENT MODE: Skip Email =====
+        // ===== DEVELOPMENT MODE: Skip Email — auto-login =====
         if (isDevelopment) {
             console.log('🔥 DEV MODE: Email verification bypassed');
 
             const accessToken = generateAccessToken(newUser._id, newUser.role);
             const refreshToken = await generateAndSaveRefreshToken(newUser);
 
+            // Set refresh token as HTTP-only cookie (mirrors login behaviour)
+            const expireDays = parseInt(process.env.JWT_REFRESH_EXPIRE_DAYS || '30', 10);
+            res.cookie('refreshToken', refreshToken, {
+                httpOnly: true,
+                secure: false,
+                sameSite: 'lax',
+                maxAge: expireDays * 24 * 60 * 60 * 1000
+            });
+
             return res.status(201).json({
                 success: true,
-                message: 'Registration successful! Auto-verified in development mode.',
+                message: 'Registration successful! Welcome to TirTir.',
                 token: accessToken,
                 refreshToken,
                 user: {
                     id: newUser._id,
                     name: newUser.name,
+                    firstName,
+                    lastName,
                     email: newUser.email,
                     role: newUser.role,
                     isEmailVerified: newUser.isEmailVerified
@@ -227,11 +241,13 @@ exports.verifyEmail = async (req, res) => {
     try {
         const { token } = req.params;
 
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
+
         if (!token) {
             return res.status(400).send(`
                 <h1>Invalid Request</h1>
                 <p>Verification token is missing.</p>
-                <a href="http://localhost:4200/login">Go to Login</a>
+                <a href="${frontendUrl}/login">Go to Login</a>
             `);
         }
 
@@ -250,15 +266,14 @@ exports.verifyEmail = async (req, res) => {
             return res.status(400).send(`
                 <h1>Verification Failed</h1>
                 <p>Invalid or expired verification token.</p>
-                <a href="http://localhost:4200/login">Go to Login</a>
+                <a href="${frontendUrl}/login">Go to Login</a>
             `);
         }
 
         // Check if already verified
         if (user.isEmailVerified) {
-            console.log(`✅ User already verified: ${user.email}`);
             // Redirect anyway
-            return res.redirect('http://localhost:4200/login?verified=true&already=true');
+            return res.redirect(`${frontendUrl}/login?verified=true&already=true`);
         }
 
         // Update user: verify email and clear token
@@ -266,17 +281,16 @@ exports.verifyEmail = async (req, res) => {
         user.emailVerificationToken = undefined;
         await user.save();
 
-        console.log(`✅ Email verified: ${user.email} (ID: ${user._id})`);
-
         // Redirect to frontend login page with success message
-        return res.redirect('http://localhost:4200/login?verified=true');
+        return res.redirect(`${frontendUrl}/login?verified=true`);
 
     } catch (error) {
         console.error('❌ Email Verification Error:', error);
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
         return res.status(500).send(`
             <h1>Server Error</h1>
             <p>Something went wrong during email verification.</p>
-            <a href="http://localhost:4200/login">Go to Login</a>
+            <a href="${frontendUrl}/login">Go to Login</a>
         `);
     }
 };
@@ -302,22 +316,15 @@ exports.login = async (req, res) => {
         // Explicitly select password because it's set to select: false in schema
         const user = await User.findOne({ email }).select('+password');
 
-        console.log(`[DEBUG] Login attempt for: ${email}`);
-
         if (!user) {
-            console.log('[DEBUG] User not found');
             return res.status(401).json({
                 success: false,
                 message: 'Invalid email or password'
             });
         }
 
-        console.log(`[DEBUG] User found: ${user._id}, Verified: ${user.isEmailVerified}, Blocked: ${user.isBlocked}`);
-        console.log(`[DEBUG] Stored Hash: ${user.password ? user.password.substring(0, 10) + '...' : 'MISSING'}`);
-
         // ===== CHECK EMAIL VERIFICATION =====
         if (!user.isEmailVerified) {
-            console.log('[DEBUG] User not verified');
             return res.status(401).json({
                 success: false,
                 message: 'Please verify your email before logging in. Check your inbox for the verification link.',
@@ -327,10 +334,8 @@ exports.login = async (req, res) => {
 
         // ===== VERIFY PASSWORD =====
         const isPasswordMatch = await user.matchPassword(password);
-        console.log(`[DEBUG] Password Match Result: ${isPasswordMatch}`);
 
         if (!isPasswordMatch) {
-            console.log('[DEBUG] Password does not match');
             return res.status(401).json({
                 success: false,
                 message: 'Invalid email or password'
@@ -349,16 +354,24 @@ exports.login = async (req, res) => {
         const accessToken = generateAccessToken(user._id, user.role);
         const refreshToken = await generateAndSaveRefreshToken(user);
 
-        console.log(`✅ User logged in: ${email} (ID: ${user._id})`);
-
         // Log Activity
         logActivity(req, 'AUTH', 'LOGIN', `User logged in: ${email}`, { userId: user._id });
+
+        // ===== SET REFRESH TOKEN AS HTTP-ONLY COOKIE (security hardening) =====
+        const isProduction = process.env.NODE_ENV === 'production';
+        const expireDays = parseInt(process.env.JWT_REFRESH_EXPIRE_DAYS || '30', 10);
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: isProduction,      // HTTPS only in production
+            sameSite: isProduction ? 'strict' : 'lax',
+            maxAge: expireDays * 24 * 60 * 60 * 1000
+        });
 
         // ===== SUCCESSFUL LOGIN =====
         return res.status(200).json({
             success: true,
             token: accessToken,
-            refreshToken,
+            refreshToken, // Retained for Angular SPA compatibility
             user: {
                 id: user._id,
                 name: user.name,
@@ -426,10 +439,12 @@ exports.forgotPassword = async (req, res) => {
 
         const user = await User.findOne({ email });
 
+        // ===== ANTI-ENUMERATION: Always return 200 regardless of whether email exists =====
+        // Never reveal whether an email is registered in the system
         if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'No user found with that email'
+            return res.status(200).json({
+                success: true,
+                message: 'If an account exists with this email, a recovery link has been sent'
             });
         }
 
@@ -470,7 +485,7 @@ exports.forgotPassword = async (req, res) => {
 
             return res.status(200).json({
                 success: true,
-                message: 'Password reset email sent successfully'
+                message: 'If an account exists with this email, a recovery link has been sent'
             });
 
         } catch (emailError) {
@@ -512,10 +527,11 @@ exports.resetPassword = async (req, res) => {
             });
         }
 
-        if (password.length < 6) {
+        // Password strength validation (NIST SP 800-63B: minimum 8 characters)
+        if (password.length < 8) {
             return res.status(400).json({
                 success: false,
-                message: 'Password must be at least 6 characters'
+                message: 'Password must be at least 8 characters long'
             });
         }
 
@@ -548,13 +564,21 @@ exports.resetPassword = async (req, res) => {
         const accessToken = generateAccessToken(user._id, user.role);
         const refreshToken = await generateAndSaveRefreshToken(user);
 
-        console.log(`✅ Password reset successful: ${user.email}`);
+        // ===== SET REFRESH TOKEN AS HTTP-ONLY COOKIE (security hardening) =====
+        const isProduction = process.env.NODE_ENV === 'production';
+        const expireDays = parseInt(process.env.JWT_REFRESH_EXPIRE_DAYS || '30', 10);
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: isProduction ? 'strict' : 'lax',
+            maxAge: expireDays * 24 * 60 * 60 * 1000
+        });
 
         return res.status(200).json({
             success: true,
             message: 'Password reset successful',
             token: accessToken,
-            refreshToken,
+            refreshToken, // Retained for Angular SPA compatibility
             user: {
                 id: user._id,
                 name: user.name,
@@ -573,19 +597,32 @@ exports.resetPassword = async (req, res) => {
 };
 
 /**
- * @route   GET /api/v1/auth/logout
- * @desc    Logout user (client-side token clearing)
- * @access  Private
+ * @route   POST /api/v1/auth/logout
+ * @desc    Logout user — invalidates refresh token in DB and clears the cookie
+ * @access  Private (requires protect middleware)
  */
 exports.logout = async (req, res) => {
     try {
-        // Clear refresh token from DB (true server-side logout)
-        if (req.user && req.user.id) {
+        // ── 1. Invalidate refresh token in the database ──────────────────────
+        // req.user is guaranteed by the protect middleware; we null out both
+        // fields so the token cannot be reused even if intercepted later.
+        if (req.user?.id) {
             await User.findByIdAndUpdate(req.user.id, {
-                refreshToken: undefined,
-                refreshTokenExpire: undefined
+                $unset: { refreshToken: '', refreshTokenExpire: '' }
             });
+            console.log(`🔒 Logout: refresh token invalidated for user ${req.user.id}`);
         }
+
+        // ── 2. Clear the HTTP-only refresh token cookie on the client ────────
+        // Setting maxAge to 0 (or expires to the past) instructs the browser
+        // to delete the cookie immediately.
+        const isProduction = process.env.NODE_ENV === 'production';
+        res.cookie('refreshToken', '', {
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: isProduction ? 'strict' : 'lax',
+            expires: new Date(0)   // epoch — forces immediate expiry
+        });
 
         return res.status(200).json({
             success: true,
@@ -596,7 +633,7 @@ exports.logout = async (req, res) => {
         console.error('❌ Logout Error:', error);
         return res.status(500).json({
             success: false,
-            message: 'Server error'
+            message: 'Server error during logout.'
         });
     }
 };

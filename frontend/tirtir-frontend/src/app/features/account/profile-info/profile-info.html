@@ -171,7 +171,7 @@
 
         <!-- Actions -->
         <div class="form-actions">
-            <button type="submit" class="btn-save" [disabled]="loading || profileForm.invalid">
+            <button type="submit" class="btn-save" [disabled]="loading || profileForm.invalid || !hasUnsavedChanges">
                 @if (loading) {
                 <span class="btn-spinner"></span> Saving...
                 } @else {

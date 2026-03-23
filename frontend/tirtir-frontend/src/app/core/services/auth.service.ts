@@ -1,7 +1,7 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, BehaviorSubject, tap, catchError, throwError, map } from 'rxjs';
+import { Observable, BehaviorSubject, tap, catchError, throwError, map, of } from 'rxjs';
 import {
     User,
     LoginRequest,
@@ -29,6 +29,7 @@ export class AuthService {
     public isAuthenticated = computed(() => this.isAuthenticatedSignal());
 
     private readonly TOKEN_KEY = 'tirtir_auth_token';
+    private readonly REFRESH_TOKEN_KEY = 'tirtir_refresh_token';
 
     constructor() {
         // Check for existing token on initialization
@@ -69,6 +70,9 @@ export class AuthService {
             tap((response) => {
                 if (response.success && response.token) {
                     this.setToken(response.token);
+                    if ((response as any).refreshToken) {
+                        localStorage.setItem(this.REFRESH_TOKEN_KEY, (response as any).refreshToken);
+                    }
                     this.currentUserSubject.next(response.user);
                     this.isAuthenticatedSignal.set(true);
                 }
@@ -78,27 +82,65 @@ export class AuthService {
     }
 
     /**
-     * Register new user
+     * Register new user.
+     * In development mode the backend returns tokens directly → auto-login.
+     * In production the backend returns a success message (email verification required).
      */
-    register(userData: RegisterRequest): Observable<{ success: boolean; message: string }> {
+    register(userData: RegisterRequest): Observable<AuthResponse & { message?: string }> {
         return this.http
-            .post<{ success: boolean; message: string }>(`${this.apiUrl}/register`, userData)
-            .pipe(catchError(this.handleError));
+            .post<AuthResponse & { message?: string }>(`${this.apiUrl}/register`, userData)
+            .pipe(
+                tap((response) => {
+                    // Auto-login when the backend issues tokens on registration
+                    if (response.success && response.token) {
+                        this.setToken(response.token);
+                        if ((response as any).refreshToken) {
+                            localStorage.setItem(this.REFRESH_TOKEN_KEY, (response as any).refreshToken);
+                        }
+                        this.currentUserSubject.next(response.user);
+                        this.isAuthenticatedSignal.set(true);
+                    }
+                }),
+                catchError(this.handleError)
+            );
     }
 
     /**
-     * Logout current user
+     * Logout current user.
+     *
+     * Strategy — clear local state immediately so the UI reacts at once,
+     * then fire the backend POST /logout in the background to invalidate the
+     * refresh token in the DB and expire the HTTP-only cookie.
+     * If the network call fails the session is still fully cleaned up locally.
      */
     logout(): void {
-        // Clear token from localStorage
-        this.clearToken();
+        // ── 1. Snapshot tokens BEFORE clearing storage ────────────────────────
+        // The auth interceptor reads tirtir_auth_token from localStorage at
+        // request time. If we call clearToken() first, storage is empty and the
+        // interceptor adds no Authorization header → protect middleware → 401.
+        // Capture both values up-front, then clear storage immediately after.
+        const accessToken  = this.getToken();
+        const refreshToken = localStorage.getItem(this.REFRESH_TOKEN_KEY);
 
-        // Clear user state
+        // ── 2. Wipe local state right away (instant UI feedback) ──────────────
+        this.clearToken();
         this.currentUserSubject.next(null);
         this.isAuthenticatedSignal.set(false);
 
-        // Navigate to home
-        this.router.navigate(['/']);
+        // ── 3. Notify the backend (fire-and-forget) ───────────────────────────
+        // Bypass the interceptor by injecting the Authorization header directly
+        // from the snapshot — storage is already empty at this point.
+        this.http
+            .post(
+                `${this.apiUrl}/logout`,
+                { refreshToken },
+                accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : {}
+            )
+            .pipe(catchError(() => of(null)))
+            .subscribe();
+
+        // ── 4. Redirect to login ──────────────────────────────────────────────
+        this.router.navigate(['/login']);
     }
 
     /**
@@ -140,6 +182,9 @@ export class AuthService {
                     if (response.success && response.token) {
                         // Auto-login after successful password reset
                         this.setToken(response.token);
+                        if ((response as any).refreshToken) {
+                            localStorage.setItem(this.REFRESH_TOKEN_KEY, (response as any).refreshToken);
+                        }
                         this.currentUserSubject.next(response.user);
                         this.isAuthenticatedSignal.set(true);
                     }
@@ -167,6 +212,7 @@ export class AuthService {
      */
     private clearToken(): void {
         localStorage.removeItem(this.TOKEN_KEY);
+        localStorage.removeItem(this.REFRESH_TOKEN_KEY);
     }
 
     /**
@@ -184,9 +230,10 @@ export class AuthService {
     }
 
     /**
-     * Error handler
+     * Error handler — defined as an arrow function so `this` is always bound
+     * correctly when passed as a callback to catchError(this.handleError).
      */
-    private handleError(error: any): Observable<never> {
+    private handleError = (error: any): Observable<never> => {
         let errorMessage = 'An error occurred';
 
         if (error.error?.message) {
@@ -197,5 +244,5 @@ export class AuthService {
 
         console.error('Auth Error:', error);
         return throwError(() => new Error(errorMessage));
-    }
+    };
 }

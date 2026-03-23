@@ -155,6 +155,15 @@ router.post('/:id/reorder', protect, orderController.reorder);
 
 /**
  * @swagger
+ * /orders/{id}/reorder-data:
+ *   get:
+ *     summary: Lấy dữ liệu kiểm tra kho/giá để đặt lại đơn hàng
+ *     tags: [Orders]
+ */
+router.get('/:id/reorder-data', protect, orderController.getReorderData);
+
+/**
+ * @swagger
  * /orders/{id}:
  *   get:
  *     summary: Xem chi tiết đơn hàng

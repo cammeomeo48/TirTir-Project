@@ -13,6 +13,7 @@ const ShadeSchema = new mongoose.Schema(
     Hex_Code: { type: String, required: true },
     Shade_Image: { type: String },
     Shade_Type: { type: String },
+    Stock_Quantity: { type: Number, default: 0, min: 0 },
 
     Hydration: { type: mongoose.Schema.Types.Mixed },
     Coverage: { type: mongoose.Schema.Types.Mixed },

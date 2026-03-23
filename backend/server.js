@@ -66,32 +66,50 @@ app.use(responseTime((req, res, time) => {
 app.use(morgan('combined', { stream: logger.stream }));
 
 // 3. CORS Configuration - MUST BE FIRST
-const explicitAllowedOrigins = new Set([
-  'http://localhost:4200',
-  'http://127.0.0.1:4200',
-  'http://localhost:4201',
-  'http://127.0.0.1:4201',
-]);
+// Production: strict whitelist from environment variables only
+// Development: also allow any localhost/127.0.0.1 origin
+const isProduction = process.env.NODE_ENV === 'production';
 
+// Build the production whitelist from env vars (never hard-code domains)
+const productionAllowedOrigins = new Set([
+  process.env.FRONTEND_URL,        // e.g. https://tirtir.com
+  process.env.ADMIN_URL,           // e.g. https://admin.tirtir.com  (optional)
+].filter(Boolean)); // strip undefined entries
+
+// Development convenience: port-agnostic localhost pattern
 const localhostOriginPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
 
 app.use(cors({
   origin: (origin, callback) => {
+    // Allow server-to-server or same-origin requests (no Origin header)
     if (!origin) {
       callback(null, true);
       return;
     }
 
-    if (explicitAllowedOrigins.has(origin) || localhostOriginPattern.test(origin)) {
+    if (isProduction) {
+      // Production: only explicitly listed origins are allowed
+      if (productionAllowedOrigins.has(origin)) {
+        callback(null, true);
+      } else {
+        logger.warn(`[CORS] Blocked origin in production: ${origin}`);
+        callback(new Error(`Not allowed by CORS: ${origin}`));
+      }
+      return;
+    }
+
+    // Development: allow any localhost / 127.0.0.1 port for convenience
+    if (localhostOriginPattern.test(origin)) {
       callback(null, true);
       return;
     }
 
+    logger.warn(`[CORS] Blocked origin in development: ${origin}`);
     callback(new Error(`Not allowed by CORS: ${origin}`));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'sentry-trace', 'baggage']
+  allowedHeaders: ['Content-Type', 'Authorization', 'sentry-trace', 'baggage', 'x-skip-token-refresh']
 }));
 
 // 2. Rate Limiting (Global API Protection) - placed after CORS

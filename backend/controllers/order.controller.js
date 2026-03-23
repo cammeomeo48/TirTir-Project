@@ -58,7 +58,7 @@ exports.createOrder = async (req, res) => {
             await session.abortTransaction();
             session.endSession();
             console.error("Create Order Error (TX):", error);
-            return res.status(error.statusCode || 500).json({ message: error.message || "Lỗi Server khi tạo đơn hàng." });
+            return res.status(error.statusCode || 500).json({ message: error.message || "Lỗi Server khi tạo đơn hàng.", errorCode: error.code || 'SERVER_ERROR' });
         }
     } else {
         // ── FALLBACK PATH (Standalone MongoDB) ─────────────────────────────────
@@ -67,7 +67,7 @@ exports.createOrder = async (req, res) => {
             return res.status(201).json({ message: "Đặt hàng thành công!", orderId: result });
         } catch (error) {
             console.error("Create Order Error (Fallback):", error);
-            return res.status(error.statusCode || 500).json({ message: error.message || "Lỗi Server khi tạo đơn hàng." });
+            return res.status(error.statusCode || 500).json({ message: error.message || "Lỗi Server khi tạo đơn hàng.", errorCode: error.code || 'SERVER_ERROR' });
         }
     }
 };
@@ -81,7 +81,7 @@ async function _createOrderLogic(req, session) {
     const cart = session ? await cartQuery.session(session) : await cartQuery;
 
     if (!cart || cart.items.length === 0) {
-        const err = new Error("Giỏ hàng trống!"); err.statusCode = 400; throw err;
+        const err = new Error("Giỏ hàng trống!"); err.statusCode = 400; err.code = 'CART_EMPTY'; throw err;
     }
 
     const orderItems = [];
@@ -108,7 +108,7 @@ async function _createOrderLogic(req, session) {
                 }
             }
             const err = new Error(`Hết hàng hoặc không đủ số lượng cho: ${item.product.Name}`);
-            err.statusCode = 400; throw err;
+            err.statusCode = 400; err.code = 'INSUFFICIENT_STOCK'; err.productName = item.product.Name; throw err;
         }
 
         reservedProducts.push({ id: item.product._id, qty: item.quantity, price: item.product.Price });
@@ -598,5 +598,59 @@ exports.reorder = async (req, res) => {
     } catch (error) {
         console.error("Reorder Error:", error);
         res.status(500).json({ message: "Lỗi server khi đặt lại đơn" });
+    }
+};
+
+// 8. LẤY DỮ LIỆU ĐỂ ĐẶT LẠI (Reorder Data Checklist)
+exports.getReorderData = async (req, res) => {
+    try {
+        const order = await Order.findById(req.params.id)
+            .populate('items.product', 'Name Price Stock_Quantity Product_ID Thumbnail_Images');
+        
+        if (!order) return res.status(404).json({ message: 'Không tìm thấy đơn hàng' });
+        
+        // Security check
+        if (order.user.toString() !== req.user.id && req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Bạn không có quyền thực hiện hành động này' });
+        }
+
+        const Shade = require('../models/shade.model');
+        const reorderItems = [];
+        
+        for (const item of order.items) {
+            const product = item.product;
+            let shadeStock = 999; 
+            let currentPrice = product?.Price || item.price;
+            let isAvailable = !!product && product.Stock_Quantity > 0;
+            
+            if (item.shade && product) {
+                const shadeDoc = await Shade.findOne({ 
+                    Product_ID: product.Product_ID, 
+                    Shade_Name: item.shade 
+                });
+                if (shadeDoc) {
+                    shadeStock = shadeDoc.Stock_Quantity;
+                    if (shadeStock <= 0) isAvailable = false;
+                } else {
+                    isAvailable = false;
+                }
+            }
+            
+            reorderItems.push({
+                productId: product?._id || item.product,
+                productName: product?.Name || item.name,
+                shade: item.shade,
+                quantity: item.quantity,
+                currentPrice: currentPrice,
+                productStock: product?.Stock_Quantity || 0,
+                shadeStock: shadeStock,
+                isAvailable: isAvailable
+            });
+        }
+        
+        res.json({ items: reorderItems });
+    } catch (err) {
+        console.error('getReorderData Error:', err);
+        res.status(500).json({ message: 'Lỗi server khi lấy dữ liệu đặt lại' });
     }
 };

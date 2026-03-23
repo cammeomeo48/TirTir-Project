@@ -215,8 +215,8 @@ router.get('/me', protect, getMe);
 /**
  * @swagger
  * /auth/logout:
- *   get:
- *     summary: Đăng xuất
+ *   post:
+ *     summary: Đăng xuất — invalidates refresh token in DB and clears cookie
  *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
@@ -224,7 +224,7 @@ router.get('/me', protect, getMe);
  *       200:
  *         description: Đăng xuất thành công
  */
-router.get('/logout', protect, logout);
+router.post('/logout', protect, logout);
 
 /**
  * Change password for authenticated user
