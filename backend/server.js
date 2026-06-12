@@ -125,16 +125,25 @@ if (process.env.NODE_ENV !== 'production') {
 
 
 // Static Files - Add CORS headers manually
+// Priority: ASSETS_PATH env var → ./public/assets (Docker/Render) → ../frontend/.../public/assets (local dev)
+const assetsPath = process.env.ASSETS_PATH
+  || (require('fs').existsSync(path.join(__dirname, 'public/assets'))
+      ? path.join(__dirname, 'public/assets')
+      : path.join(__dirname, '../frontend/tirtir-frontend/public/assets'));
+
+logger.info(`[STATIC] Serving /assets from: ${assetsPath}`);
+
 app.use('/assets', (req, res, next) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   res.setHeader('Access-Control-Allow-Origin', '*');
   next();
-}, express.static(path.join(__dirname, '../frontend/tirtir-frontend/public/assets'), {
+}, express.static(assetsPath, {
   setHeaders: (res, filePath) => {
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     res.setHeader('Access-Control-Allow-Origin', '*');
   }
 }));
+
 
 // Serve uploaded files (avatars, etc.)
 app.use('/uploads', (req, res, next) => {

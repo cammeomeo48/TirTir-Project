@@ -29,6 +29,11 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy application source
 COPY --chown=node:node . .
 
+# Assets are bundled inside backend/public/assets/ at build time.
+# On Render there is no volume mount, so the assets folder must already exist
+# inside the build context (backend/public/assets → /app/public/assets in container).
+# server.js detects this path via ASSETS_PATH env var or falls back to ./public/assets.
+
 # Switch to non-root user
 USER node
 
