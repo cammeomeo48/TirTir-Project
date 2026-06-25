@@ -1,2 +1,7 @@
 node_modules/
 .env
+
+ai-service/my_venv/
+backend/logs/
+frontend/tirtir-frontend/node_modules/
+logs/
