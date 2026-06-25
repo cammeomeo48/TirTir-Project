@@ -194,6 +194,13 @@ exports.addToCart = async (req, res) => {
         await cart.save();
         console.log("✅ Cart Saved Successfully!");
 
+        try {
+            const admin = require('firebase-admin');
+            await admin.firestore().collection('carts').doc(String(req.user.id)).set({ items: cart.items });
+        } catch (err) {
+            console.error('Error syncing cart to Firestore:', err);
+        }
+
         const populatedCart = await Cart.findById(cart._id).populate({
             path: 'items.product',
             select: 'Name Price Original_Price Thumbnail_Images Stock_Quantity slug Product_Attributes Product_ID'
@@ -292,6 +299,13 @@ exports.updateCartItem = async (req, res) => {
         cart.lastAbandonedAt = new Date();
         await cart.save();
 
+        try {
+            const admin = require('firebase-admin');
+            await admin.firestore().collection('carts').doc(String(req.user.id)).set({ items: cart.items });
+        } catch (err) {
+            console.error('Error syncing cart update to Firestore:', err);
+        }
+
         const populatedCart = await Cart.findById(cart._id).populate({
             path: 'items.product',
             select: 'Name Price Original_Price Thumbnail_Images Stock_Quantity slug Product_Attributes Product_ID'
@@ -337,6 +351,13 @@ exports.removeFromCart = async (req, res) => {
         cart.lastAbandonedAt = new Date();
         await cart.save();
 
+        try {
+            const admin = require('firebase-admin');
+            await admin.firestore().collection('carts').doc(String(req.user.id)).set({ items: cart.items });
+        } catch (err) {
+            console.error('Error syncing cart remove to Firestore:', err);
+        }
+
         const populatedCart = await Cart.findById(cart._id).populate({
             path: 'items.product',
             select: 'Name Price Original_Price Thumbnail_Images Stock_Quantity slug Product_Attributes Product_ID'
@@ -359,6 +380,13 @@ exports.clearCart = async (req, res) => {
             cart.items = [];
             cart.totalPrice = 0;
             await cart.save();
+        }
+
+        try {
+            const admin = require('firebase-admin');
+            await admin.firestore().collection('carts').doc(String(req.user.id)).set({ items: [] });
+        } catch (err) {
+            console.error('Error syncing cart clear to Firestore:', err);
         }
 
         res.status(200).json({ message: "Cart cleared", items: [], totalPrice: 0 });

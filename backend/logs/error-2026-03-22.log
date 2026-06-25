@@ -1,0 +1,1 @@
+2026-03-22 12:00:11 [ERROR]: Failed to send email to test@example.com: Failed to send email: Data command failed: 550 5.7.0 Too many emails per second. Please upgrade your plan https://mailtrap.io/billing/plans/testing

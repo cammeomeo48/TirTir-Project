@@ -59,9 +59,10 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
 
 # ─── Global references — set during lifespan startup ──────────────────────────
 chatbot: ChatbotEngine | None = None
+_startup_error: str | None = None
 
-# Path to the product CSV 
-_CHATBOT_CSV = os.path.join(os.path.dirname(__file__), "chatbot_products.csv")
+# Path to the product CSV — use abspath so it resolves correctly no matter which CWD uvicorn is launched from
+_CHATBOT_CSV = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chatbot_products.csv")
 
 
 @asynccontextmanager
@@ -73,9 +74,20 @@ async def lifespan(app: FastAPI):
     start = time.time()
 
     if os.path.exists(_CHATBOT_CSV):
-        chatbot = ChatbotEngine(_CHATBOT_CSV)
-        logger.info("✅ ChatbotEngine loaded.")
+        try:
+            chatbot = ChatbotEngine(_CHATBOT_CSV)
+            logger.info("✅ ChatbotEngine loaded successfully.")
+        except Exception as e:
+            import traceback as _tb
+            chatbot = None
+            _startup_error = _tb.format_exc()
+            logger.error(
+                f"❌ ChatbotEngine failed to initialize: {e}. "
+                "/chat endpoint will return 503 until this is fixed.",
+                exc_info=True,
+            )
     else:
+        _startup_error = f"CSV not found at: {_CHATBOT_CSV}"
         logger.warning(f"⚠️  Chatbot CSV not found at {_CHATBOT_CSV}. /chat endpoint will be unavailable.")
 
     if AI_API_KEY:
@@ -84,7 +96,7 @@ async def lifespan(app: FastAPI):
         logger.warning("⚠️  AI_SERVICE_API_KEY not set — authentication disabled (dev mode).")
 
     elapsed = time.time() - start
-    logger.info(f"✅ Chatbot model loaded in {elapsed:.2f}s. Ready to serve.")
+    logger.info(f"✅ Startup complete in {elapsed:.2f}s. chatbot_loaded={chatbot is not None}")
     yield
 
     # Cleanup
@@ -151,6 +163,8 @@ async def health_check():
     return {
         "status": "ok",
         "chatbot_loaded": chatbot is not None,
+        "startup_error": _startup_error,
+        "csv_path": _CHATBOT_CSV,
         "service": "TirTir Chatbot Service v1.0",
         "auth_enabled": bool(AI_API_KEY),
     }

@@ -58,7 +58,7 @@ class ChatbotEngine:
         self._ensure_columns()
         self._normalize_catalog()
 
-        self.redis_url = os.environ.get("REDIS_URL", "redis://redis:6379")
+        self.redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
         self.session_ttl_seconds = 30 * 60
         self.redis_client: redis.Redis | None = None
         try:

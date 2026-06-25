@@ -137,6 +137,20 @@ async function _createOrderLogic(req, session) {
 
     const savedOrder = session ? await newOrder.save({ session }) : await newOrder.save();
 
+    try {
+        const admin = require('firebase-admin');
+        const db = admin.firestore();
+        await db.collection('users').doc(String(userId))
+            .collection('orders').doc(savedOrder._id.toString())
+            .set({
+                status: savedOrder.status,
+                totalAmount: savedOrder.totalAmount,
+                createdAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+    } catch (err) {
+        console.error('Lỗi sync order lên Firestore:', err);
+    }
+
     // CANCEL Cart Recovery Jobs since the user has checked out
     try {
         const { cancelRecoveryJobsForCart } = require('../queues/cart_recovery.queue');
@@ -383,6 +397,17 @@ exports.updateOrderStatus = async (req, res) => {
         appendStatusHistory(order, status, req.body.note || '');
         const updatedOrder = await order.save();
 
+        try {
+            const admin = require('firebase-admin');
+            const db = admin.firestore();
+            const orderUserId = order.user?._id ? order.user._id.toString() : String(order.user);
+            await db.collection('users').doc(orderUserId)
+                .collection('orders').doc(updatedOrder._id.toString())
+                .update({ status: updatedOrder.status });
+        } catch (err) {
+            console.error('Lỗi sync update order lên Firestore:', err);
+        }
+
         // ─── Gửi notification cho chủ đơn hàng ────────────────────────────────
         const orderIdStr = order._id.toString();
         const shortId = orderIdStr.slice(-6).toUpperCase();
@@ -466,6 +491,16 @@ exports.cancelOrder = async (req, res) => {
         order.status = 'Cancelled';
         appendStatusHistory(order, 'Cancelled', 'Cancelled by customer');
         await order.save();
+
+        try {
+            const admin = require('firebase-admin');
+            const db = admin.firestore();
+            await db.collection('users').doc(String(userId))
+                .collection('orders').doc(order._id.toString())
+                .update({ status: 'Cancelled' });
+        } catch (err) {
+            console.error('Lỗi sync cancel order lên Firestore:', err);
+        }
 
         // STOCK STATE MACHINE:
         // Order PENDING   → Stock_Reserved++, Stock_Quantity--  (reserved on order create)

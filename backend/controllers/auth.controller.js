@@ -108,6 +108,24 @@ exports.register = async (req, res) => {
 
         console.log(`✅ User created: ${email} (ID: ${newUser._id})`);
 
+        try {
+            const admin = require('firebase-admin');
+            const uid = newUser._id.toString();
+            await admin.firestore().collection('users').doc(uid).set({
+                email: newUser.email,
+                name: newUser.name,
+                role: newUser.role || 'user',
+                createdAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+        } catch (error) {
+            console.error("Lỗi đồng bộ Firestore khi đăng ký:", error);
+            await User.findByIdAndDelete(newUser._id);
+            return res.status(500).json({
+                success: false,
+                message: 'Lỗi đồng bộ hệ thống. Vui lòng thử lại.'
+            });
+        }
+
         // Log Activity
         logActivity(req, 'AUTH', 'REGISTER', `New user registered: ${email}`, { userId: newUser._id });
 

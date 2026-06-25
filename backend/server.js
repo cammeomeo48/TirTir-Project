@@ -13,6 +13,12 @@ const responseTime = require('response-time');
 const Sentry = require("@sentry/node");
 // Note: @sentry/profiling-node is loaded in instrument.js with graceful fallback
 
+const admin = require('firebase-admin');
+const serviceAccount = require('./config/serviceAccountKey.json');
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
 const errorHandler = require('./middlewares/error');
 const logger = require('./utils/logger');
 require('./cron/abandonedCart.cron'); // Initialize Cron Jobs
