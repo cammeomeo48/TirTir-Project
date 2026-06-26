@@ -16,7 +16,7 @@ const Sentry = require("@sentry/node");
 const admin = require('firebase-admin');
 const serviceAccount = require('./config/serviceAccountKey.json');
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
+  credential: admin.cert(serviceAccount)
 });
 
 const errorHandler = require('./middlewares/error');
