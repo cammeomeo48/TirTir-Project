@@ -6,4 +6,4 @@ backend/logs/
 frontend/tirtir-frontend/node_modules/
 logs/
 
-backend/config/serviceAccountKey.json
+**/serviceAccountKey.json
