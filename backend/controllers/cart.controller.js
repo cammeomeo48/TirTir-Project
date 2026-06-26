@@ -383,8 +383,8 @@ exports.clearCart = async (req, res) => {
         }
 
         try {
-            const admin = require('firebase-admin');
-            await admin.firestore().collection('carts').doc(String(req.user.id)).set({ items: [] });
+            const { getFirestore } = require('firebase-admin/firestore');
+            await getFirestore().collection('carts').doc(String(req.user.id)).set({ items: [] });
         } catch (err) {
             console.error('Error syncing cart clear to Firestore:', err);
         }

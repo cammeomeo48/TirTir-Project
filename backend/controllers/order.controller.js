@@ -138,14 +138,15 @@ async function _createOrderLogic(req, session) {
     const savedOrder = session ? await newOrder.save({ session }) : await newOrder.save();
 
     try {
-        const admin = require('firebase-admin');
-        const db = admin.firestore();
+        const { getFirestore } = require('firebase-admin/firestore');
+        const { FieldValue } = require('firebase-admin/firestore');
+        const db = getFirestore();
         await db.collection('users').doc(String(userId))
             .collection('orders').doc(savedOrder._id.toString())
             .set({
                 status: savedOrder.status,
                 totalAmount: savedOrder.totalAmount,
-                createdAt: admin.firestore.FieldValue.serverTimestamp()
+                createdAt: FieldValue.serverTimestamp()
             });
     } catch (err) {
         console.error('Lỗi sync order lên Firestore:', err);
@@ -398,8 +399,8 @@ exports.updateOrderStatus = async (req, res) => {
         const updatedOrder = await order.save();
 
         try {
-            const admin = require('firebase-admin');
-            const db = admin.firestore();
+            const { getFirestore } = require('firebase-admin/firestore');
+            const db = getFirestore();
             const orderUserId = order.user?._id ? order.user._id.toString() : String(order.user);
             await db.collection('users').doc(orderUserId)
                 .collection('orders').doc(updatedOrder._id.toString())
@@ -493,8 +494,8 @@ exports.cancelOrder = async (req, res) => {
         await order.save();
 
         try {
-            const admin = require('firebase-admin');
-            const db = admin.firestore();
+            const { getFirestore } = require('firebase-admin/firestore');
+            const db = getFirestore();
             await db.collection('users').doc(String(userId))
                 .collection('orders').doc(order._id.toString())
                 .update({ status: 'Cancelled' });
