@@ -20,7 +20,17 @@ async function runTests() {
   // 2. Test Firebase & Firestore
   console.log("\n[2] Testing Firebase Admin & Firestore...");
   try {
-    const serviceAccount = require('./config/serviceAccountKey.json');
+    const fs = require('fs');
+    const path = require('path');
+    let serviceAccount;
+    if (fs.existsSync('/etc/secrets/serviceAccountKey.json')) {
+      serviceAccount = require('/etc/secrets/serviceAccountKey.json');
+    } else if (fs.existsSync(path.join(__dirname, 'serviceAccountKey.json'))) {
+      serviceAccount = require('./serviceAccountKey.json');
+    } else {
+      serviceAccount = require('./config/serviceAccountKey.json');
+    }
+
     try {
       admin.initializeApp({
         credential: admin.cert(serviceAccount)
