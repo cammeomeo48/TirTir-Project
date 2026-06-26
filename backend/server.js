@@ -13,8 +13,18 @@ const responseTime = require('response-time');
 const Sentry = require("@sentry/node");
 // Note: @sentry/profiling-node is loaded in instrument.js with graceful fallback
 
+const fs = require('fs');
 const admin = require('firebase-admin');
-const serviceAccount = require('./config/serviceAccountKey.json');
+let serviceAccount;
+// Hỗ trợ Render Secret File (đặt ở /etc/secrets/ hoặc thư mục gốc) hoặc Local (đặt trong config/)
+if (fs.existsSync('/etc/secrets/serviceAccountKey.json')) {
+  serviceAccount = require('/etc/secrets/serviceAccountKey.json');
+} else if (fs.existsSync(path.join(__dirname, 'serviceAccountKey.json'))) {
+  serviceAccount = require('./serviceAccountKey.json');
+} else {
+  serviceAccount = require('./config/serviceAccountKey.json');
+}
+
 admin.initializeApp({
   credential: admin.cert(serviceAccount)
 });
