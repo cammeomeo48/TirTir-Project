@@ -9,7 +9,7 @@ RUN apk add --no-cache dumb-init
 COPY package*.json ./
 
 # Install production dependencies only
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 # ─── Production Stage ─────────────────────────────────────────────────────────
 FROM node:22-alpine AS production
