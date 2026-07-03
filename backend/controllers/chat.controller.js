@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const ChatHistory = require('../models/chat.history.model');
 const Coupon = require('../models/coupon.model');
 const Order = require('../models/order.model');
+const Product = require('../models/product.model');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const CHATBOT_SERVICE_URL = process.env.CHATBOT_SERVICE_URL || 'http://localhost:8001';
 const AI_SERVICE_API_KEY = process.env.AI_SERVICE_API_KEY || '';
@@ -200,18 +202,93 @@ async function buildDynamicContext(message, userId, conversationHistory = []) {
  * @access  Public (guests allowed; authenticated users get DB persistence)
  */
 exports.chatWithBot = async (req, res) => {
-    const { message } = req.body;
+    const { message, productId } = req.body;
 
     if (!message || !message.trim()) {
         return res.status(400).json({ success: false, message: 'Vui lòng nhập nội dung tin nhắn.' });
     }
 
     try {
-        console.log(`[CHAT] Sending request to ${CHATBOT_SERVICE_URL}/chat with message: "${message.trim()}"`);
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) {
+            throw new Error("GEMINI_API_KEY is not configured.");
+        }
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({
+            model: 'gemini-1.5-flash',
+            generationConfig: { responseMimeType: 'application/json' }
+        });
+
+        // 1. Lấy thông tin User (nếu đã login)
+        let skinType = 'Không rõ';
+        let knownAllergies = [];
+        if (req.user) {
+            const User = mongoose.model('User');
+            const userDoc = await User.findById(req.user._id).lean();
+            if (userDoc) {
+                if (userDoc.skinProfile?.skinType) skinType = userDoc.skinProfile.skinType;
+                if (userDoc.knownAllergies) knownAllergies = userDoc.knownAllergies;
+            }
+        }
+
+        // 2. Fetch Product Context (nếu user đang xem 1 SP cụ thể)
+        let productInfoStr = '';
+        if (productId) {
+            try {
+                const product = await Product.findById(productId).lean();
+                if (product) {
+                    const ingredients = Array.isArray(product.ingredients) ? product.ingredients.join(', ') : product.ingredients || 'Không rõ';
+                    productInfoStr = `Tên: ${product.name}, Thành phần: ${ingredients}.`;
+                }
+            } catch (err) {
+                console.error('[CHAT] Product context fetch error:', err.message);
+            }
+        }
+
+        // 3. Lấy danh sách sản phẩm active để làm gợi ý
+        let productsListText = '';
+        try {
+            const products = await Product.find({ isActive: true })
+                .select('_id name category price')
+                .limit(20)
+                .lean();
+            productsListText = products.map(p => `- ID: ${p._id} | Tên: ${p.name} | Loại: ${p.category}`).join('\n');
+        } catch (err) {
+            console.error('[CHAT] Fetch active products error:', err.message);
+        }
+
+        // 4. Lịch sử hội thoại & Dynamic Context
         const sessionId = req.user?._id?.toString() || `guest:${req.ip || 'unknown'}`;
         const conversationHistory = await getRecentConversationHistory(req.user?._id, 5);
         const dynamicContext = await buildDynamicContext(message.trim(), req.user?._id, conversationHistory);
+        let historyText = conversationHistory.map(msg => `${msg.role === 'user' ? 'Khách' : 'Bot'}: ${msg.content}`).join('\n');
 
+        const systemPrompt = `Bạn là chuyên gia tư vấn da liễu của TirTir.
+Nhiệm vụ của bạn là tư vấn mỹ phẩm.
+Người dùng hiện tại có loại da: ${skinType}.
+Dị ứng đã biết: ${knownAllergies.length > 0 ? knownAllergies.join(', ') : 'Không có'}.
+Lịch sử chat gần đây:
+${historyText}
+
+Context sản phẩm đang xem (nếu có):
+${productInfoStr}
+
+Danh sách sản phẩm gợi ý (chỉ chọn từ ID trong này):
+${productsListText}
+
+Thông tin Đơn hàng / Mã giảm giá (Dynamic Context):
+${JSON.stringify(dynamicContext, null, 2)}
+
+Bạn phải phản hồi ở định dạng JSON với các khóa chính xác sau:
+{
+    "reply": "câu trả lời của bạn (ngắn gọn, thân thiện, tiếng Việt)",
+    "detectedSkinType": "loại da bạn đoán (Oily, Dry, Combination, Sensitive) hoặc null",
+    "recommendedProductIds": ["id1", "id2"],
+    "intent": "consultation" // hoặc order, coupon, greeting
+}
+TUYỆT ĐỐI KHÔNG DÙNG THẺ MARKDOWN. TRẢ VỀ CHUỖI JSON HỢP LỆ.`;
+
+        // 5. Chuẩn bị SSE Response
         res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
         res.setHeader('Cache-Control', 'no-cache, no-transform');
         res.setHeader('Connection', 'keep-alive');
@@ -224,214 +301,108 @@ exports.chatWithBot = async (req, res) => {
             res.write(`event: ${eventName}\ndata: ${JSON.stringify(payload)}\n\n`);
         };
 
-        const response = await axios.post(
-            `${CHATBOT_SERVICE_URL}/chat`,
-            {
-                message: message.trim(),
-                session_id: sessionId,
-                conversation_history: conversationHistory,
-                dynamic_context: dynamicContext,
-            },
-            {
-                timeout: 45000,
-                responseType: 'stream',
-                validateStatus: () => true,
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'text/event-stream',
-                    ...(AI_SERVICE_API_KEY && { 'X-API-Key': AI_SERVICE_API_KEY })
-                }
-            }
-        );
-
-        const contentType = response.headers['content-type'] || '';
-        if (response.status >= 400 || !contentType.includes('text/event-stream')) {
-            let rawBody = '';
-            response.data.setEncoding('utf8');
-            response.data.on('data', (chunk) => {
-                rawBody += chunk;
-            });
-            response.data.on('end', () => {
-                let detail = 'Lỗi Chatbot Service';
+        // 6. Gọi Gemini với Retry + Timeout
+        let rawResponseText = "";
+        const callGeminiWithRetry = async (retries = 1, timeoutMs = 5000) => {
+            for (let attempt = 0; attempt <= retries; attempt++) {
                 try {
-                    const parsed = JSON.parse(rawBody || '{}');
-                    detail = parsed.detail || parsed.error || parsed.message || detail;
-                } catch (_) {}
-                writeSse('error', { success: false, message: detail });
-                res.end();
-            });
-            response.data.on('error', (streamErr) => {
-                writeSse('error', { success: false, message: streamErr.message || 'Lỗi đọc phản hồi AI Service' });
-                res.end();
-            });
-            return;
-        }
+                    const timeoutPromise = new Promise((_, reject) => {
+                        setTimeout(() => reject(new Error('Timeout')), timeoutMs);
+                    });
 
-        let buffer = '';
-        let finalPayload = null;
-        let streamedText = '';
-        let clientClosed = false;
+                    const prompt = `Tin nhắn của khách hàng: "${message.trim()}"\nTUYỆT ĐỐI KHÔNG sử dụng thẻ markdown \`\`\`json. Chỉ trả về chuỗi JSON thuần tuý hợp lệ.`;
+                    const geminiCall = (async () => {
+                        const result = await model.generateContent([
+                            { text: systemPrompt },
+                            { text: prompt }
+                        ]);
+                        return result.response.text();
+                    })();
 
-        req.on('close', () => {
-            clientClosed = true;
-            if (response.data && !response.data.destroyed) {
-                response.data.destroy();
-            }
-        });
-
-        const handleEventBlock = (rawEventBlock) => {
-            const lines = rawEventBlock
-                .split('\n')
-                .map((line) => line.trim())
-                .filter(Boolean);
-
-            if (!lines.length) {
-                return;
-            }
-
-            const eventLine = lines.find((line) => line.startsWith('event:'));
-            const eventName = eventLine ? eventLine.slice(6).trim() : 'message';
-            const dataLines = lines
-                .filter((line) => line.startsWith('data:'))
-                .map((line) => line.slice(5).trim());
-            const dataRaw = dataLines.join('\n');
-
-            if (!dataRaw) {
-                return;
-            }
-
-            let payload = {};
-            try {
-                payload = JSON.parse(dataRaw);
-            } catch (_) {
-                payload = { text: dataRaw };
-            }
-
-            if (eventName === 'chunk') {
-                const text = payload.text || '';
-                if (text) {
-                    streamedText += text;
+                    rawResponseText = await Promise.race([geminiCall, timeoutPromise]);
+                    return rawResponseText;
+                } catch (err) {
+                    console.error(`[CHAT] Gemini attempt ${attempt + 1} failed:`, err.message);
+                    if (attempt === retries || err.status === 400 || err.status === 401 || err.status === 403) {
+                        throw err;
+                    }
                 }
-                writeSse('chunk', { text });
-                return;
             }
-
-            if (eventName === 'done') {
-                finalPayload = payload;
-                writeSse('done', payload);
-                return;
-            }
-
-            if (eventName === 'error') {
-                writeSse('error', payload);
-                return;
-            }
-
-            writeSse(eventName, payload);
         };
 
-        response.data.setEncoding('utf8');
-        response.data.on('data', (chunk) => {
-            buffer += chunk;
-            let separatorIndex = buffer.indexOf('\n\n');
-            while (separatorIndex !== -1) {
-                const eventBlock = buffer.slice(0, separatorIndex);
-                buffer = buffer.slice(separatorIndex + 2);
-                handleEventBlock(eventBlock);
-                separatorIndex = buffer.indexOf('\n\n');
-            }
-        });
+        rawResponseText = await callGeminiWithRetry(1, 5000);
 
-        response.data.on('end', async () => {
-            if (buffer.trim()) {
-                handleEventBlock(buffer);
-                buffer = '';
-            }
+        // 7. Strip Markdown
+        let cleanJsonString = rawResponseText.trim();
+        if (cleanJsonString.startsWith('```json')) {
+            cleanJsonString = cleanJsonString.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+        } else if (cleanJsonString.startsWith('```')) {
+            cleanJsonString = cleanJsonString.replace(/^```\s*/, '').replace(/\s*```$/, '');
+        }
 
-            const donePayload = finalPayload || {
-                success: true,
-                data: {
-                    intent: 'consultation',
-                    message: streamedText,
-                    data: null,
-                    type: 'text',
-                },
+        let chatbotReply;
+        try {
+            chatbotReply = JSON.parse(cleanJsonString.trim());
+        } catch (e) {
+            console.error('[CHAT] Failed to parse Gemini response:', cleanJsonString);
+            throw new Error("Invalid JSON from Gemini");
+        }
+
+        const replyText = chatbotReply.reply || "Xin lỗi, tôi không thể trả lời lúc này.";
+        
+        // 8. Stream kết quả trả về như cũ (event: chunk -> event: done)
+        const words = replyText.split(' ');
+        for (const word of words) {
+            writeSse('chunk', { text: word + ' ' });
+            await new Promise(r => setTimeout(r, 20)); // Delay tạo hiệu ứng gõ phím
+        }
+
+        const donePayload = {
+            success: true,
+            message: replyText,
+            data: {
+                intent: chatbotReply.intent || 'consultation',
+                message: replyText,
+                data: { recommendations: chatbotReply.recommendedProductIds || [] },
+                type: 'text'
+            }
+        };
+        writeSse('done', donePayload);
+
+        // 9. Lưu vào DB nếu có req.user
+        if (req.user) {
+            const userMsg = { text: message.trim(), sender: 'user', timestamp: new Date() };
+            const botMsg = { 
+                text: replyText, 
+                sender: 'bot', 
+                timestamp: new Date(),
+                intent: chatbotReply.intent || 'consultation'
             };
-
-            if (!finalPayload) {
-                writeSse('done', donePayload);
+            await saveMessagesToDB(req.user._id, userMsg, botMsg);
+            
+            // Cập nhật lại SkinType nếu bot đoán ra
+            if (chatbotReply.detectedSkinType && chatbotReply.detectedSkinType !== "null") {
+                const User = mongoose.model('User');
+                await User.findByIdAndUpdate(req.user._id, {
+                    "skinProfile.skinType": chatbotReply.detectedSkinType
+                });
             }
+        }
 
-            if (req.user && donePayload.success && donePayload.data) {
-                const botData = donePayload.data;
-                const userMsg = {
-                    text: message.trim(),
-                    sender: 'user',
-                    timestamp: new Date(),
-                };
-                const botMsg = {
-                    text: botData.message || streamedText,
-                    sender: 'bot',
-                    timestamp: new Date(),
-                    // Store full product data with recommendations & metadata
-                    ...(botData.type === 'product' && botData.data
-                        ? { productData: botData.data }
-                        : {}),
-                    // Store intent classification for conversation analytics
-                    ...(botData.intent ? { intent: botData.intent } : {})
-                };
-                await saveMessagesToDB(req.user._id, userMsg, botMsg);
-            }
-
-            if (!clientClosed) {
-                res.end();
-            }
-        });
-
-        response.data.on('error', (streamErr) => {
-            writeSse('error', { success: false, message: streamErr.message || 'Lỗi luồng AI Service' });
-            if (!clientClosed) {
-                res.end();
-            }
-        });
-
-        return;
+        res.end();
 
     } catch (error) {
-        // ── Detailed diagnostics — always log so nothing is swallowed ──────────
-        console.error('[CHAT] AI SERVICE ERROR DETAILS:', {
-            code: error.code,
-            message: error.message,
-            targetUrl: `${CHATBOT_SERVICE_URL}/chat`,
-            httpStatus: error.response?.status,
-            httpBody: error.response?.data,
-        });
-
-        // Network error → chatbot service not running
-        if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
-            res.write(`event: error\ndata: ${JSON.stringify({
-                success: false,
-                message: `AI Chatbot Service chưa chạy. Hãy khởi động service tại ${CHATBOT_SERVICE_URL}`,
-            })}\n\n`);
-            return res.end();
+        console.error('[CHAT] ERROR:', error.message);
+        let errorMsg = "Hiện tại tôi đang gặp khó khăn khi kết nối với máy chủ AI. Xin bạn vui lòng thử lại sau.";
+        if (error.message === 'Timeout') {
+            errorMsg = "Xin lỗi, hệ thống AI đang quá tải. Bạn có thể hỏi lại sau.";
         }
-        // Request timed out
-        if (error.code === 'ECONNABORTED') {
-            res.write(`event: error\ndata: ${JSON.stringify({ success: false, message: 'AI Chatbot đang quá tải, vui lòng thử lại sau.' })}\n\n`);
-            return res.end();
+        if (!res.headersSent) {
+            res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+            res.setHeader('Cache-Control', 'no-cache, no-transform');
         }
-        // FastAPI returned 4xx/5xx — forward the detail message
-        if (error.response) {
-            res.write(`event: error\ndata: ${JSON.stringify({
-                success: false,
-                message: error.response.data?.detail || 'Lỗi Chatbot Service',
-            })}\n\n`);
-            return res.end();
-        }
-
-        console.error('[CHAT] Unexpected error:', error);
-        res.write(`event: error\ndata: ${JSON.stringify({ success: false, message: 'Lỗi hệ thống AI.' })}\n\n`);
-        return res.end();
+        res.write(`event: error\ndata: ${JSON.stringify({ success: false, message: errorMsg })}\n\n`);
+        res.end();
     }
 };
 
