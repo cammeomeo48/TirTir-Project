@@ -213,6 +213,8 @@ exports.chatWithBot = async (req, res) => {
         if (!apiKey) {
             throw new Error("GEMINI_API_KEY is not configured.");
         }
+        console.log(`[CHAT] GEMINI_API_KEY loaded. Length: ${apiKey.length}`);
+        
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
             model: 'gemini-1.5-flash',
@@ -392,8 +394,14 @@ TUYỆT ĐỐI KHÔNG DÙNG THẺ MARKDOWN. TRẢ VỀ CHUỖI JSON HỢP LỆ.`
         res.end();
 
     } catch (error) {
-        console.error('[CHAT] ERROR:', error.message);
-        let errorMsg = "Hiện tại tôi đang gặp khó khăn khi kết nối với máy chủ AI. Xin bạn vui lòng thử lại sau.";
+        console.error('========== [CHAT] FATAL ERROR ==========');
+        console.error('Message:', error.message);
+        console.error('Status/Code:', error.status || error.code);
+        console.error('Response Data:', error.response ? JSON.stringify(error.response.data) : 'N/A');
+        console.error('Stack Trace:', error.stack);
+        console.error('=========================================');
+        
+        let errorMsg = `DEBUG ERROR: ${error.message}`;
         if (error.message === 'Timeout') {
             errorMsg = "Xin lỗi, hệ thống AI đang quá tải. Bạn có thể hỏi lại sau.";
         }
