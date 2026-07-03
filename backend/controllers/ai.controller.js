@@ -47,7 +47,7 @@ const geminiCircuit = {
     }
 };
 
-const GEMINI_MODEL = 'gemini-1.5-flash'; // Free tier supported
+const GEMINI_MODEL = 'gemini-2.5-flash'; // Updated from 1.5-flash to avoid 404
 
 const initializeGemini = () => {
     const apiKey = process.env.GEMINI_API_KEY;

@@ -303,6 +303,9 @@ TUYỆT ĐỐI KHÔNG DÙNG THẺ MARKDOWN. TRẢ VỀ CHUỖI JSON HỢP LỆ.`
         let rawResponseText = "";
         const callGeminiWithRetry = async (retries = 1, timeoutMs = 5000) => {
             const modelsToTry = [
+                { name: 'gemini-2.5-flash', useJson: true },
+                { name: 'gemini-2.0-flash', useJson: true },
+                { name: 'gemini-1.5-pro', useJson: true },
                 { name: 'gemini-1.5-flash-latest', useJson: true },
                 { name: 'gemini-1.5-flash', useJson: true },
                 { name: 'gemini-pro', useJson: false },
