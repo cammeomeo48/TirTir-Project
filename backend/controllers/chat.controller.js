@@ -209,17 +209,13 @@ exports.chatWithBot = async (req, res) => {
     }
 
     try {
-        const apiKey = process.env.GEMINI_API_KEY;
+        const apiKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : null;
         if (!apiKey) {
             throw new Error("GEMINI_API_KEY is not configured.");
         }
         console.log(`[CHAT] GEMINI_API_KEY loaded. Length: ${apiKey.length}`);
         
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({
-            model: 'gemini-1.5-flash',
-            generationConfig: { responseMimeType: 'application/json' }
-        });
 
         // 1. Lấy thông tin User (nếu đã login)
         let skinType = 'Không rõ';
@@ -303,33 +299,56 @@ TUYỆT ĐỐI KHÔNG DÙNG THẺ MARKDOWN. TRẢ VỀ CHUỖI JSON HỢP LỆ.`
             res.write(`event: ${eventName}\ndata: ${JSON.stringify(payload)}\n\n`);
         };
 
-        // 6. Gọi Gemini với Retry + Timeout
+        // 6. Gọi Gemini với Retry + Fallback Models
         let rawResponseText = "";
         const callGeminiWithRetry = async (retries = 1, timeoutMs = 5000) => {
-            for (let attempt = 0; attempt <= retries; attempt++) {
-                try {
-                    const timeoutPromise = new Promise((_, reject) => {
-                        setTimeout(() => reject(new Error('Timeout')), timeoutMs);
-                    });
+            const modelsToTry = [
+                { name: 'gemini-1.5-flash-latest', useJson: true },
+                { name: 'gemini-1.5-flash', useJson: true },
+                { name: 'gemini-pro', useJson: false },
+                { name: 'gemini-1.0-pro', useJson: false }
+            ];
 
-                    const prompt = `Tin nhắn của khách hàng: "${message.trim()}"\nTUYỆT ĐỐI KHÔNG sử dụng thẻ markdown \`\`\`json. Chỉ trả về chuỗi JSON thuần tuý hợp lệ.`;
-                    const geminiCall = (async () => {
-                        const result = await model.generateContent([
-                            { text: systemPrompt },
-                            { text: prompt }
-                        ]);
-                        return result.response.text();
-                    })();
+            for (let m = 0; m < modelsToTry.length; m++) {
+                const currentModelConfig = modelsToTry[m];
+                const model = genAI.getGenerativeModel({
+                    model: currentModelConfig.name,
+                    ...(currentModelConfig.useJson && { generationConfig: { responseMimeType: 'application/json' } })
+                });
 
-                    rawResponseText = await Promise.race([geminiCall, timeoutPromise]);
-                    return rawResponseText;
-                } catch (err) {
-                    console.error(`[CHAT] Gemini attempt ${attempt + 1} failed:`, err.message);
-                    if (attempt === retries || err.status === 400 || err.status === 401 || err.status === 403) {
-                        throw err;
+                for (let attempt = 0; attempt <= retries; attempt++) {
+                    try {
+                        const timeoutPromise = new Promise((_, reject) => {
+                            setTimeout(() => reject(new Error('Timeout')), timeoutMs);
+                        });
+
+                        const prompt = `Tin nhắn của khách hàng: "${message.trim()}"\nTUYỆT ĐỐI KHÔNG sử dụng thẻ markdown \`\`\`json. Chỉ trả về chuỗi JSON thuần tuý hợp lệ.`;
+                        const geminiCall = (async () => {
+                            const result = await model.generateContent([
+                                { text: systemPrompt },
+                                { text: prompt }
+                            ]);
+                            return result.response.text();
+                        })();
+
+                        rawResponseText = await Promise.race([geminiCall, timeoutPromise]);
+                        return rawResponseText; // Success!
+                    } catch (err) {
+                        console.error(`[CHAT] Model ${currentModelConfig.name} attempt ${attempt + 1} failed:`, err.message);
+                        
+                        // Nếu bị 404 (Model not found) -> Bỏ qua retry, chuyển ngay sang model tiếp theo
+                        if (err.status === 404 || (err.message && err.message.includes('404'))) {
+                            break; 
+                        }
+
+                        // Các lỗi fatal khác (400, 401, 403) -> Văng lỗi luôn, không cứu được
+                        if (attempt === retries || err.status === 400 || err.status === 401 || err.status === 403) {
+                            if (m === modelsToTry.length - 1) throw err; // Hết model để thử rồi
+                        }
                     }
                 }
             }
+            throw new Error("All Gemini models failed or were not found.");
         };
 
         rawResponseText = await callGeminiWithRetry(1, 5000);
