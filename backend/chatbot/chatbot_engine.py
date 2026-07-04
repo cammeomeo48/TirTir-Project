@@ -43,8 +43,8 @@ class ChatbotEngine:
         if api_key:
             genai.configure(api_key=api_key)
             try:
-                self.model = genai.GenerativeModel("gemini-2.0-flash")
-                logger.info("✅ Gemini-2.0-Flash model configured for natural-language phrasing.")
+                self.model = genai.GenerativeModel("gemini-1.5-flash")
+                logger.info("✅ Gemini-1.5-Flash model configured for natural-language phrasing.")
             except Exception:
                 try:
                     self.model = genai.GenerativeModel("gemini-pro")
