@@ -1,7 +1,8 @@
 const express = require('express');
 const {
     sendFlashSale,
-    recoverAbandonedCarts
+    recoverAbandonedCarts,
+    sendWinBackPush
 } = require('../controllers/marketing.controller');
 
 const router = express.Router();
@@ -15,5 +16,6 @@ router.use(authorize('admin')); // Only admin can trigger marketing blasts
 
 router.post('/flash-sale', sendFlashSale);
 router.post('/abandoned-cart-recovery', recoverAbandonedCarts);
+router.post('/win-back', sendWinBackPush);
 
 module.exports = router;

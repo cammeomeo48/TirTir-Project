@@ -115,3 +115,48 @@ exports.recoverAbandonedCarts = async (req, res, next) => {
         next(err);
     }
 };
+
+/**
+ * @desc    Send Win-back Push to At-Risk Users
+ * @route   POST /api/v1/marketing/win-back
+ * @access  Private (Admin)
+ */
+exports.sendWinBackPush = async (req, res, next) => {
+    try {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        
+        const Order = require('../models/order.model');
+        const recentBuyersAgg = await Order.aggregate([
+            { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+            { $group: { _id: '$user' } }
+        ]);
+        const recentBuyerIds = recentBuyersAgg.map(b => b._id);
+        
+        const atRiskUsers = await User.find({
+            role: 'user',
+            createdAt: { $lt: thirtyDaysAgo },
+            _id: { $nin: recentBuyerIds }
+        });
+
+        if (!atRiskUsers.length) {
+             return res.status(200).json({ success: true, message: "No at-risk users found to send push." });
+        }
+
+        const notifications = atRiskUsers.map(u => ({
+            user: u._id,
+            type: 'promotion',
+            title: 'We Miss You!',
+            message: 'Come back and see what\\'s new. Get a special surprise today!',
+            link: '/products',
+            isRead: false
+        }));
+
+        const Notification = require('../models/notification.model');
+        await Notification.insertMany(notifications);
+
+        res.status(200).json({ success: true, message: `Win-back push sent to ${atRiskUsers.length} users!` });
+    } catch (e) {
+        next(e);
+    }
+};
