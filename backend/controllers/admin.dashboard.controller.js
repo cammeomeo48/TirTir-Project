@@ -547,8 +547,19 @@ exports.getMarketingOverview = async (req, res) => {
         // 2. Active Campaigns
         let campaigns = [];
         try {
-            campaigns = await Campaign.find({ status: { $in: ['LIVE', 'SCHEDULED', 'ACTIVE'] } }).sort({ endDate: 1 }).limit(10);
-        } catch(e) {}
+            campaigns = await Campaign.find({ active: true, validTo: { $gte: new Date() } }).sort({ validTo: 1 }).limit(10);
+            
+            // Map it to the format Android expects
+            campaigns = campaigns.map(c => ({
+                id: c._id,
+                title: c.code + " (" + (c.discountType === 'percentage' ? c.discountValue + "%" : "$" + c.discountValue) + " OFF)",
+                status: 'LIVE',
+                endDate: c.validTo ? c.validTo.toISOString() : null,
+                participants: c.usedCount || 0
+            }));
+        } catch(e) {
+            console.error(e);
+        }
 
         res.json({
             success: true,
