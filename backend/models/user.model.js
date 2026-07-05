@@ -48,6 +48,19 @@ const UserSchema = new mongoose.Schema({
     refreshToken: { type: String, select: false },
     refreshTokenExpire: { type: Date },
     // ===== NEW PROFILE FIELDS =====
+    fcmTokens: [{ type: String }],
+    totalSpent: {
+        type: Number,
+        default: 0
+    },
+    lastPurchaseDate: {
+        type: Date,
+        default: null
+    },
+    lastActiveDate: {
+        type: Date,
+        default: Date.now
+    },
     avatar: {
         type: String,
         default: null

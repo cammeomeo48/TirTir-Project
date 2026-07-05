@@ -495,3 +495,136 @@ exports.getAllOrders = async (req, res) => {
         res.status(500).json({ message: "Lỗi khi lấy danh sách đơn hàng" });
     }
 };
+
+// ─── Marketing & Retention ────────────────────────────────────────────────
+
+exports.getMarketingOverview = async (req, res) => {
+    try {
+        const Campaign = require('../models/coupon.model'); // Using coupon/campaign
+        const Order = require('../models/order.model');
+        const User = require('../models/user.model');
+        const DailyStats = require('../models/daily.stats.model');
+
+        // 1. Performance Insights
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        
+        // Buyers in last 30 days
+        const recentBuyersAgg = await Order.aggregate([
+            { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+            { $group: { _id: '$user' } } // Fix: Order uses 'user', not 'userId' in TirTir-Project
+        ]);
+        const recentBuyerIds = recentBuyersAgg.map(b => b._id);
+
+        // At Risk Users
+        const atRiskUsersCount = await User.countDocuments({
+            role: 'user',
+            createdAt: { $lt: thirtyDaysAgo },
+            _id: { $nin: recentBuyerIds }
+        });
+
+        // Vouchers Used & Revenue Recovered
+        const orders = await Order.find({ status: { $in: ['Delivered', 'Completed'] } });
+        let vouchersUsed = 0;
+        let revenueRecovered = 0; 
+
+        for (const order of orders) {
+            if (order.coupon || order.discount > 0) { // Fix: Order uses 'coupon'
+                vouchersUsed++;
+                revenueRecovered += order.totalAmount || 0;
+            }
+        }
+
+        // Conversion Rate
+        const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
+        const viewsAgg = await DailyStats.aggregate([
+            { $match: { date: { $gte: thirtyDaysAgoStr } } },
+            { $group: { _id: null, totalViews: { $sum: '$views' } } }
+        ]);
+        const totalViews = viewsAgg[0]?.totalViews || (orders.length * 2);
+        const conversionRate = totalViews > 0 ? (orders.length / totalViews) * 100 : 0;
+
+        // 2. Active Campaigns
+        let campaigns = [];
+        try {
+            campaigns = await Campaign.find({ status: { $in: ['LIVE', 'SCHEDULED', 'ACTIVE'] } }).sort({ endDate: 1 }).limit(10);
+        } catch(e) {}
+
+        res.json({
+            success: true,
+            data: {
+                insights: {
+                    revenueRecovered: revenueRecovered,
+                    atRiskUsers: atRiskUsersCount,
+                    vouchersUsed: vouchersUsed,
+                    conversionRate: parseFloat(conversionRate.toFixed(2))
+                },
+                campaigns,
+                activities: []
+            }
+        });
+    } catch (error) {
+        console.error('Marketing Overview Error:', error);
+        res.status(500).json({ success: false, message: 'Failed to load marketing overview' });
+    }
+};
+
+exports.getRetentionAnalytics = async (req, res) => {
+    try {
+        const User = require('../models/user.model');
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const activeUsers = await User.countDocuments({ lastActiveDate: { $gte: thirtyDaysAgo }, role: 'user' });
+        const inactiveUsers = await User.countDocuments({ lastActiveDate: { $lt: thirtyDaysAgo }, role: 'user' });
+        const total = activeUsers + inactiveUsers;
+
+        const rate = total > 0 ? ((activeUsers / total) * 100).toFixed(1) : "0.0";
+
+        res.json({
+            success: true,
+            data: {
+                active: activeUsers,
+                inactive: inactiveUsers,
+                rate: rate + "%"
+            }
+        });
+    } catch (error) {
+        console.error('Retention Stats Error:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch retention stats' });
+    }
+};
+
+exports.getAtRiskUsers = async (req, res) => {
+    try {
+        const User = require('../models/user.model');
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const sixtyDaysAgo = new Date();
+        sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+
+        const users = await User.find({ lastActiveDate: { $lt: thirtyDaysAgo }, role: 'user' })
+                                .sort({ lastActiveDate: -1 })
+                                .limit(20);
+
+        const result = users.map(u => {
+            let status = 'High Risk';
+            if (u.lastActiveDate && u.lastActiveDate < sixtyDaysAgo) {
+                status = 'Slipping Away';
+            }
+            return {
+                id: u._id,
+                name: u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim(),
+                avatar: u.avatar || '',
+                ltv: u.totalSpent || 0,
+                status: status,
+                lastActiveStr: u.lastActiveDate ? u.lastActiveDate.toISOString() : null
+            };
+        });
+
+        res.json({ success: true, data: result });
+    } catch (error) {
+        console.error('At Risk Users Error:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch at-risk users' });
+    }
+};

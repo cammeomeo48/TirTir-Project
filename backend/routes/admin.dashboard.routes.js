@@ -8,7 +8,10 @@ const {
     getTopProducts,
     getCustomerStats,
     getAllOrders,
-    getOrderStats
+    getOrderStats,
+    getMarketingOverview,
+    getRetentionAnalytics,
+    getAtRiskUsers
 } = require('../controllers/admin.dashboard.controller');
 const { getAllReviewsAdmin, deleteReview } = require('../controllers/review.controller');
 
@@ -36,6 +39,11 @@ router.get('/orders/stats', getOrderStats);
 
 // GET /api/admin/orders  (supports ?status=&search=&startDate=&endDate=)
 router.get('/orders', getAllOrders);
+
+// ─── Marketing & Retention ───────────────────────────────
+router.get('/marketing/overview', getMarketingOverview);
+router.get('/retention/stats', getRetentionAnalytics);
+router.get('/retention/users', getAtRiskUsers);
 
 // ─── Review Moderation ───────────────────────────────────
 // GET  /api/v1/admin/reviews        List all reviews (paginated, ?rating=)
