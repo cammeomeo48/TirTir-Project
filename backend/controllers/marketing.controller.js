@@ -147,7 +147,7 @@ exports.sendWinBackPush = async (req, res, next) => {
             user: u._id,
             type: 'promotion',
             title: 'We Miss You!',
-            message: 'Come back and see what\\'s new. Get a special surprise today!',
+            message: "Come back and see what's new. Get a special surprise today!",
             link: '/products',
             isRead: false
         }));
